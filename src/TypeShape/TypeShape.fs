@@ -1,29 +1,34 @@
 ﻿module TypeShape
 
+#nowarn "4224"
+
 open System
 open System.Collections.Generic
 open System.Reflection
 open Microsoft.FSharp.Reflection
 
-type IFunc<'R> =
-    abstract Invoke<'T> : unit -> 'R
+type ITypeShapeVisitor<'R> =
+    abstract Visit<'T> : unit -> 'R
 
 [<AbstractClass>]
 type TypeShape internal () =
     abstract Type : Type
-    abstract Accept : IFunc<'R> -> 'R
+    abstract Accept : ITypeShapeVisitor<'R> -> 'R
     override s.ToString() = sprintf "Shape [%O]" (s.GetType())
 
-type TypeShape<'T> internal () =
-    inherit TypeShape()
+type TypeShape<'T> =
+    inherit TypeShape
+
+    [<CompilerMessage("TypeShape<'T> constructor should only be used when inheriting shape implementations.", 4224)>]
+    new () = { inherit TypeShape() }
     member __.TypeCode = Type.GetTypeCode typeof<'T>
     override __.Type = typeof<'T>
-    override __.Accept<'R> (func : IFunc<'R>) = func.Invoke<'T> ()
+    override __.Accept v = v.Visit<'T> ()
 
 /////////////// Enumerations
 
 type IEnumVisitor<'R> =
-    abstract VisitEnum<'Enum, 'Underlying when 'Enum : enum<'Underlying>> : unit -> 'R
+    abstract Visit<'Enum, 'Underlying when 'Enum : enum<'Underlying>> : unit -> 'R
 
 type IShapeEnum =
     abstract Accept : IEnumVisitor<'R> -> 'R
@@ -31,12 +36,12 @@ type IShapeEnum =
 type ShapeEnum<'Enum, 'Underlying when 'Enum : enum<'Underlying>>() =
     inherit TypeShape<'Enum> ()
     interface IShapeEnum with
-        member __.Accept v = v.VisitEnum<'Enum, 'Underlying> ()
+        member __.Accept v = v.Visit<'Enum, 'Underlying> ()
 
 /////////////// Nullable
 
 type INullableVisitor<'R> =
-    abstract VisitNullable<'T when 'T : (new : unit -> 'T) and 'T :> ValueType and 'T : struct> : unit -> 'R
+    abstract Visit<'T when 'T : (new : unit -> 'T) and 'T :> ValueType and 'T : struct> : unit -> 'R
 
 type IShapeNullable =
     abstract Accept : INullableVisitor<'R> -> 'R
@@ -44,12 +49,12 @@ type IShapeNullable =
 type ShapeNullable<'T when 'T : (new : unit -> 'T) and 'T :> ValueType and 'T : struct>() =
     inherit TypeShape<Nullable<'T>>()
     interface IShapeNullable with
-        member __.Accept v = v.VisitNullable<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
 /////////////// Collections & IEnumerable
 
 type IEnumerableVisitor<'R> =
-    abstract VisitEnumerable<'T> : unit -> 'R
+    abstract Visit<'T> : unit -> 'R
 
 type IShapeEnumerable =
     abstract Accept : IEnumerableVisitor<'R> -> 'R
@@ -57,10 +62,10 @@ type IShapeEnumerable =
 type ShapeEnumerable<'T>() =
     inherit TypeShape<seq<'T>> ()
     interface IShapeEnumerable with
-        member __.Accept v = v.VisitEnumerable<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
 type ICollectionVisitor<'R> =
-    abstract VisitCollection<'T> : unit -> 'R
+    abstract Visit<'T> : unit -> 'R
 
 type IShapeCollection =
     abstract Accept : ICollectionVisitor<'R> -> 'R
@@ -68,27 +73,29 @@ type IShapeCollection =
 type ShapeCollection<'T>() =
     inherit TypeShape<ICollection<'T>>()
     interface IShapeCollection with
-        member __.Accept v = v.VisitCollection<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
     interface IShapeEnumerable with
-        member __.Accept v = v.VisitEnumerable<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
 
 ///////// KeyValuePair
 
 type IKeyValuePairVisitor<'R> =
-    abstract VisitKeyValuePair<'K, 'V> : unit -> 'R
+    abstract Visit<'K, 'V> : unit -> 'R
 
 type IShapeKeyValuePair =
     abstract Accept : IKeyValuePairVisitor<'R> -> 'R
 
 type ShapeKeyValuePair<'K,'V> () =
     inherit TypeShape<KeyValuePair<'K,'V>> ()
+    interface IShapeKeyValuePair with
+        member __.Accept v = v.Visit<'K, 'V> ()
 
 /////////////// System.Array
 
 type IArrayVisitor<'R> =
-    abstract VisitArray<'T> : unit -> 'R
+    abstract Visit<'T> : unit -> 'R
 
 type IShapeArray =
     abstract Accept : IArrayVisitor<'R> -> 'R
@@ -96,19 +103,19 @@ type IShapeArray =
 type ShapeArray<'T>() =
     inherit TypeShape<'T []> ()
     interface IShapeArray with
-        member __.Accept v = v.VisitArray<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
     interface IShapeCollection with
-        member __.Accept v = v.VisitCollection<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
     interface IShapeEnumerable with
-        member __.Accept v = v.VisitEnumerable<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
 type ShapeByteArray() =
     inherit ShapeArray<byte> ()
 
 type IArray2DVisitor<'R> =
-    abstract VisitArray2D<'T> : unit -> 'R
+    abstract Visit<'T> : unit -> 'R
 
 type IShapeArray2D =
     abstract Accept : IArray2DVisitor<'R> -> 'R
@@ -116,11 +123,11 @@ type IShapeArray2D =
 type ShapeArray2D<'T>() =
     inherit TypeShape<'T [,]> ()
     interface IShapeArray2D with
-        member __.Accept v = v.VisitArray2D<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
 
 type IArray3DVisitor<'R> =
-    abstract VisitArray3D<'T> : unit -> 'R
+    abstract Visit<'T> : unit -> 'R
 
 type IShapeArray3D =
     abstract Accept : IArray3DVisitor<'R> -> 'R
@@ -128,11 +135,11 @@ type IShapeArray3D =
 type ShapeArray3D<'T>() =
     inherit TypeShape<'T [,,]> ()
     interface IShapeArray3D with
-        member __.Accept v = v.VisitArray3D<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
 
 type IArray4DVisitor<'R> =
-    abstract VisitArray4D<'T> : unit -> 'R
+    abstract Visit<'T> : unit -> 'R
 
 type IShapeArray4D =
     abstract Accept : IArray4DVisitor<'R> -> 'R
@@ -140,12 +147,12 @@ type IShapeArray4D =
 type ShapeArray4D<'T>() =
     inherit TypeShape<'T [,,,]> ()
     interface IShapeArray4D with
-        member __.Accept v = v.VisitArray4D<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
 ////////////// System.Collections.List
 
 type IResizeArrayVisitor<'R> =
-    abstract VisitResizeArray<'T> : unit -> 'R
+    abstract Visit<'T> : unit -> 'R
 
 type IShapeResizeArray =
     abstract Accept : IResizeArrayVisitor<'R> -> 'R
@@ -153,13 +160,13 @@ type IShapeResizeArray =
 type ShapeResizeArray<'T> () =
     inherit TypeShape<ResizeArray<'T>> ()
     interface IShapeResizeArray with
-        member __.Accept v = v.VisitResizeArray<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
 
 ////////////// System.Collections.Dictionary
 
 type IDictionaryVisitor<'R> =
-    abstract VisitDictionary<'K, 'V when 'K : equality> : unit -> 'R
+    abstract Visit<'K, 'V when 'K : equality> : unit -> 'R
 
 type IShapeDictionary =
     abstract Accept : IDictionaryVisitor<'R> -> 'R
@@ -167,16 +174,16 @@ type IShapeDictionary =
 type ShapeDictionary<'K, 'V when 'K : equality> () =
     inherit TypeShape<Dictionary<'K, 'V>> ()
     interface IShapeDictionary with
-        member __.Accept v = v.VisitDictionary<'K, 'V> ()
+        member __.Accept v = v.Visit<'K, 'V> ()
     interface IShapeEnumerable with
-        member __.Accept v = v.VisitEnumerable<KeyValuePair<'K, 'V>> ()
+        member __.Accept v = v.Visit<KeyValuePair<'K, 'V>> ()
     interface IShapeCollection with
-        member __.Accept v = v.VisitCollection<KeyValuePair<'K, 'V>> ()
+        member __.Accept v = v.Visit<KeyValuePair<'K, 'V>> ()
 
 ////////////// System.Collections.HashSet
 
 type IHashSetVisitor<'R> =
-    abstract VisitHashSet<'T when 'T : equality> : unit -> 'R
+    abstract Visit<'T when 'T : equality> : unit -> 'R
 
 type IShapeHashSet =
     abstract Accept : IHashSetVisitor<'R> -> 'R
@@ -184,17 +191,17 @@ type IShapeHashSet =
 type ShapeHashSet<'T when 'T : equality> () =
     inherit TypeShape<HashSet<'T>> ()
     interface IShapeHashSet with
-        member __.Accept v = v.VisitHashSet<'T> ()
+        member __.Accept v = v.Visit<'T> ()
     interface IShapeEnumerable with
-        member __.Accept v = v.VisitEnumerable<'T> ()
+        member __.Accept v = v.Visit<'T> ()
     interface IShapeCollection with
-        member __.Accept v = v.VisitCollection<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
 
 //////// System.Tuple
 
 type ITuple1Visitor<'R> =
-    abstract VisitTuple<'T> : unit -> 'R
+    abstract Visit<'T> : unit -> 'R
 
 type IShapeTuple1 =
     abstract Accept : ITuple1Visitor<'R> -> 'R
@@ -202,10 +209,10 @@ type IShapeTuple1 =
 type ShapeTuple<'T> () =
     inherit TypeShape<System.Tuple<'T>> ()
     interface IShapeTuple1 with
-        member __.Accept v = v.VisitTuple<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
 type ITuple2Visitor<'R> =
-    abstract VisitTuple<'T1, 'T2> : unit -> 'R
+    abstract Visit<'T1, 'T2> : unit -> 'R
 
 type IShapeTuple2 =
     abstract Accept : ITuple2Visitor<'R> -> 'R
@@ -213,10 +220,10 @@ type IShapeTuple2 =
 type ShapeTuple<'T1, 'T2> () =
     inherit TypeShape<'T1 * 'T2> ()
     interface IShapeTuple2 with
-        member __.Accept v = v.VisitTuple<'T1,'T2> ()
+        member __.Accept v = v.Visit<'T1,'T2> ()
 
 type ITuple3Visitor<'R> =
-    abstract VisitTuple<'T1, 'T2, 'T3> : unit -> 'R
+    abstract Visit<'T1, 'T2, 'T3> : unit -> 'R
 
 type IShapeTuple3 =
     abstract Accept : ITuple3Visitor<'R> -> 'R
@@ -224,10 +231,10 @@ type IShapeTuple3 =
 type ShapeTuple<'T1, 'T2, 'T3> () =
     inherit TypeShape<'T1 * 'T2 * 'T3> ()
     interface IShapeTuple3 with
-        member __.Accept v = v.VisitTuple<'T1, 'T2, 'T3> ()
+        member __.Accept v = v.Visit<'T1, 'T2, 'T3> ()
 
 type ITuple4Visitor<'R> =
-    abstract VisitTuple<'T1, 'T2, 'T3, 'T4> : unit -> 'R
+    abstract Visit<'T1, 'T2, 'T3, 'T4> : unit -> 'R
 
 type IShapeTuple4 =
     abstract Accept : ITuple4Visitor<'R> -> 'R
@@ -235,10 +242,10 @@ type IShapeTuple4 =
 type ShapeTuple<'T1, 'T2, 'T3, 'T4> () =
     inherit TypeShape<'T1 * 'T2 * 'T3 * 'T4> ()
     interface IShapeTuple4 with
-        member __.Accept v = v.VisitTuple<'T1, 'T2, 'T3, 'T4> ()
+        member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4> ()
 
 type ITuple5Visitor<'R> =
-    abstract VisitTuple<'T1, 'T2, 'T3, 'T4, 'T5> : unit -> 'R
+    abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5> : unit -> 'R
 
 type IShapeTuple5 =
     abstract Accept : ITuple5Visitor<'R> -> 'R
@@ -246,10 +253,10 @@ type IShapeTuple5 =
 type ShapeTuple<'T1, 'T2, 'T3, 'T4, 'T5> () =
     inherit TypeShape<'T1 * 'T2 * 'T3 * 'T4 * 'T5> ()
     interface IShapeTuple5 with
-        member __.Accept v = v.VisitTuple<'T1, 'T2, 'T3, 'T4, 'T5> ()
+        member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5> ()
 
 type ITuple6Visitor<'R> =
-    abstract VisitTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> : unit -> 'R
+    abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> : unit -> 'R
 
 type IShapeTuple6 =
     abstract Accept : ITuple6Visitor<'R> -> 'R
@@ -257,10 +264,10 @@ type IShapeTuple6 =
 type ShapeTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> () =
     inherit TypeShape<'T1 * 'T2 * 'T3 * 'T4 * 'T5 * 'T6> ()
     interface IShapeTuple6 with
-        member __.Accept v = v.VisitTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> ()
+        member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> ()
 
 type ITuple7Visitor<'R> =
-    abstract VisitTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> : unit -> 'R
+    abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> : unit -> 'R
 
 type IShapeTuple7 =
     abstract Accept : ITuple7Visitor<'R> -> 'R
@@ -268,10 +275,10 @@ type IShapeTuple7 =
 type ShapeTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> () =
     inherit TypeShape<'T1 * 'T2 * 'T3 * 'T4 * 'T5 * 'T6 * 'T7> ()
     interface IShapeTuple7 with
-        member __.Accept v = v.VisitTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> ()
+        member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> ()
 
 type ITuple8Visitor<'R> =
-    abstract VisitTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> : unit -> 'R
+    abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> : unit -> 'R
 
 type IShapeTuple8 =
     abstract Accept : ITuple8Visitor<'R> -> 'R
@@ -279,7 +286,7 @@ type IShapeTuple8 =
 type ShapeTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> () =
     inherit TypeShape<Tuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest>> ()
     interface IShapeTuple8 with
-        member __.Accept v = v.VisitTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> ()
+        member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> ()
 
 /////////////////
 /// F# Types
@@ -288,7 +295,7 @@ type ShapeTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> () =
 ///// F# Option
 
 type IFSharpOptionVisitor<'R> =
-    abstract VisitFSharpOption<'T> : unit -> 'R
+    abstract Visit<'T> : unit -> 'R
 
 type IShapeFSharpOption =
     abstract Accept : IFSharpOptionVisitor<'R> -> 'R
@@ -296,12 +303,12 @@ type IShapeFSharpOption =
 type ShapeFSharpOption<'T> () =
     inherit TypeShape<'T option> ()
     interface IShapeFSharpOption with
-        member __.Accept v = v.VisitFSharpOption<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
 ///// F# List
 
 type IFSharpListVisitor<'R> =
-    abstract VisitFSharpList<'T> : unit -> 'R
+    abstract Visit<'T> : unit -> 'R
 
 type IShapeFSharpList =
     abstract Accept : IFSharpListVisitor<'R> -> 'R
@@ -309,16 +316,16 @@ type IShapeFSharpList =
 type ShapeFSharpList<'T> () =
     inherit TypeShape<'T list> ()
     interface IShapeFSharpList with
-        member __.Accept v = v.VisitFSharpList<'T> ()
+        member __.Accept v = v.Visit<'T> ()
     interface IShapeEnumerable with
-        member __.Accept v = v.VisitEnumerable<'T> ()
+        member __.Accept v = v.Visit<'T> ()
     interface IShapeCollection with
-        member __.Accept v = v.VisitCollection<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
 ///////// F# Ref
 
 type IFSharpRefVisitor<'R> =
-    abstract VisitFSharpRef<'T> : unit -> 'R
+    abstract Visit<'T> : unit -> 'R
 
 type IShapeFSharpRef =
     abstract Accept : IFSharpRefVisitor<'R> -> 'R
@@ -326,7 +333,7 @@ type IShapeFSharpRef =
 type ShapeFSharpRef<'T> () =
     inherit TypeShape<'T ref> ()
     interface IShapeFSharpRef with
-        member __.Accept v = v.VisitFSharpRef<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
 ///////// F# Record
 
@@ -363,7 +370,7 @@ and ShapeFSharpRecord<'Rec, 'F1> private (info : RecordInfo) =
     override __.Properties = info.Properties |> Array.toList
 
     member __.Ctor(f1 : 'F1) = info.RCtor [|f1|] :?> 'Rec
-    member __.Proj1(record : 'Rec) = info.Properties.[0].GetValue(record) :?> 'F1
+    member __.Proj1(record : 'Rec) = info.Properties.[0].GetValue(record, null) :?> 'F1
 
     interface IShapeFSharpRecord1 with
         member s.Accept v = v.Visit<'Rec, 'F1> s
@@ -381,8 +388,8 @@ and ShapeFSharpRecord<'Rec, 'F1, 'F2> private (info : RecordInfo) =
     override __.Properties = info.Properties |> Array.toList
 
     member __.Ctor(f1 : 'F1, f2 : 'F2) = info.RCtor [|f1; f2|] :?> 'Rec
-    member __.Proj1(record : 'Rec) = info.Properties.[0].GetValue(record) :?> 'F1
-    member __.Proj2(record : 'Rec) = info.Properties.[1].GetValue(record) :?> 'F2
+    member __.Proj1(record : 'Rec) = info.Properties.[0].GetValue(record, null) :?> 'F1
+    member __.Proj2(record : 'Rec) = info.Properties.[1].GetValue(record, null) :?> 'F2
 
     interface IShapeFSharpRecord2 with
         member s.Accept v = v.Visit<'Rec, 'F1, 'F2> s
@@ -400,9 +407,9 @@ and ShapeFSharpRecord<'Rec, 'F1, 'F2, 'F3> private (info : RecordInfo) =
     override __.Properties = info.Properties |> Array.toList
 
     member __.Ctor(f1 : 'F1, f2 : 'F2, f3 : 'F3) = info.RCtor [|f1; f2; f3|] :?> 'Rec
-    member __.Proj1(record : 'Rec) = info.Properties.[0].GetValue(record) :?> 'F1
-    member __.Proj2(record : 'Rec) = info.Properties.[1].GetValue(record) :?> 'F2
-    member __.Proj3(record : 'Rec) = info.Properties.[2].GetValue(record) :?> 'F3
+    member __.Proj1(record : 'Rec) = info.Properties.[0].GetValue(record, null) :?> 'F1
+    member __.Proj2(record : 'Rec) = info.Properties.[1].GetValue(record, null) :?> 'F2
+    member __.Proj3(record : 'Rec) = info.Properties.[2].GetValue(record, null) :?> 'F3
 
     interface IShapeFSharpRecord3 with
         member s.Accept v = v.Visit<'Rec, 'F1, 'F2, 'F3> s
@@ -420,10 +427,10 @@ and ShapeFSharpRecord<'Rec, 'F1, 'F2, 'F3, 'F4> private (info : RecordInfo) =
     override __.Properties = info.Properties |> Array.toList
 
     member __.Ctor(f1 : 'F1, f2 : 'F2, f3 : 'F3, f4 : 'F4) = info.RCtor [|f1; f2; f3; f4|] :?> 'Rec
-    member __.Proj1(record : 'Rec) = info.Properties.[0].GetValue(record) :?> 'F1
-    member __.Proj2(record : 'Rec) = info.Properties.[1].GetValue(record) :?> 'F2
-    member __.Proj3(record : 'Rec) = info.Properties.[2].GetValue(record) :?> 'F3
-    member __.Proj4(record : 'Rec) = info.Properties.[3].GetValue(record) :?> 'F4
+    member __.Proj1(record : 'Rec) = info.Properties.[0].GetValue(record, null) :?> 'F1
+    member __.Proj2(record : 'Rec) = info.Properties.[1].GetValue(record, null) :?> 'F2
+    member __.Proj3(record : 'Rec) = info.Properties.[2].GetValue(record, null) :?> 'F3
+    member __.Proj4(record : 'Rec) = info.Properties.[3].GetValue(record, null) :?> 'F4
 
     interface IShapeFSharpRecord4 with
         member s.Accept v = v.Visit<'Rec, 'F1, 'F2, 'F3, 'F4> s
@@ -441,11 +448,11 @@ and ShapeFSharpRecord<'Rec, 'F1, 'F2, 'F3, 'F4, 'F5> private (info : RecordInfo)
     override __.Properties = info.Properties |> Array.toList
 
     member __.Ctor(f1 : 'F1, f2 : 'F2, f3 : 'F3, f4 : 'F4, f5 : 'F5) = info.RCtor [|f1; f2; f3; f4; f5|] :?> 'Rec
-    member __.Proj1(record : 'Rec) = info.Properties.[0].GetValue(record) :?> 'F1
-    member __.Proj2(record : 'Rec) = info.Properties.[1].GetValue(record) :?> 'F2
-    member __.Proj3(record : 'Rec) = info.Properties.[2].GetValue(record) :?> 'F3
-    member __.Proj4(record : 'Rec) = info.Properties.[3].GetValue(record) :?> 'F4
-    member __.Proj5(record : 'Rec) = info.Properties.[4].GetValue(record) :?> 'F5
+    member __.Proj1(record : 'Rec) = info.Properties.[0].GetValue(record, null) :?> 'F1
+    member __.Proj2(record : 'Rec) = info.Properties.[1].GetValue(record, null) :?> 'F2
+    member __.Proj3(record : 'Rec) = info.Properties.[2].GetValue(record, null) :?> 'F3
+    member __.Proj4(record : 'Rec) = info.Properties.[3].GetValue(record, null) :?> 'F4
+    member __.Proj5(record : 'Rec) = info.Properties.[4].GetValue(record, null) :?> 'F5
 
     interface IShapeFSharpRecord5 with
         member s.Accept v = v.Visit<'Rec, 'F1, 'F2, 'F3, 'F4, 'F5> s
@@ -463,12 +470,12 @@ and ShapeFSharpRecord<'Rec, 'F1, 'F2, 'F3, 'F4, 'F5, 'F6> private (info : Record
     override __.Properties = info.Properties |> Array.toList
 
     member __.Ctor(f1 : 'F1, f2 : 'F2, f3 : 'F3, f4 : 'F4, f5 : 'F5, f6 : 'F6) = info.RCtor [|f1; f2; f3; f4; f5 ; f6|] :?> 'Rec
-    member __.Proj1(record : 'Rec) = info.Properties.[0].GetValue(record) :?> 'F1
-    member __.Proj2(record : 'Rec) = info.Properties.[1].GetValue(record) :?> 'F2
-    member __.Proj3(record : 'Rec) = info.Properties.[2].GetValue(record) :?> 'F3
-    member __.Proj4(record : 'Rec) = info.Properties.[3].GetValue(record) :?> 'F4
-    member __.Proj5(record : 'Rec) = info.Properties.[4].GetValue(record) :?> 'F5
-    member __.Proj6(record : 'Rec) = info.Properties.[5].GetValue(record) :?> 'F6
+    member __.Proj1(record : 'Rec) = info.Properties.[0].GetValue(record, null) :?> 'F1
+    member __.Proj2(record : 'Rec) = info.Properties.[1].GetValue(record, null) :?> 'F2
+    member __.Proj3(record : 'Rec) = info.Properties.[2].GetValue(record, null) :?> 'F3
+    member __.Proj4(record : 'Rec) = info.Properties.[3].GetValue(record, null) :?> 'F4
+    member __.Proj5(record : 'Rec) = info.Properties.[4].GetValue(record, null) :?> 'F5
+    member __.Proj6(record : 'Rec) = info.Properties.[5].GetValue(record, null) :?> 'F6
 
     interface IShapeFSharpRecord6 with
         member s.Accept v = v.Visit<'Rec, 'F1, 'F2, 'F3, 'F4, 'F5, 'F6> s
@@ -488,13 +495,13 @@ and ShapeFSharpRecord<'Rec, 'F1, 'F2, 'F3, 'F4, 'F5, 'F6, 'F7> private (info : R
     member __.Ctor(f1 : 'F1, f2 : 'F2, f3 : 'F3, f4 : 'F4, f5 : 'F5, f6 : 'F6, f7 : 'F7) = 
         info.RCtor [|f1; f2; f3; f4; f5; f6; f7|] :?> 'Rec
 
-    member __.Proj1(record : 'Rec) = info.Properties.[0].GetValue(record) :?> 'F1
-    member __.Proj2(record : 'Rec) = info.Properties.[1].GetValue(record) :?> 'F2
-    member __.Proj3(record : 'Rec) = info.Properties.[2].GetValue(record) :?> 'F3
-    member __.Proj4(record : 'Rec) = info.Properties.[3].GetValue(record) :?> 'F4
-    member __.Proj5(record : 'Rec) = info.Properties.[4].GetValue(record) :?> 'F5
-    member __.Proj6(record : 'Rec) = info.Properties.[5].GetValue(record) :?> 'F6
-    member __.Proj7(record : 'Rec) = info.Properties.[6].GetValue(record) :?> 'F7
+    member __.Proj1(record : 'Rec) = info.Properties.[0].GetValue(record, null) :?> 'F1
+    member __.Proj2(record : 'Rec) = info.Properties.[1].GetValue(record, null) :?> 'F2
+    member __.Proj3(record : 'Rec) = info.Properties.[2].GetValue(record, null) :?> 'F3
+    member __.Proj4(record : 'Rec) = info.Properties.[3].GetValue(record, null) :?> 'F4
+    member __.Proj5(record : 'Rec) = info.Properties.[4].GetValue(record, null) :?> 'F5
+    member __.Proj6(record : 'Rec) = info.Properties.[5].GetValue(record, null) :?> 'F6
+    member __.Proj7(record : 'Rec) = info.Properties.[6].GetValue(record, null) :?> 'F7
 
     interface IShapeFSharpRecord7 with
         member s.Accept v = v.Visit<'Rec, 'F1, 'F2, 'F3, 'F4, 'F5, 'F6, 'F7> s
@@ -535,33 +542,33 @@ type ShapeFSharpUnion<'U> internal () =
         member __.UnionCaseInfo = __.UnionCaseInfo
         member __.IsFSharpChoice = __.IsFSharpChoice
 
-type IFSharpUnionVisitor1<'R> =
-    abstract VisitUnion<'U, 'C1> : ShapeFSharpUnion<'U, 'C1> -> 'R
+type IFSharpUnion1Visitor<'R> =
+    abstract Visit<'Union, 'Case1> : ShapeFSharpUnion<'Union, 'Case1> -> 'R
 
 and IShapeFSharpUnion1 =
     inherit IShapeFSharpUnion
-    abstract Accept : IFSharpUnionVisitor1<'R> -> 'R
+    abstract Accept : IFSharpUnion1Visitor<'R> -> 'R
 
-and ShapeFSharpUnion<'U, 'C1> private (info : UnionInfo) =
-    inherit ShapeFSharpUnion<'U>()
+and ShapeFSharpUnion<'Union, 'Case1> private (info : UnionInfo) =
+    inherit ShapeFSharpUnion<'Union>()
     let { Proj = proj ; Ctor = ctor } = info.Cases.[0]
-    member __.Project (u : 'U) = 
-        proj u :?> 'C1
+    member __.Project (u : 'Union) = 
+        proj u :?> 'Case1
 
-    member __.Ctor1 (c : 'C1) = ctor c :?> 'U
-    override __.GetTag (u : 'U) = info.TagReader (u :> _)
+    member __.Ctor1 (c : 'Case1) = ctor c :?> 'Union
+    override __.GetTag (u : 'Union) = info.TagReader (u :> _)
     override __.UnionCaseInfo = info.UnionCaseInfo
     override __.IsFSharpChoice = info.IsChoiceType
     interface IShapeFSharpUnion1 with
-        member self.Accept(v : IFSharpUnionVisitor1<'R>) = v.VisitUnion<'U, 'C1> self
+        member self.Accept v = v.Visit<'Union, 'Case1> self
 
-type IFSharpUnionVisitor2<'R> =
-    abstract VisitUnion<'U, 'C1, 'C2> : ShapeFSharpUnion<'U, 'C1, 'C2> -> 'R
+type IFSharpUnion2Visitor<'R> =
+    abstract Visit<'U, 'Case1, 'Case2> : ShapeFSharpUnion<'U, 'Case1, 'Case2> -> 'R
 
 and IShapeFSharpUnion2 =
-    abstract Accept : IFSharpUnionVisitor2<'R> -> 'R
+    abstract Accept : IFSharpUnion2Visitor<'R> -> 'R
 
-and ShapeFSharpUnion<'U, 'C1, 'C2> private (info : UnionInfo) =
+and ShapeFSharpUnion<'U, 'Case1, 'Case2> private (info : UnionInfo) =
     inherit ShapeFSharpUnion<'U>()
     member __.Project (u : 'U) =
         if info.IsChoiceType then u :> obj :?> _ else 
@@ -569,14 +576,14 @@ and ShapeFSharpUnion<'U, 'C1, 'C2> private (info : UnionInfo) =
         let { Proj = proj } = info.Cases.[tag]
         let value = proj u
         match tag with
-        | 0 -> Choice1Of2(value :?> 'C1)
-        | _ -> Choice2Of2(value :?> 'C2)
+        | 0 -> Choice1Of2(value :?> 'Case1)
+        | _ -> Choice2Of2(value :?> 'Case2)
 
-    member __.Ctor1 (c : 'C1) =
+    member __.Ctor1 (c : 'Case1) =
         let { Ctor = ctor } = info.Cases.[0]
         ctor c :?> 'U
 
-    member __.Ctor2 (c : 'C2) =
+    member __.Ctor2 (c : 'Case2) =
         let { Ctor = ctor } = info.Cases.[1]
         ctor c :?> 'U
 
@@ -585,15 +592,15 @@ and ShapeFSharpUnion<'U, 'C1, 'C2> private (info : UnionInfo) =
     override __.IsFSharpChoice = info.IsChoiceType
 
     interface IShapeFSharpUnion2 with
-        member self.Accept(v : IFSharpUnionVisitor2<'R>) = v.VisitUnion<'U, 'C1, 'C2> self
+        member self.Accept(v : IFSharpUnion2Visitor<'R>) = v.Visit<'U, 'Case1, 'Case2> self
 
-type IFSharpUnionVisitor3<'R> =
-    abstract VisitUnion<'U, 'C1, 'C2, 'C3> : ShapeFSharpUnion<'U, 'C1, 'C2, 'C3> -> 'R
+type IFSharpUnion3Visitor<'R> =
+    abstract Visit<'U, 'Case1, 'Case2, 'Case3> : ShapeFSharpUnion<'U, 'Case1, 'Case2, 'Case3> -> 'R
 
 and IShapeFSharpUnion3 =
-    abstract Accept : IFSharpUnionVisitor3<'R> -> 'R
+    abstract Accept : IFSharpUnion3Visitor<'R> -> 'R
 
-and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3> private (info : UnionInfo) =
+and ShapeFSharpUnion<'U, 'Case1, 'Case2, 'Case3> private (info : UnionInfo) =
     inherit ShapeFSharpUnion<'U>()
     member __.Project (u : 'U) =
         if info.IsChoiceType then u :> obj :?> _ else 
@@ -601,19 +608,19 @@ and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3> private (info : UnionInfo) =
         let { Proj = proj } = info.Cases.[tag]
         let value = proj u
         match tag with
-        | 0 -> Choice1Of3(value :?> 'C1)
-        | 1 -> Choice2Of3(value :?> 'C2)
-        | _ -> Choice3Of3(value :?> 'C3)
+        | 0 -> Choice1Of3(value :?> 'Case1)
+        | 1 -> Choice2Of3(value :?> 'Case2)
+        | _ -> Choice3Of3(value :?> 'Case3)
 
-    member __.Ctor1 (c : 'C1) =
+    member __.Ctor1 (c : 'Case1) =
         let { Ctor = ctor } = info.Cases.[0]
         ctor c :?> 'U
 
-    member __.Ctor2 (c : 'C2) =
+    member __.Ctor2 (c : 'Case2) =
         let { Ctor = ctor } = info.Cases.[1]
         ctor c :?> 'U
 
-    member __.Ctor3 (c : 'C3) =
+    member __.Ctor3 (c : 'Case3) =
         let { Ctor = ctor } = info.Cases.[2]
         ctor c :?> 'U
 
@@ -622,16 +629,16 @@ and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3> private (info : UnionInfo) =
     override __.IsFSharpChoice = info.IsChoiceType
 
     interface IShapeFSharpUnion3 with
-        member self.Accept(v : IFSharpUnionVisitor3<'R>) = 
-            v.VisitUnion<'U, 'C1, 'C2, 'C3> self
+        member self.Accept(v : IFSharpUnion3Visitor<'R>) = 
+            v.Visit<'U, 'Case1, 'Case2, 'Case3> self
 
-type IFSharpUnionVisitor4<'R> =
-    abstract VisitUnion<'U, 'C1, 'C2, 'C3, 'C4> : ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4> -> 'R
+type IFSharpUnion4Visitor<'R> =
+    abstract Visit<'U, 'Case1, 'Case2, 'Case3, 'Case4> : ShapeFSharpUnion<'U, 'Case1, 'Case2, 'Case3, 'Case4> -> 'R
 
 and IShapeFSharpUnion4 =
-    abstract Accept : IFSharpUnionVisitor4<'R> -> 'R
+    abstract Accept : IFSharpUnion4Visitor<'R> -> 'R
 
-and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4> private (info : UnionInfo) =
+and ShapeFSharpUnion<'U, 'Case1, 'Case2, 'Case3, 'Case4> private (info : UnionInfo) =
     inherit ShapeFSharpUnion<'U>()
     member __.Project (u : 'U) =
         if info.IsChoiceType then u :> obj :?> _ else 
@@ -639,24 +646,24 @@ and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4> private (info : UnionInfo) =
         let { Proj = proj } = info.Cases.[tag]
         let value = proj u
         match tag with
-        | 0 -> Choice1Of4(value :?> 'C1)
-        | 1 -> Choice2Of4(value :?> 'C2)
-        | 2 -> Choice3Of4(value :?> 'C3)
-        | _ -> Choice4Of4(value :?> 'C4)
+        | 0 -> Choice1Of4(value :?> 'Case1)
+        | 1 -> Choice2Of4(value :?> 'Case2)
+        | 2 -> Choice3Of4(value :?> 'Case3)
+        | _ -> Choice4Of4(value :?> 'Case4)
 
-    member __.Ctor1 (c : 'C1) =
+    member __.Ctor1 (c : 'Case1) =
         let { Ctor = ctor } = info.Cases.[0]
         ctor c :?> 'U
 
-    member __.Ctor2 (c : 'C2) =
+    member __.Ctor2 (c : 'Case2) =
         let { Ctor = ctor } = info.Cases.[1]
         ctor c :?> 'U
 
-    member __.Ctor3 (c : 'C3) =
+    member __.Ctor3 (c : 'Case3) =
         let { Ctor = ctor } = info.Cases.[2]
         ctor c :?> 'U
 
-    member __.Ctor4 (c : 'C4) =
+    member __.Ctor4 (c : 'Case4) =
         let { Ctor = ctor } = info.Cases.[3]
         ctor c :?> 'U
 
@@ -665,16 +672,16 @@ and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4> private (info : UnionInfo) =
     override __.IsFSharpChoice = info.IsChoiceType
 
     interface IShapeFSharpUnion4 with
-        member self.Accept(v : IFSharpUnionVisitor4<'R>) = 
-            v.VisitUnion<'U, 'C1, 'C2, 'C3, 'C4> self
+        member self.Accept(v : IFSharpUnion4Visitor<'R>) = 
+            v.Visit<'U, 'Case1, 'Case2, 'Case3, 'Case4> self
 
-type IFSharpUnionVisitor5<'R> =
-    abstract VisitUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5> : ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5> -> 'R
+type IFSharpUnion5Visitor<'R> =
+    abstract Visit<'U, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5> : ShapeFSharpUnion<'U, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5> -> 'R
 
 and IShapeFSharpUnion5 =
-    abstract Accept : IFSharpUnionVisitor5<'R> -> 'R
+    abstract Accept : IFSharpUnion5Visitor<'R> -> 'R
 
-and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5> private (info : UnionInfo) =
+and ShapeFSharpUnion<'U, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5> private (info : UnionInfo) =
     inherit ShapeFSharpUnion<'U>()
     member __.Project (u : 'U) =
         if info.IsChoiceType then u :> obj :?> _ else 
@@ -682,29 +689,29 @@ and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5> private (info : UnionInfo) =
         let { Proj = proj } = info.Cases.[tag]
         let value = proj u
         match tag with
-        | 0 -> Choice1Of5(value :?> 'C1)
-        | 1 -> Choice2Of5(value :?> 'C2)
-        | 2 -> Choice3Of5(value :?> 'C3)
-        | 3 -> Choice4Of5(value :?> 'C4)
-        | _ -> Choice5Of5(value :?> 'C5)
+        | 0 -> Choice1Of5(value :?> 'Case1)
+        | 1 -> Choice2Of5(value :?> 'Case2)
+        | 2 -> Choice3Of5(value :?> 'Case3)
+        | 3 -> Choice4Of5(value :?> 'Case4)
+        | _ -> Choice5Of5(value :?> 'Case5)
 
-    member __.Ctor1 (c : 'C1) =
+    member __.Ctor1 (c : 'Case1) =
         let { Ctor = ctor } = info.Cases.[0]
         ctor c :?> 'U
 
-    member __.Ctor2 (c : 'C2) =
+    member __.Ctor2 (c : 'Case2) =
         let { Ctor = ctor } = info.Cases.[1]
         ctor c :?> 'U
 
-    member __.Ctor3 (c : 'C3) =
+    member __.Ctor3 (c : 'Case3) =
         let { Ctor = ctor } = info.Cases.[2]
         ctor c :?> 'U
 
-    member __.Ctor4 (c : 'C4) =
+    member __.Ctor4 (c : 'Case4) =
         let { Ctor = ctor } = info.Cases.[3]
         ctor c :?> 'U
 
-    member __.Ctor5 (c : 'C5) =
+    member __.Ctor5 (c : 'Case5) =
         let { Ctor = ctor } = info.Cases.[3]
         ctor c :?> 'U
 
@@ -713,16 +720,16 @@ and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5> private (info : UnionInfo) =
     override __.IsFSharpChoice = info.IsChoiceType
 
     interface IShapeFSharpUnion5 with
-        member self.Accept(v : IFSharpUnionVisitor5<'R>) = 
-            v.VisitUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5> self
+        member self.Accept(v : IFSharpUnion5Visitor<'R>) = 
+            v.Visit<'U, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5> self
 
-type IFSharpUnionVisitor6<'R> =
-    abstract VisitUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5, 'C6> : ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5, 'C6> -> 'R
+type IFSharpUnion6Visitor<'R> =
+    abstract Visit<'U, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6> : ShapeFSharpUnion<'U, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6> -> 'R
 
 and IShapeFSharpUnion6 =
-    abstract Accept : IFSharpUnionVisitor6<'R> -> 'R
+    abstract Accept : IFSharpUnion6Visitor<'R> -> 'R
 
-and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5, 'C6> private (info : UnionInfo) =
+and ShapeFSharpUnion<'U, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6> private (info : UnionInfo) =
     inherit ShapeFSharpUnion<'U>()
     member __.Project (u : 'U) =
         if info.IsChoiceType then u :> obj :?> _ else 
@@ -730,34 +737,34 @@ and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5, 'C6> private (info : UnionInfo
         let { Proj = proj } = info.Cases.[tag]
         let value = proj u
         match tag with
-        | 0 -> Choice1Of6(value :?> 'C1)
-        | 1 -> Choice2Of6(value :?> 'C2)
-        | 2 -> Choice3Of6(value :?> 'C3)
-        | 3 -> Choice4Of6(value :?> 'C4)
-        | 4 -> Choice5Of6(value :?> 'C5)
-        | _ -> Choice6Of6(value :?> 'C6)
+        | 0 -> Choice1Of6(value :?> 'Case1)
+        | 1 -> Choice2Of6(value :?> 'Case2)
+        | 2 -> Choice3Of6(value :?> 'Case3)
+        | 3 -> Choice4Of6(value :?> 'Case4)
+        | 4 -> Choice5Of6(value :?> 'Case5)
+        | _ -> Choice6Of6(value :?> 'Case6)
 
-    member __.Ctor1 (c : 'C1) =
+    member __.Ctor1 (c : 'Case1) =
         let { Ctor = ctor } = info.Cases.[0]
         ctor c :?> 'U
 
-    member __.Ctor2 (c : 'C2) =
+    member __.Ctor2 (c : 'Case2) =
         let { Ctor = ctor } = info.Cases.[1]
         ctor c :?> 'U
 
-    member __.Ctor3 (c : 'C3) =
+    member __.Ctor3 (c : 'Case3) =
         let { Ctor = ctor } = info.Cases.[2]
         ctor c :?> 'U
 
-    member __.Ctor4 (c : 'C4) =
+    member __.Ctor4 (c : 'Case4) =
         let { Ctor = ctor } = info.Cases.[3]
         ctor c :?> 'U
 
-    member __.Ctor5 (c : 'C5) =
+    member __.Ctor5 (c : 'Case5) =
         let { Ctor = ctor } = info.Cases.[3]
         ctor c :?> 'U
 
-    member __.Ctor6 (c : 'C6) =
+    member __.Ctor6 (c : 'Case6) =
         let { Ctor = ctor } = info.Cases.[3]
         ctor c :?> 'U
 
@@ -766,16 +773,16 @@ and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5, 'C6> private (info : UnionInfo
     override __.IsFSharpChoice = info.IsChoiceType
 
     interface IShapeFSharpUnion6 with
-        member self.Accept(v : IFSharpUnionVisitor6<'R>) = 
-            v.VisitUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5, 'C6> self
+        member self.Accept(v : IFSharpUnion6Visitor<'R>) = 
+            v.Visit<'U, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6> self
 
-type IFSharpUnionVisitor7<'R> =
-    abstract VisitUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5, 'C6, 'C7> : ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5, 'C6, 'C7> -> 'R
+type IFSharpUnion7Visitor<'R> =
+    abstract Visit<'U, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6, 'Case7> : ShapeFSharpUnion<'U, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6, 'Case7> -> 'R
 
 and IShapeFSharpUnion7 =
-    abstract Accept : IFSharpUnionVisitor7<'R> -> 'R
+    abstract Accept : IFSharpUnion7Visitor<'R> -> 'R
 
-and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5, 'C6, 'C7> private (info : UnionInfo) =
+and ShapeFSharpUnion<'U, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6, 'Case7> private (info : UnionInfo) =
     inherit ShapeFSharpUnion<'U>()
     member __.Project (u : 'U) =
         if info.IsChoiceType then u :> obj :?> _ else 
@@ -783,39 +790,39 @@ and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5, 'C6, 'C7> private (info : Unio
         let { Proj = proj } = info.Cases.[tag]
         let value = proj u
         match tag with
-        | 0 -> Choice1Of7(value :?> 'C1)
-        | 1 -> Choice2Of7(value :?> 'C2)
-        | 2 -> Choice3Of7(value :?> 'C3)
-        | 3 -> Choice4Of7(value :?> 'C4)
-        | 4 -> Choice5Of7(value :?> 'C5)
-        | 5 -> Choice6Of7(value :?> 'C6)
-        | _ -> Choice7Of7(value :?> 'C7)
+        | 0 -> Choice1Of7(value :?> 'Case1)
+        | 1 -> Choice2Of7(value :?> 'Case2)
+        | 2 -> Choice3Of7(value :?> 'Case3)
+        | 3 -> Choice4Of7(value :?> 'Case4)
+        | 4 -> Choice5Of7(value :?> 'Case5)
+        | 5 -> Choice6Of7(value :?> 'Case6)
+        | _ -> Choice7Of7(value :?> 'Case7)
 
-    member __.Ctor1 (c : 'C1) =
+    member __.Ctor1 (c : 'Case1) =
         let { Ctor = ctor } = info.Cases.[0]
         ctor c :?> 'U
 
-    member __.Ctor2 (c : 'C2) =
+    member __.Ctor2 (c : 'Case2) =
         let { Ctor = ctor } = info.Cases.[1]
         ctor c :?> 'U
 
-    member __.Ctor3 (c : 'C3) =
+    member __.Ctor3 (c : 'Case3) =
         let { Ctor = ctor } = info.Cases.[2]
         ctor c :?> 'U
 
-    member __.Ctor4 (c : 'C4) =
+    member __.Ctor4 (c : 'Case4) =
         let { Ctor = ctor } = info.Cases.[3]
         ctor c :?> 'U
 
-    member __.Ctor5 (c : 'C5) =
+    member __.Ctor5 (c : 'Case5) =
         let { Ctor = ctor } = info.Cases.[3]
         ctor c :?> 'U
 
-    member __.Ctor6 (c : 'C6) =
+    member __.Ctor6 (c : 'Case6) =
         let { Ctor = ctor } = info.Cases.[3]
         ctor c :?> 'U
 
-    member __.Ctor7 (c : 'C7) =
+    member __.Ctor7 (c : 'Case7) =
         let { Ctor = ctor } = info.Cases.[3]
         ctor c :?> 'U
 
@@ -824,8 +831,8 @@ and ShapeFSharpUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5, 'C6, 'C7> private (info : Unio
     override __.IsFSharpChoice = info.IsChoiceType
 
     interface IShapeFSharpUnion7 with
-        member self.Accept(v : IFSharpUnionVisitor7<'R>) = 
-            v.VisitUnion<'U, 'C1, 'C2, 'C3, 'C4, 'C5, 'C6, 'C7> self
+        member self.Accept(v : IFSharpUnion7Visitor<'R>) = 
+            v.Visit<'U, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6, 'Case7> self
 
 ///////// F# Set
 
@@ -840,9 +847,9 @@ type ShapeFSharpSet<'T when 'T : comparison> () =
     interface IShapeFSharpSet with
         member __.Accept v = v.VisitFSharpSet<'T> ()
     interface IShapeEnumerable with
-        member __.Accept v = v.VisitEnumerable<'T> ()
+        member __.Accept v = v.Visit<'T> ()
     interface IShapeCollection with
-        member __.Accept v = v.VisitCollection<'T> ()
+        member __.Accept v = v.Visit<'T> ()
 
 /////////// F# Map
 
@@ -857,9 +864,9 @@ type ShapeFSharpMap<'K, 'V when 'K : comparison> () =
     interface IShapeFSharpMap with
         member __.Accept v = v.VisitFSharpMap<'K, 'V>()
     interface IShapeEnumerable with
-        member __.Accept v = v.VisitEnumerable<KeyValuePair<'K, 'V>> ()
+        member __.Accept v = v.Visit<KeyValuePair<'K, 'V>> ()
     interface IShapeCollection with
-        member __.Accept v = v.VisitCollection<KeyValuePair<'K, 'V>> ()
+        member __.Accept v = v.Visit<KeyValuePair<'K, 'V>> ()
 
 /////////// F# func
 
@@ -993,7 +1000,7 @@ module private TypeShapeImpl =
                     | [|field|] -> 
                         { CaseInfo = uci ; PTy = field.PropertyType ;
                             Ctor = (fun v -> uctor [|v|]) ;
-                            Proj = (fun u -> field.GetValue(u)) }
+                            Proj = (fun u -> field.GetValue(u, null)) }
                     | _ ->
                         let tupleType = fields |> Array.map (fun f -> f.PropertyType) |> FSharpType.MakeTupleType
                         let uReader = FSharpValue.PreComputeUnionReader(uci, allMembers)
@@ -1085,7 +1092,7 @@ module TypeShapeModule =
     let shapeof<'T> = TypeShapeImpl.resolveTypeShapeCached typeof<'T>
 
     let private SomeU = Some()
-    let inline test0<'TypeShape when 'TypeShape :> TypeShape> (t : TypeShape) =
+    let test0<'TypeShape when 'TypeShape :> TypeShape> (t : TypeShape) =
         match t with
         | :? 'TypeShape -> SomeU
         | _ -> None
@@ -1185,10 +1192,3 @@ module TypeShapeModule =
         | :? IShapeTuple7
         | :? IShapeTuple8 -> SomeU
         | _ -> None
-
-
-//type Foo = { A : int ; B : string }
-//
-//let shape = shapeof<Foo> :?> ShapeFSharpRecord<Foo, int, string>
-//shape.Ctor(2, "42")
-//shape.Proj2 { A = 2 ; B = null}

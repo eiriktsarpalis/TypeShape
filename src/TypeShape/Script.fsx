@@ -1,8 +1,8 @@
-// Learn more about F# at http://fsharp.org. See the 'F# Tutorial' project
-// for more guidance on F# programming.
-
-#load "Library.fs"
+#r "../../bin/TypeShape.dll"
 open TypeShape
 
-let num = Library.hello 42
-printfn "%i" num
+type Foo = { A : int ; B : string }
+
+let shape = shapeof<Foo> :?> ShapeFSharpRecord<Foo, int, string>
+shape.Ctor(2, "42")
+shape.Proj2 { A = 2 ; B = null}
