@@ -1,38 +1,48 @@
-[![Issue Stats](http://issuestats.com/github/fsprojects/ProjectScaffold/badge/issue)](http://issuestats.com/github/fsprojects/ProjectScaffold)
-[![Issue Stats](http://issuestats.com/github/fsprojects/ProjectScaffold/badge/pr)](http://issuestats.com/github/fsprojects/ProjectScaffold)
+# TypeShape
 
-# ProjectScaffold
+TypeShape is a small F# library for generic programming.
+Borrows from ideas used in the FsPickler [implementation](http://mbraceproject.github.io/FsPickler/overview.html#Pickler-Generation).
 
-This project can be used to scaffold a prototypical .NET solution including file system layout and tooling. This includes a build process that: 
+### Example: Implementing a value printer
 
-* updates all AssemblyInfo files
-* compiles the application and runs all test projects
-* generates [SourceLinks](https://github.com/ctaggart/SourceLink)
-* generates API docs based on XML document tags
-* generates [documentation based on Markdown files](http://fsprojects.github.io/ProjectScaffold/writing-docs.html)
-* generates [NuGet](http://www.nuget.org) packages
-* and allows a simple [one step release process](http://fsprojects.github.io/ProjectScaffold/release-process.html).
+```fsharp
+open System
+open TypeShape
 
-In order to start the scaffolding process run 
+let rec mkPrinter<'T> () : 'T -> string = mkPrinterUntyped typeof<'T> :?> _
+and private mkPrinterUntyped (t : Type) : obj =
+    match getShape t with
+    | ShapeUnit -> box(fun () -> "()")
+    | ShapeBool -> box(sprintf "%b")
+    | ShapeInt32 -> box(sprintf "%d")
+    | ShapeString -> box(sprintf "%s")
+    | ShapeFSharpOption s ->
+        s.Accept {
+            new IFSharpOptionVisitor<obj> with
+                member __.Visit<'T> () =
+                    let tp = mkPrinter<'T>()
+                    box(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
+        }
 
-    > build.cmd // on windows    
-    $ ./build.sh  // on unix
-    
-Read the [Getting started tutorial](http://fsprojects.github.io/ProjectScaffold/index.html#Getting-started) to learn more.
+    | ShapeFSharpList s ->
+        s.Accept {
+            new IFSharpListVisitor<obj> with
+                member __.Visit<'T> () =
+                    let tp = mkPrinter<'T>()
+                    box(fun ts -> ts |> List.map tp |> String.concat "; " |> sprintf "[%s]")
+        }
 
-Documentation: http://fsprojects.github.io/ProjectScaffold
+    | ShapeTuple2 s ->
+        s.Accept {
+            new ITuple2Visitor<obj> with
+                member __.Visit<'T, 'S> () =
+                    let tp = mkPrinter<'T>()
+                    let sp = mkPrinter<'S>()
+                    box(fun (t : 'T, s : 'S) -> sprintf "(%s, %s)" (tp t) (sp s))
+        }
 
+    | _ -> failwithf "unsupported type '%O'" t
 
-## Build Status
-
-Mono | .NET
----- | ----
-[![Mono CI Build Status](https://img.shields.io/travis/fsprojects/ProjectScaffold/master.svg)](https://travis-ci.org/fsprojects/ProjectScaffold) | [![.NET Build Status](https://img.shields.io/appveyor/ci/fsgit/ProjectScaffold/master.svg)](https://ci.appveyor.com/project/fsgit/projectscaffold)
-
-## Maintainer(s)
-
-- [@forki](https://github.com/forki)
-- [@pblasucci](https://github.com/pblasucci)
-- [@sergey-tihon](https://github.com/sergey-tihon)
-
-The default maintainer account for projects under "fsprojects" is [@fsprojectsgit](https://github.com/fsprojectsgit) - F# Community Project Incubation Space (repo management)
+let p = mkPrinter<int list * (string option * (bool * unit))> ()
+p ([1 .. 5], (None, (false, ())))
+```
