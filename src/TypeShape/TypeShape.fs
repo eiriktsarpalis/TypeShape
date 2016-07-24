@@ -64,10 +64,13 @@ type ShapeNullable<'T when 'T : (new : unit -> 'T) and 'T :> ValueType and 'T : 
 
 ///////////// System.Tuple
 
+type IShapeTuple = interface end
+
 type ITuple1Visitor<'R> =
     abstract Visit<'T> : unit -> 'R
 
 type IShapeTuple1 =
+    inherit IShapeTuple
     abstract Accept : ITuple1Visitor<'R> -> 'R
 
 type ShapeTuple<'T> () =
@@ -79,6 +82,7 @@ type ITuple2Visitor<'R> =
     abstract Visit<'T1, 'T2> : unit -> 'R
 
 type IShapeTuple2 =
+    inherit IShapeTuple
     abstract Accept : ITuple2Visitor<'R> -> 'R
 
 type ShapeTuple<'T1, 'T2> () =
@@ -90,6 +94,7 @@ type ITuple3Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3> : unit -> 'R
 
 type IShapeTuple3 =
+    inherit IShapeTuple
     abstract Accept : ITuple3Visitor<'R> -> 'R
 
 type ShapeTuple<'T1, 'T2, 'T3> () =
@@ -101,6 +106,7 @@ type ITuple4Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4> : unit -> 'R
 
 type IShapeTuple4 =
+    inherit IShapeTuple
     abstract Accept : ITuple4Visitor<'R> -> 'R
 
 type ShapeTuple<'T1, 'T2, 'T3, 'T4> () =
@@ -112,6 +118,7 @@ type ITuple5Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5> : unit -> 'R
 
 type IShapeTuple5 =
+    inherit IShapeTuple
     abstract Accept : ITuple5Visitor<'R> -> 'R
 
 type ShapeTuple<'T1, 'T2, 'T3, 'T4, 'T5> () =
@@ -123,6 +130,7 @@ type ITuple6Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> : unit -> 'R
 
 type IShapeTuple6 =
+    inherit IShapeTuple
     abstract Accept : ITuple6Visitor<'R> -> 'R
 
 type ShapeTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> () =
@@ -134,6 +142,7 @@ type ITuple7Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> : unit -> 'R
 
 type IShapeTuple7 =
+    inherit IShapeTuple
     abstract Accept : ITuple7Visitor<'R> -> 'R
 
 type ShapeTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> () =
@@ -145,6 +154,7 @@ type ITuple8Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> : unit -> 'R
 
 type IShapeTuple8 =
+    inherit IShapeTuple
     abstract Accept : ITuple8Visitor<'R> -> 'R
 
 type ShapeTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> () =
@@ -227,6 +237,7 @@ type IArrayVisitor<'R> =
     abstract Visit<'T> : unit -> 'R
 
 type IShapeArray =
+    inherit IShapeCollection
     abstract Accept : IArrayVisitor<'R> -> 'R
 
 type ShapeArray<'T>() =
@@ -281,10 +292,15 @@ type IResizeArrayVisitor<'R> =
     abstract Visit<'T> : unit -> 'R
 
 type IShapeResizeArray =
+    inherit IShapeCollection
     abstract Accept : IResizeArrayVisitor<'R> -> 'R
 
 type ShapeResizeArray<'T> () =
     inherit TypeShape<ResizeArray<'T>> ()
+    interface IShapeEnumerable with
+        member __.Accept v = v.Visit<'T> ()
+    interface IShapeCollection with
+        member __.Accept v = v.Visit<'T> ()
     interface IShapeResizeArray with
         member __.Accept v = v.Visit<'T> ()
 
@@ -295,16 +311,17 @@ type IDictionaryVisitor<'R> =
     abstract Visit<'K, 'V when 'K : equality> : unit -> 'R
 
 type IShapeDictionary =
+    inherit IShapeCollection
     abstract Accept : IDictionaryVisitor<'R> -> 'R
 
 type ShapeDictionary<'K, 'V when 'K : equality> () =
     inherit TypeShape<Dictionary<'K, 'V>> ()
-    interface IShapeDictionary with
-        member __.Accept v = v.Visit<'K, 'V> ()
     interface IShapeEnumerable with
         member __.Accept v = v.Visit<KeyValuePair<'K, 'V>> ()
     interface IShapeCollection with
         member __.Accept v = v.Visit<KeyValuePair<'K, 'V>> ()
+    interface IShapeDictionary with
+        member __.Accept v = v.Visit<'K, 'V> ()
 
 ///////////// System.Collections.HashSet
 
@@ -312,15 +329,16 @@ type IHashSetVisitor<'R> =
     abstract Visit<'T when 'T : equality> : unit -> 'R
 
 type IShapeHashSet =
+    inherit IShapeCollection
     abstract Accept : IHashSetVisitor<'R> -> 'R
 
 type ShapeHashSet<'T when 'T : equality> () =
     inherit TypeShape<HashSet<'T>> ()
-    interface IShapeHashSet with
-        member __.Accept v = v.Visit<'T> ()
     interface IShapeEnumerable with
         member __.Accept v = v.Visit<'T> ()
     interface IShapeCollection with
+        member __.Accept v = v.Visit<'T> ()
+    interface IShapeHashSet with
         member __.Accept v = v.Visit<'T> ()
 
 ///////////// F# Set
@@ -329,15 +347,16 @@ type IFSharpSetVisitor<'R> =
     abstract Visit<'T when 'T : comparison> : unit -> 'R
 
 type IShapeFSharpSet =
+    inherit IShapeCollection
     abstract Accept : IFSharpSetVisitor<'R> -> 'R
 
 type ShapeFSharpSet<'T when 'T : comparison> () =
     inherit TypeShape<Set<'T>> ()
-    interface IShapeFSharpSet with
-        member __.Accept v = v.Visit<'T> ()
     interface IShapeEnumerable with
         member __.Accept v = v.Visit<'T> ()
     interface IShapeCollection with
+        member __.Accept v = v.Visit<'T> ()
+    interface IShapeFSharpSet with
         member __.Accept v = v.Visit<'T> ()
 
 ///////////// F# Map
@@ -346,16 +365,17 @@ type IFSharpMapVisitor<'R> =
     abstract Visit<'K, 'V when 'K : comparison> : unit -> 'R
 
 type IShapeFSharpMap =
+    inherit IShapeCollection
     abstract Accept : IFSharpMapVisitor<'R> -> 'R
 
 type ShapeFSharpMap<'K, 'V when 'K : comparison> () =
     inherit TypeShape<Map<'K,'V>> ()
-    interface IShapeFSharpMap with
-        member __.Accept v = v.Visit<'K, 'V>()
     interface IShapeEnumerable with
         member __.Accept v = v.Visit<KeyValuePair<'K, 'V>> ()
     interface IShapeCollection with
         member __.Accept v = v.Visit<KeyValuePair<'K, 'V>> ()
+    interface IShapeFSharpMap with
+        member __.Accept v = v.Visit<'K, 'V>()
 
 //////////////////////////////////
 ///////////// Section: F# Records
@@ -1196,6 +1216,7 @@ module TypeShapeModule =
     let (|ShapeArray3D|_|) t = test1<IShapeArray3D> t
     let (|ShapeArray4D|_|) t = test1<IShapeArray4D> t
 
+    let (|ShapeTuple|_|)  t = test1<IShapeTuple> t
     let (|ShapeTuple1|_|) t = test1<IShapeTuple1> t
     let (|ShapeTuple2|_|) t = test1<IShapeTuple2> t
     let (|ShapeTuple3|_|) t = test1<IShapeTuple3> t
@@ -1211,7 +1232,7 @@ module TypeShapeModule =
     let (|ShapeFSharpSet|_|) t = test1<IShapeFSharpSet> t
     let (|ShapeFSharpMap|_|) t = test1<IShapeFSharpMap> t
     let (|ShapeFSharpFunc|_|) t = test1<IShapeFSharpFunc> t
-    let (|ShapeFSharpException|_|) t = test1<IShapeException> t
+    let (|ShapeException|_|) t = test1<IShapeException> t
 
     let (|ShapeFSharpUnion1|_|) t = test1<IShapeFSharpUnion1> t
     let (|ShapeFSharpUnion2|_|) t = test1<IShapeFSharpUnion2> t
@@ -1246,16 +1267,4 @@ module TypeShapeModule =
         | :? TypeShape<single>
         | :? TypeShape<double>
         | :? TypeShape<decimal> -> SomeU
-        | _ -> None
-
-    let (|ShapeTuple|_|) (t : TypeShape) =
-        match box t with
-        | :? IShapeTuple1
-        | :? IShapeTuple2
-        | :? IShapeTuple3
-        | :? IShapeTuple4
-        | :? IShapeTuple5
-        | :? IShapeTuple6
-        | :? IShapeTuple7
-        | :? IShapeTuple8 -> SomeU
         | _ -> None
