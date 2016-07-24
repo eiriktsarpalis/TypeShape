@@ -1,6 +1,13 @@
+framework: >= net45
 source https://nuget.org/api/v2
 
 nuget FSharp.Core redirects: force
+nuget xunit ~> 2.0
+nuget xunit.extensions
+nuget xunit.runner.console
+nuget xunit.runner.visualstudio version_in_path: true
+nuget Unquote
+nuget FsCheck
 
 group Build
   source https://nuget.org/api/v2
@@ -10,9 +17,3 @@ group Build
   nuget FSharp.Formatting
 
   github fsharp/FAKE modules/Octokit/Octokit.fsx
-
-group Test
-  source https://nuget.org/api/v2
-  
-  nuget NUnit ~> 2
-  nuget NUnit.Runners ~> 2

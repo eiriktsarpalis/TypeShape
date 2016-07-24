@@ -1,11 +1,31 @@
+FRAMEWORK: >= NET45
 NUGET
   remote: https://www.nuget.org/api/v2
+    FsCheck (2.5)
+      FSharp.Core (>= 3.1.2.5)
     FSharp.Core (4.0.0.1) - redirects: force
+    Unquote (3.1.1)
+    xunit (2.1)
+      xunit.assert (2.1)
+      xunit.core (2.1)
+    xunit.abstractions (2.0)
+    xunit.assert (2.1)
+    xunit.core (2.1)
+      xunit.extensibility.core (2.1)
+      xunit.extensibility.execution (2.1)
+    xunit.extensibility.core (2.1)
+      xunit.abstractions (2.0)
+    xunit.extensibility.execution (2.1)
+      xunit.extensibility.core (2.1)
+    xunit.extensions (1.9.0.1566)
+      xunit (>= 1.9.0.1566)
+    xunit.runner.console (2.1)
+    xunit.runner.visualstudio (2.1.0) - version_in_path: true
 
 GROUP Build
 NUGET
   remote: https://www.nuget.org/api/v2
-    FAKE (4.34.5)
+    FAKE (4.35)
     FSharp.Compiler.Service (2.0.0.6)
     FSharp.Formatting (2.14.4)
       FSharp.Compiler.Service (2.0.0.6)
@@ -23,10 +43,5 @@ NUGET
     SourceLink.Fake (1.1)
 GITHUB
   remote: fsharp/FAKE
-    modules/Octokit/Octokit.fsx (573a4dc3d2be229d55a4935136f393d1f1d683c1)
+    modules/Octokit/Octokit.fsx (6fd8b4d79012bde7c3210031b5017b6c9fc05fda)
       Octokit (>= 0.20)
-GROUP Test
-NUGET
-  remote: https://www.nuget.org/api/v2
-    NUnit (2.6.4)
-    NUnit.Runners (2.6.4)

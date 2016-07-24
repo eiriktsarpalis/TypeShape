@@ -12,6 +12,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{5BA0
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape.Tests", "tests\TypeShape.Tests\TypeShape.Tests.fsproj", "{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -22,6 +24,10 @@ Global
 		{8609D2FB-063F-45FE-94E2-FF251792C495}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8609D2FB-063F-45FE-94E2-FF251792C495}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8609D2FB-063F-45FE-94E2-FF251792C495}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

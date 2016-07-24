@@ -1,4 +1,6 @@
 FSharp.Core
-group Test
-NUnit
-NUnit.Runners
+xunit
+xunit.extensions
+xunit.runner.visualstudio
+UnQuote
+FsCheck

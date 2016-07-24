@@ -1312,7 +1312,7 @@ module TypeShapeModule =
         TypeShapeImpl.resolveTypeShapeCached (obj.GetType())
 
     /// Computes the type shape for given type
-    let shapeof<'T> = TypeShapeImpl.resolveTypeShapeCached typeof<'T>
+    let shapeof<'T> = TypeShapeImpl.resolveTypeShapeCached typeof<'T> :?> TypeShape<'T>
 
     let private SomeU = Some()
     let inline private test0<'T> (t : TypeShape) =
