@@ -1,4 +1,8 @@
-﻿module TypeShape
+﻿#if TYPESHAPE_HIDE
+module internal TypeShape
+#else
+module TypeShape
+#endif
 
 #nowarn "4224"
 
@@ -21,7 +25,6 @@ type TypeShape internal () =
 
 type TypeShape<'T> =
     inherit TypeShape
-
     [<CompilerMessage("TypeShape<'T> constructor should only be used when inheriting shape implementations.", 4224)>]
     new () = { inherit TypeShape() }
     override __.Type = typeof<'T>
