@@ -24,7 +24,6 @@ type TypeShape<'T> =
 
     [<CompilerMessage("TypeShape<'T> constructor should only be used when inheriting shape implementations.", 4224)>]
     new () = { inherit TypeShape() }
-    member __.TypeCode = Type.GetTypeCode typeof<'T>
     override __.Type = typeof<'T>
     override __.Accept v = v.Visit<'T> ()
 
