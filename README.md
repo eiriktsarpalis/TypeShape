@@ -44,5 +44,5 @@ and private mkPrinterUntyped (t : Type) : obj =
     | _ -> failwithf "unsupported type '%O'" t
 
 let p = mkPrinter<int list * (string option * (bool * unit))> ()
-p ([1 .. 5], (None, (false, ())))
+p ([1 .. 5], (None, (false, ()))) // "([], (None, (false, ())))"
 ```
