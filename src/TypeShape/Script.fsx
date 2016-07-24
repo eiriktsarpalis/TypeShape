@@ -8,7 +8,7 @@ and private mkPrinterUntyped (t : Type) : obj =
     | ShapeUnit -> box(fun () -> "()")
     | ShapeBool -> box(sprintf "%b")
     | ShapeInt32 -> box(sprintf "%d")
-    | ShapeString -> box(sprintf "%s")
+    | ShapeString -> box(sprintf "\"%s\"")
     | ShapeFSharpOption s ->
         s.Accept {
             new IFSharpOptionVisitor<obj> with
@@ -37,8 +37,14 @@ and private mkPrinterUntyped (t : Type) : obj =
     | _ -> failwithf "unsupported type '%O'" t
 
 
-#time "on"
 
-let p = mkPrinter<int list * (string option * (bool * unit))> ()
-p ([1 .. 5], (None, (false, ())))
-sprintf "%A" ([1 .. 5], (None, (false, ())))
+let p = mkPrinter<(int list * string option) * (bool * unit)> ()
+p (([1 .. 5], None), (false, ()))
+
+#time "on"
+let value = (([1 .. 5], Some "42"), (false, ()))
+
+// Real: 00:00:00.561, CPU: 00:00:00.562, GC gen0: 32, gen1: 0, gen2: 0
+for i = 1 to 1000 do ignore <| sprintf "%A" value
+// Real: 00:00:00.010, CPU: 00:00:00.000, GC gen0: 1, gen1: 0, gen2: 0
+for i = 1 to 1000 do ignore <| p value

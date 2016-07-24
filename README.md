@@ -43,6 +43,16 @@ and private mkPrinterUntyped (t : Type) : obj =
 
     | _ -> failwithf "unsupported type '%O'" t
 
-let p = mkPrinter<int list * (string option * (bool * unit))> ()
-p ([1 .. 5], (None, (false, ()))) // "([], (None, (false, ())))"
+let p = mkPrinter<(int list * string option) * (bool * unit)> ()
+p (([1 .. 5], None), (false, ())) // "(([1; 2; 3; 4; 5], None), (false, ()))"
+```
+Let's see how the value printer compares to sprintf:
+```fsharp
+#time "on"
+let value = (([1 .. 5], Some "42"), (false, ()))
+
+// Real: 00:00:00.561, CPU: 00:00:00.562, GC gen0: 32, gen1: 0, gen2: 0
+for i = 1 to 1000 do ignore <| sprintf "%A" value
+// Real: 00:00:00.010, CPU: 00:00:00.000, GC gen0: 1, gen1: 0, gen2: 0
+for i = 1 to 1000 do ignore <| p value
 ```
