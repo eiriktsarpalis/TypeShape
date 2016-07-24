@@ -15,7 +15,7 @@ and private mkPrinterUntyped (t : Type) : obj =
     | ShapeUnit -> box(fun () -> "()")
     | ShapeBool -> box(sprintf "%b")
     | ShapeInt32 -> box(sprintf "%d")
-    | ShapeString -> box(sprintf "%s")
+    | ShapeString -> box(sprintf "\"%s\"")
     | ShapeFSharpOption s ->
         s.Accept {
             new IFSharpOptionVisitor<obj> with
