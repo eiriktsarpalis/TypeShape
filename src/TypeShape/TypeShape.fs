@@ -181,11 +181,13 @@ type IExceptionVisitor<'R> =
     abstract Visit<'exn when 'exn :> exn> : unit -> 'R
 
 type IShapeException =
+    abstract IsFSharpException : bool
     abstract Accept : IExceptionVisitor<'R> -> 'R
 
-type private ShapeException<'exn when 'exn :> exn> () =
+type private ShapeException<'exn when 'exn :> exn> (isFSharpExn : bool) =
     inherit TypeShape<'exn> ()
     interface IShapeException with
+        member __.IsFSharpException = isFSharpExn
         member __.Accept v = v.Visit<'exn> ()
 
 
@@ -1080,9 +1082,8 @@ type IFSharpOptionVisitor<'R> =
 type IShapeFSharpOption =
     abstract Accept : IFSharpOptionVisitor<'R> -> 'R
 
-type ShapeFSharpOption<'T> () =
+type ShapeFSharpOption<'T> (unionCases : UnionCaseInfo list) =
     inherit TypeShape<'T option> ()
-    let ucis = FSharpType.GetUnionCases typeof<'T option> |> Array.toList
     interface IShapeFSharpOption with
         member __.Accept v = v.Visit<'T> ()
 
@@ -1092,7 +1093,7 @@ type ShapeFSharpOption<'T> () =
         member __.IsFSharpChoice = false
         member __.IsFSharpList = false
         member __.IsFSharpOption = true
-        member __.UnionCaseInfo = ucis
+        member __.UnionCaseInfo = unionCases
         member __.Project t = match t with None -> Choice1Of2 () | Some t -> Choice2Of2 t
         member __.Construct1 (()) = None
         member __.Construct2 t = Some t
@@ -1106,9 +1107,8 @@ type IFSharpListVisitor<'R> =
 type IShapeFSharpList =
     abstract Accept : IFSharpListVisitor<'R> -> 'R
 
-type ShapeFSharpList<'T> () =
+type ShapeFSharpList<'T> (unionCases : UnionCaseInfo list) =
     inherit TypeShape<'T list> ()
-    let ucis = FSharpType.GetUnionCases typeof<'T list> |> Array.toList
     interface IShapeFSharpList with
         member __.Accept v = v.Visit<'T> ()
     interface IShapeEnumerable with
@@ -1121,7 +1121,7 @@ type ShapeFSharpList<'T> () =
         member __.IsFSharpChoice = false
         member __.IsFSharpList = true
         member __.IsFSharpOption = false
-        member __.UnionCaseInfo = ucis
+        member __.UnionCaseInfo = unionCases
         member __.Project ts = match ts with [] -> Choice1Of2() | t :: tl -> Choice2Of2(t,tl)
         member __.Construct1 (()) = []
         member __.Construct2 ((t, tl)) = t :: tl
@@ -1205,7 +1205,8 @@ module private TypeShapeImpl =
             | _ -> raise <| UnsupportedShape t
 
         elif isAssignableFrom typeof<exn> t then
-            activate1 typedefof<ShapeException<_>> t
+            let isFSharpExn = FSharpType.IsExceptionRepresentation(t, allMembers)
+            activateArgs typedefof<ShapeException<_>> [|t|] [|isFSharpExn|]
 
         elif FSharpType.IsFunction t then
             let d,c = FSharpType.GetFunctionElements t
@@ -1240,9 +1241,11 @@ module private TypeShapeImpl =
                 else None
 
             if genTy = Some(typedefof<_ list>) then
-                activate typedefof<ShapeFSharpList<_>> (t.GetGenericArguments())
+                let ucis = FSharpType.GetUnionCases(t, allMembers) |> Array.toList
+                activateArgs typedefof<ShapeFSharpList<_>> (t.GetGenericArguments()) [|ucis|]
             elif genTy = Some(typedefof<_ option>) then
-                activate typedefof<ShapeFSharpOption<_>> (t.GetGenericArguments())
+                let ucis = FSharpType.GetUnionCases(t, allMembers) |> Array.toList
+                activateArgs typedefof<ShapeFSharpOption<_>> (t.GetGenericArguments()) [|ucis|]
             else
                 let isChoice =
                     Option.isSome genTy &&
@@ -1320,120 +1323,134 @@ module private TypeShapeImpl =
 //////////////////////////////////
 ///////////// Section: Public API
 
+type TypeShape with
+
+    /// <summary>
+    ///     Computes the type shape for given type
+    /// </summary>
+    /// <param name="t">System.Type to be resolved.</param>
+    /// <param name="addOnResolver">User supplied add-on resolver for custom shapes.</param>
+    static member Resolve (t : Type, ?addOnResolver : Type -> TypeShape option) = 
+        if t = null then raise <| ArgumentNullException()
+        match addOnResolver with
+        | None -> TypeShapeImpl.resolveTypeShapeCached t
+        | Some r -> TypeShapeImpl.resolveTypeShape r t
+
+    /// <summary>
+    ///     Computes the type shape for given type
+    /// </summary>
+    /// <param name="addOnResolver">User supplied add-on resolver for custom shapes.</param>
+    static member Resolve<'T> (?addOnResolver : Type -> TypeShape option) =
+        TypeShape.Resolve(typeof<'T>, ?addOnResolver = addOnResolver) :?> TypeShape<'T>
+
 [<AutoOpen>]
-module TypeShapeModule =
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module TypeShape =
 
     /// Computes the type shape for given type
-    let getShape (t : Type) = TypeShapeImpl.resolveTypeShapeCached t
-    /// Computes the type shape for given object
-    let getObjectShape (obj : obj) = 
-        if obj = null then raise <| new ArgumentNullException()
-        TypeShapeImpl.resolveTypeShapeCached (obj.GetType())
+    let shapeof<'T> = TypeShape.Resolve<'T>()
 
-    /// Computes the type shape for given type
-    let shapeof<'T> = TypeShapeImpl.resolveTypeShapeCached typeof<'T> :?> TypeShape<'T>
+/// Type shape active recognizers
+[<RequireQualifiedAccess>]
+module Shape =
+    let private SomeU = Some() // avoid allocating this all the time
+    let inline private test0<'T> (t : TypeShape) =
+        match t with
+        | :? TypeShape<'T> -> SomeU
+        | _ -> None
 
-    /// Type shape active recognizers
-    [<RequireQualifiedAccess>]
-    module Shape =
-        let private SomeU = Some()
-        let inline private test0<'T> (t : TypeShape) =
-            match t with
-            | :? TypeShape<'T> -> SomeU
-            | _ -> None
+    let inline private test1<'If> (t : TypeShape) =
+        match t :> obj with
+        | :? 'If as f -> Some f
+        | _ -> None
 
-        let inline private test1<'If> (t : TypeShape) =
-            match t :> obj with
-            | :? 'If as f -> Some f
-            | _ -> None
+    let (|Bool|_|) t = test0<bool> t
+    let (|Byte|_|) t = test0<byte> t
+    let (|SByte|_|) t = test0<sbyte> t
+    let (|Int16|_|) t = test0<int16> t
+    let (|Int32|_|) t = test0<int32> t
+    let (|Int64|_|) t = test0<int64> t
+    let (|UInt16|_|) t = test0<uint16> t
+    let (|UInt32|_|) t = test0<uint32> t
+    let (|UInt64|_|) t = test0<uint64> t
+    let (|Single|_|) t = test0<single> t
+    let (|Double|_|) t = test0<double> t
+    let (|Char|_|) t = test0<char> t
 
-        let (|Bool|_|) t = test0<bool> t
-        let (|Byte|_|) t = test0<byte> t
-        let (|SByte|_|) t = test0<sbyte> t
-        let (|Int16|_|) t = test0<int16> t
-        let (|Int32|_|) t = test0<int32> t
-        let (|Int64|_|) t = test0<int64> t
-        let (|UInt16|_|) t = test0<uint16> t
-        let (|UInt32|_|) t = test0<uint32> t
-        let (|UInt64|_|) t = test0<uint64> t
-        let (|Single|_|) t = test0<single> t
-        let (|Double|_|) t = test0<double> t
-        let (|Char|_|) t = test0<char> t
-
-        let (|String|_|) t = test0<string> t
-        let (|Guid|_|) t = test0<Guid> t
-        let (|Decimal|_|) t = test0<decimal> t
-        let (|TimeSpan|_|) t = test0<TimeSpan> t
-        let (|DateTime|_|) t = test0<DateTime> t
-        let (|DateTimeOffset|_|) t = test0<DateTimeOffset> t
-        let (|DBNull|_|) t = test0<DBNull> t
-        let (|Unit|_|) t = test0<unit> t
-        let (|FSharpUnit|_|) t = test0<unit> t
-        let (|ByteArray|_|) t = test0<byte []> t
+    let (|String|_|) t = test0<string> t
+    let (|Guid|_|) t = test0<Guid> t
+    let (|Decimal|_|) t = test0<decimal> t
+    let (|TimeSpan|_|) t = test0<TimeSpan> t
+    let (|DateTime|_|) t = test0<DateTime> t
+    let (|DateTimeOffset|_|) t = test0<DateTimeOffset> t
+    let (|DBNull|_|) t = test0<DBNull> t
+    let (|Unit|_|) t = test0<unit> t
+    let (|FSharpUnit|_|) t = test0<unit> t
+    let (|ByteArray|_|) t = test0<byte []> t
     
-        let (|Nullable|_|) t = test1<IShapeNullable> t
-        let (|Enum|_|) t = test1<IShapeEnum> t
-        let (|KeyValuePair|_|) t = test1<IShapeKeyValuePair> t
-        let (|Dictionary|_|) t = test1<IShapeDictionary> t
-        let (|HashSet|_|) t = test1<IShapeHashSet> t
-        let (|ResizeArray|_|) t = test1<IShapeResizeArray> t
+    let (|Nullable|_|) t = test1<IShapeNullable> t
+    let (|Enum|_|) t = test1<IShapeEnum> t
+    let (|KeyValuePair|_|) t = test1<IShapeKeyValuePair> t
+    let (|Dictionary|_|) t = test1<IShapeDictionary> t
+    let (|HashSet|_|) t = test1<IShapeHashSet> t
+    let (|ResizeArray|_|) t = test1<IShapeResizeArray> t
 
-        let (|Array|_|) t = test1<IShapeArray> t
-        let (|Array2D|_|) t = test1<IShapeArray2D> t
-        let (|Array3D|_|) t = test1<IShapeArray3D> t
-        let (|Array4D|_|) t = test1<IShapeArray4D> t
+    let (|Array|_|) t = test1<IShapeArray> t
+    let (|Array2D|_|) t = test1<IShapeArray2D> t
+    let (|Array3D|_|) t = test1<IShapeArray3D> t
+    let (|Array4D|_|) t = test1<IShapeArray4D> t
 
-        let (|Tuple|_|)  t = test1<IShapeTuple> t
-        let (|Tuple1|_|) t = test1<IShapeTuple1> t
-        let (|Tuple2|_|) t = test1<IShapeTuple2> t
-        let (|Tuple3|_|) t = test1<IShapeTuple3> t
-        let (|Tuple4|_|) t = test1<IShapeTuple4> t
-        let (|Tuple5|_|) t = test1<IShapeTuple5> t
-        let (|Tuple6|_|) t = test1<IShapeTuple6> t
-        let (|Tuple7|_|) t = test1<IShapeTuple7> t
-        let (|Tuple8|_|) t = test1<IShapeTuple8> t
+    let (|Tuple|_|)  t = test1<IShapeTuple> t
+    let (|Tuple1|_|) t = test1<IShapeTuple1> t
+    let (|Tuple2|_|) t = test1<IShapeTuple2> t
+    let (|Tuple3|_|) t = test1<IShapeTuple3> t
+    let (|Tuple4|_|) t = test1<IShapeTuple4> t
+    let (|Tuple5|_|) t = test1<IShapeTuple5> t
+    let (|Tuple6|_|) t = test1<IShapeTuple6> t
+    let (|Tuple7|_|) t = test1<IShapeTuple7> t
+    let (|Tuple8|_|) t = test1<IShapeTuple8> t
 
-        let (|FSharpList|_|) t = test1<IShapeFSharpList> t
-        let (|FSharpOption|_|) t = test1<IShapeFSharpOption> t
-        let (|FSharpRef|_|) t = test1<IShapeFSharpRef> t
-        let (|FSharpSet|_|) t = test1<IShapeFSharpSet> t
-        let (|FSharpMap|_|) t = test1<IShapeFSharpMap> t
-        let (|FSharpFunc|_|) t = test1<IShapeFSharpFunc> t
-        let (|Exception|_|) t = test1<IShapeException> t
+    let (|FSharpList|_|) t = test1<IShapeFSharpList> t
+    let (|FSharpOption|_|) t = test1<IShapeFSharpOption> t
+    let (|FSharpRef|_|) t = test1<IShapeFSharpRef> t
+    let (|FSharpSet|_|) t = test1<IShapeFSharpSet> t
+    let (|FSharpMap|_|) t = test1<IShapeFSharpMap> t
+    let (|FSharpFunc|_|) t = test1<IShapeFSharpFunc> t
+    let (|Exception|_|) t = test1<IShapeException> t
 
-        let (|FSharpUnion|_|) t = test1<IShapeFSharpUnion> t
-        let (|FSharpUnion1|_|) t = test1<IShapeFSharpUnion1> t
-        let (|FSharpUnion2|_|) t = test1<IShapeFSharpUnion2> t
-        let (|FSharpUnion3|_|) t = test1<IShapeFSharpUnion3> t
-        let (|FSharpUnion4|_|) t = test1<IShapeFSharpUnion4> t
-        let (|FSharpUnion5|_|) t = test1<IShapeFSharpUnion5> t
-        let (|FSharpUnion6|_|) t = test1<IShapeFSharpUnion6> t
-        let (|FSharpUnion7|_|) t = test1<IShapeFSharpUnion7> t
+    let (|FSharpUnion|_|) t = test1<IShapeFSharpUnion> t
+    let (|FSharpUnion1|_|) t = test1<IShapeFSharpUnion1> t
+    let (|FSharpUnion2|_|) t = test1<IShapeFSharpUnion2> t
+    let (|FSharpUnion3|_|) t = test1<IShapeFSharpUnion3> t
+    let (|FSharpUnion4|_|) t = test1<IShapeFSharpUnion4> t
+    let (|FSharpUnion5|_|) t = test1<IShapeFSharpUnion5> t
+    let (|FSharpUnion6|_|) t = test1<IShapeFSharpUnion6> t
+    let (|FSharpUnion7|_|) t = test1<IShapeFSharpUnion7> t
 
-        let (|FSharpRecord|_|) t = test1<IShapeFSharpRecord> t
-        let (|FSharpRecord1|_|) t = test1<IShapeFSharpRecord1> t
-        let (|FSharpRecord2|_|) t = test1<IShapeFSharpRecord2> t
-        let (|FSharpRecord3|_|) t = test1<IShapeFSharpRecord3> t
-        let (|FSharpRecord4|_|) t = test1<IShapeFSharpRecord4> t
-        let (|FSharpRecord5|_|) t = test1<IShapeFSharpRecord5> t
-        let (|FSharpRecord6|_|) t = test1<IShapeFSharpRecord6> t
-        let (|FSharpRecord7|_|) t = test1<IShapeFSharpRecord7> t
+    let (|FSharpRecord|_|) t = test1<IShapeFSharpRecord> t
+    let (|FSharpRecord1|_|) t = test1<IShapeFSharpRecord1> t
+    let (|FSharpRecord2|_|) t = test1<IShapeFSharpRecord2> t
+    let (|FSharpRecord3|_|) t = test1<IShapeFSharpRecord3> t
+    let (|FSharpRecord4|_|) t = test1<IShapeFSharpRecord4> t
+    let (|FSharpRecord5|_|) t = test1<IShapeFSharpRecord5> t
+    let (|FSharpRecord6|_|) t = test1<IShapeFSharpRecord6> t
+    let (|FSharpRecord7|_|) t = test1<IShapeFSharpRecord7> t
 
-        let (|Collection|_|) t = test1<IShapeCollection> t
-        let (|Enumerable|_|) t = test1<IShapeEnumerable> t
+    let (|Collection|_|) t = test1<IShapeCollection> t
+    let (|Enumerable|_|) t = test1<IShapeEnumerable> t
 
-        let (|Primitive|_|) (t : TypeShape) =
-            match t with
-            | :? TypeShape<bool>  
-            | :? TypeShape<byte>  
-            | :? TypeShape<sbyte> 
-            | :? TypeShape<int16> 
-            | :? TypeShape<int32> 
-            | :? TypeShape<int64> 
-            | :? TypeShape<uint16>
-            | :? TypeShape<uint32>
-            | :? TypeShape<uint64>
-            | :? TypeShape<single>
-            | :? TypeShape<double>
-            | :? TypeShape<decimal> -> SomeU
-            | _ -> None
+    let (|Primitive|_|) (t : TypeShape) =
+        match t with
+        | :? TypeShape<bool>  
+        | :? TypeShape<byte>  
+        | :? TypeShape<sbyte> 
+        | :? TypeShape<int16> 
+        | :? TypeShape<int32> 
+        | :? TypeShape<int64> 
+        | :? TypeShape<uint16>
+        | :? TypeShape<uint32>
+        | :? TypeShape<uint64>
+        | :? TypeShape<single>
+        | :? TypeShape<double>
+        | :? TypeShape<decimal> -> SomeU
+        | _ -> None

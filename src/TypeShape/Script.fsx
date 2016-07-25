@@ -4,7 +4,7 @@ open TypeShape
 
 let rec mkPrinter<'T> () : 'T -> string = mkPrinterUntyped typeof<'T> :?> _
 and private mkPrinterUntyped (t : Type) : obj =
-    match getShape t with
+    match TypeShape.Resolve t with
     | Shape.Unit -> box(fun () -> "()")
     | Shape.Bool -> box(sprintf "%b")
     | Shape.Int32 -> box(sprintf "%d")
