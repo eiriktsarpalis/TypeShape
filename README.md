@@ -2,7 +2,7 @@
 
 TypeShape is a small F# library for practical generic programming.
 Borrows from ideas used in the FsPickler [implementation](http://mbraceproject.github.io/FsPickler/overview.html#Pickler-Generation).
-Uses a combination of active patterns and F# object expressions and minimizes the
+Uses a combination of active patterns and F# object expressions to minimize the
 amount of reflection and unsafe code required by the user in such applications.
 
 TypeShape is not a metaprogramming library and does not emit IL at runtime;
@@ -15,7 +15,7 @@ To incorporate TypeShape in your project place the following line in your
 ```
 github eiriktsarpalis/TypeShape src/TypeShape/TypeShape.fs
 ```
-and in `paket.refences`:
+and in `paket.references`:
 ```
 File: TypeShape.fs
 ```
