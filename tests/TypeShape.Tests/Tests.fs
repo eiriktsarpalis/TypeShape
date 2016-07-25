@@ -34,7 +34,7 @@ let ``Shape Binding Flags`` () =
         { new IEnumVisitor<bool> with 
             member __.Visit<'T, 'U when 'T : enum<'U>>() = 
                 typeof<'T> = typeof<BindingFlags> && typeof<'U> = typeof<int> }
-    test <@ match shapeof<BindingFlags> with ShapeEnum e -> e.Accept accepter | _ -> false @>
+    test <@ match shapeof<BindingFlags> with Shape.Enum e -> e.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Nullable`` () =
@@ -42,21 +42,21 @@ let ``Shape Nullable`` () =
         { new INullableVisitor<bool> with 
             member __.Visit<'T when 'T : struct and 'T : (new : unit -> 'T) and 'T :> ValueType>() = 
                 typeof<'T> = typeof<int> }
-    test <@ match shapeof<Nullable<int>> with ShapeNullable e -> e.Accept accepter | _ -> false @>
+    test <@ match shapeof<Nullable<int>> with Shape.Nullable e -> e.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Tuple`1`` () =
     let accepter = 
         { new ITuple1Visitor<bool> with 
             member __.Visit<'T>() = typeof<'T> = typeof<int> }
-    test <@ match shapeof<Tuple<int>> with ShapeTuple1 e -> e.Accept accepter | _ -> false @>
+    test <@ match shapeof<Tuple<int>> with Shape.Tuple1 e -> e.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Tuple`2`` () =
     let accepter = 
         { new ITuple2Visitor<bool> with 
             member __.Visit<'T1, 'T2>() = typeof<'T1> = typeof<int> && typeof<'T2> = typeof<string> }
-    test <@ match shapeof<int * string> with ShapeTuple2 e -> e.Accept accepter | _ -> false @>
+    test <@ match shapeof<int * string> with Shape.Tuple2 e -> e.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Tuple`3`` () =
@@ -66,7 +66,7 @@ let ``Shape Tuple`3`` () =
                 typeof<'T1> = typeof<int> && 
                 typeof<'T2> = typeof<string> && 
                 typeof<'T3> = typeof<bool> }
-    test <@ match shapeof<int * string * bool> with ShapeTuple3 e -> e.Accept accepter | _ -> false @>
+    test <@ match shapeof<int * string * bool> with Shape.Tuple3 e -> e.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Tuple`4`` () =
@@ -77,7 +77,7 @@ let ``Shape Tuple`4`` () =
                 typeof<'T2> = typeof<string> && 
                 typeof<'T3> = typeof<bool> &&
                 typeof<'T4> = typeof<byte> }
-    test <@ match shapeof<int * string * bool * byte> with ShapeTuple4 e -> e.Accept accepter | _ -> false @>
+    test <@ match shapeof<int * string * bool * byte> with Shape.Tuple4 e -> e.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Tuple`5`` () =
@@ -89,7 +89,7 @@ let ``Shape Tuple`5`` () =
                 typeof<'T3> = typeof<bool> &&
                 typeof<'T4> = typeof<byte> &&
                 typeof<'T5> = typeof<sbyte> }
-    test <@ match shapeof<int * string * bool * byte * sbyte> with ShapeTuple5 e -> e.Accept accepter | _ -> false @>
+    test <@ match shapeof<int * string * bool * byte * sbyte> with Shape.Tuple5 e -> e.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Tuple`6`` () =
@@ -102,7 +102,7 @@ let ``Shape Tuple`6`` () =
                 typeof<'T4> = typeof<byte> &&
                 typeof<'T5> = typeof<sbyte> &&
                 typeof<'T6> = typeof<int16> }
-    test <@ match shapeof<int * string * bool * byte * sbyte * int16> with ShapeTuple6 e -> e.Accept accepter | _ -> false @>
+    test <@ match shapeof<int * string * bool * byte * sbyte * int16> with Shape.Tuple6 e -> e.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Tuple`7`` () =
@@ -116,7 +116,7 @@ let ``Shape Tuple`7`` () =
                 typeof<'T5> = typeof<sbyte> &&
                 typeof<'T6> = typeof<int16> && 
                 typeof<'T7> = typeof<int64>}
-    test <@ match shapeof<int * string * bool * byte * sbyte * int16 * int64> with ShapeTuple7 e -> e.Accept accepter | _ -> false @>
+    test <@ match shapeof<int * string * bool * byte * sbyte * int16 * int64> with Shape.Tuple7 e -> e.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Tuple`8`` () =
@@ -131,49 +131,49 @@ let ``Shape Tuple`8`` () =
                 typeof<'T6> = typeof<int16> && 
                 typeof<'T7> = typeof<int64> &&
                 typeof<'TRest> = typeof<Tuple<int>> }
-    test <@ match shapeof<int * string * bool * byte * sbyte * int16 * int64 * int> with ShapeTuple8 e -> e.Accept accepter | _ -> false @>
+    test <@ match shapeof<int * string * bool * byte * sbyte * int16 * int64 * int> with Shape.Tuple8 e -> e.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape FSharpFunc`` () =
     let accepter =
         { new IFSharpFuncVisitor<bool> with
             member __.Visit<'D,'C>() = typeof<'D> = typeof<int> && typeof<'C> = typeof<string>}
-    test <@ match shapeof<int -> string> with ShapeFSharpFunc s -> s.Accept accepter | _ -> false @>
+    test <@ match shapeof<int -> string> with Shape.FSharpFunc s -> s.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Exception`` () =
     let accepter =
         { new IExceptionVisitor<bool> with
             member __.Visit<'exn when 'exn :> exn>() = typeof<'exn> = typeof<System.IO.FileNotFoundException> }
-    test <@ match shapeof<System.IO.FileNotFoundException> with ShapeException s -> s.Accept accepter | _ -> false @>
+    test <@ match shapeof<System.IO.FileNotFoundException> with Shape.Exception s -> s.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Enumerable`` () =
     let accepter t =
         { new IEnumerableVisitor<bool> with
             member __.Visit<'T>() = typeof<'T> = t }
-    test <@ match shapeof<int []> with ShapeEnumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<int list> with ShapeEnumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<seq<int>> with ShapeEnumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<ResizeArray<int>> with ShapeEnumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<HashSet<int>> with ShapeEnumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<Dictionary<int, string>> with ShapeEnumerable s -> s.Accept (accepter typeof<KeyValuePair<int, string>>) | _ -> false @>
-    test <@ match shapeof<Set<int>> with ShapeEnumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<Map<int, string>> with ShapeEnumerable s -> s.Accept (accepter typeof<KeyValuePair<int, string>>) | _ -> false @>
+    test <@ match shapeof<int []> with Shape.Enumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
+    test <@ match shapeof<int list> with Shape.Enumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
+    test <@ match shapeof<seq<int>> with Shape.Enumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
+    test <@ match shapeof<ResizeArray<int>> with Shape.Enumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
+    test <@ match shapeof<HashSet<int>> with Shape.Enumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
+    test <@ match shapeof<Dictionary<int, string>> with Shape.Enumerable s -> s.Accept (accepter typeof<KeyValuePair<int, string>>) | _ -> false @>
+    test <@ match shapeof<Set<int>> with Shape.Enumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
+    test <@ match shapeof<Map<int, string>> with Shape.Enumerable s -> s.Accept (accepter typeof<KeyValuePair<int, string>>) | _ -> false @>
 
 [<Fact>]
 let ``Shape Collection`` () =
     let accepter t =
         { new ICollectionVisitor<bool> with
             member __.Visit<'T>() = typeof<'T> = t }
-    test <@ match shapeof<int []> with ShapeCollection s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<int list> with ShapeCollection s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<seq<int>> with ShapeCollection s -> false | _ -> true @>
-    test <@ match shapeof<ResizeArray<int>> with ShapeCollection s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<HashSet<int>> with ShapeCollection s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<Dictionary<int, string>> with ShapeCollection s -> s.Accept (accepter typeof<KeyValuePair<int, string>>) | _ -> false @>
-    test <@ match shapeof<Set<int>> with ShapeCollection s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<Map<int, string>> with ShapeCollection s -> s.Accept (accepter typeof<KeyValuePair<int, string>>) | _ -> false @>
+    test <@ match shapeof<int []> with Shape.Collection s -> s.Accept (accepter typeof<int>) | _ -> false @>
+    test <@ match shapeof<int list> with Shape.Collection s -> s.Accept (accepter typeof<int>) | _ -> false @>
+    test <@ match shapeof<seq<int>> with Shape.Collection s -> false | _ -> true @>
+    test <@ match shapeof<ResizeArray<int>> with Shape.Collection s -> s.Accept (accepter typeof<int>) | _ -> false @>
+    test <@ match shapeof<HashSet<int>> with Shape.Collection s -> s.Accept (accepter typeof<int>) | _ -> false @>
+    test <@ match shapeof<Dictionary<int, string>> with Shape.Collection s -> s.Accept (accepter typeof<KeyValuePair<int, string>>) | _ -> false @>
+    test <@ match shapeof<Set<int>> with Shape.Collection s -> s.Accept (accepter typeof<int>) | _ -> false @>
+    test <@ match shapeof<Map<int, string>> with Shape.Collection s -> s.Accept (accepter typeof<KeyValuePair<int, string>>) | _ -> false @>
 
 [<Fact>]
 let ``Shape KeyValuePair`` () =
@@ -181,7 +181,7 @@ let ``Shape KeyValuePair`` () =
         { new IKeyValuePairVisitor<bool> with
             member __.Visit<'K,'V>() = typeof<'K> = typeof<int> && typeof<'V> = typeof<string> }
 
-    test <@ match shapeof<KeyValuePair<int,string>> with ShapeKeyValuePair s -> s.Accept accepter | _ -> false @>
+    test <@ match shapeof<KeyValuePair<int,string>> with Shape.KeyValuePair s -> s.Accept accepter | _ -> false @>
 
 
 [<Fact>]
@@ -190,7 +190,7 @@ let ``Shape Array`` () =
         { new IArrayVisitor<bool> with
             member __.Visit<'T>() = typeof<'T> = typeof<int> }
 
-    test <@ match shapeof<int []> with ShapeArray s -> s.Accept accepter | _ -> false @>    
+    test <@ match shapeof<int []> with Shape.Array s -> s.Accept accepter | _ -> false @>    
 
 [<Fact>]
 let ``Shape Array 2D`` () =
@@ -198,7 +198,7 @@ let ``Shape Array 2D`` () =
         { new IArray2DVisitor<bool> with
             member __.Visit<'T>() = typeof<'T> = typeof<int> }
 
-    test <@ match shapeof<int [,]> with ShapeArray2D s -> s.Accept accepter | _ -> false @>    
+    test <@ match shapeof<int [,]> with Shape.Array2D s -> s.Accept accepter | _ -> false @>    
 
 [<Fact>]
 let ``Shape Array 3D`` () =
@@ -206,7 +206,7 @@ let ``Shape Array 3D`` () =
         { new IArray3DVisitor<bool> with
             member __.Visit<'T>() = typeof<'T> = typeof<int> }
 
-    test <@ match shapeof<int [,,]> with ShapeArray3D s -> s.Accept accepter | _ -> false @>
+    test <@ match shapeof<int [,,]> with Shape.Array3D s -> s.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Array 4D`` () =
@@ -214,7 +214,7 @@ let ``Shape Array 4D`` () =
         { new IArray4DVisitor<bool> with
             member __.Visit<'T>() = typeof<'T> = typeof<int> }
 
-    test <@ match shapeof<int [,,,]> with ShapeArray4D s -> s.Accept accepter | _ -> false @>
+    test <@ match shapeof<int [,,,]> with Shape.Array4D s -> s.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape ResizeArray`` () =
@@ -222,7 +222,7 @@ let ``Shape ResizeArray`` () =
         { new IResizeArrayVisitor<bool> with
             member __.Visit<'T>() = typeof<'T> = typeof<int> }
 
-    test <@ match shapeof<ResizeArray<int>> with ShapeResizeArray s -> s.Accept accepter | _ -> false @>
+    test <@ match shapeof<ResizeArray<int>> with Shape.ResizeArray s -> s.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Dictionary`` () =
@@ -230,7 +230,7 @@ let ``Shape Dictionary`` () =
         { new IDictionaryVisitor<bool> with
             member __.Visit<'K, 'V when 'K : equality>() = typeof<'K> = typeof<int> && typeof<'V> = typeof<string> }
 
-    test <@ match shapeof<Dictionary<int, string>> with ShapeDictionary s -> s.Accept accepter | _ -> false @>
+    test <@ match shapeof<Dictionary<int, string>> with Shape.Dictionary s -> s.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape F# Set`` () =
@@ -238,7 +238,7 @@ let ``Shape F# Set`` () =
         { new IFSharpSetVisitor<bool> with
             member __.Visit<'T when 'T : comparison>() = typeof<'T> = typeof<string> }
 
-    test <@ match shapeof<Set<string>> with ShapeFSharpSet s -> s.Accept accepter | _ -> false @>
+    test <@ match shapeof<Set<string>> with Shape.FSharpSet s -> s.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape F# Map`` () =
@@ -246,13 +246,13 @@ let ``Shape F# Map`` () =
         { new IFSharpMapVisitor<bool> with
             member __.Visit<'K, 'V when 'K : comparison>() = typeof<'K> = typeof<string> && typeof<'V> = typeof<int> }
 
-    test <@ match shapeof<Map<string, int>> with ShapeFSharpMap s -> s.Accept accepter | _ -> false @>
+    test <@ match shapeof<Map<string, int>> with Shape.FSharpMap s -> s.Accept accepter | _ -> false @>
 
 type Record1 = { A1 : int }
 
 [<Fact>]
 let ``Shape Record 1`` () =
-    test <@ match shapeof<Record1> with ShapeFSharpRecord1 _ -> true | _ -> false @>
+    test <@ match shapeof<Record1> with Shape.FSharpRecord1 _ -> true | _ -> false @>
     let shape = shapeof<Record1> |> unbox<IShapeFSharpRecord<Record1, int>>
     test <@ shape.Properties.Length = 1 @>
     test <@ shape.IsFSharpRef = false @>
@@ -263,7 +263,7 @@ type Record2 = { A1 : int ; A2 : string }
 
 [<Fact>]
 let ``Shape Record 2`` () =
-    test <@ match shapeof<Record2> with ShapeFSharpRecord2 _ -> true | _ -> false @>
+    test <@ match shapeof<Record2> with Shape.FSharpRecord2 _ -> true | _ -> false @>
     let shape = shapeof<Record2> |> unbox<IShapeFSharpRecord<Record2, int, string>>
     test <@ shape.Properties.Length = 2 @>
     test <@ shape.IsFSharpRef = false @>
@@ -276,7 +276,7 @@ type Record3 = { A1 : int ; A2 : string ; A3 : bool }
 
 [<Fact>]
 let ``Shape Record 3`` () =
-    test <@ match shapeof<Record3> with ShapeFSharpRecord3 _ -> true | _ -> false @>
+    test <@ match shapeof<Record3> with Shape.FSharpRecord3 _ -> true | _ -> false @>
     let shape = shapeof<Record3> |> unbox<IShapeFSharpRecord<Record3, int, string, bool>>
     test <@ shape.Properties.Length = 3 @>
     test <@ shape.IsFSharpRef = false @>
@@ -290,7 +290,7 @@ type Record4 = { A1 : int ; A2 : string ; A3 : bool ; A4 : byte }
 
 [<Fact>]
 let ``Shape Record 4`` () =
-    test <@ match shapeof<Record4> with ShapeFSharpRecord4 _ -> true | _ -> false @>
+    test <@ match shapeof<Record4> with Shape.FSharpRecord4 _ -> true | _ -> false @>
     let shape = shapeof<Record4> |> unbox<IShapeFSharpRecord<Record4, int, string, bool, byte>>
     test <@ shape.Properties.Length = 4 @>
     test <@ shape.IsFSharpRef = false @>
@@ -304,7 +304,7 @@ type Record5 = { A1 : int ; A2 : string ; A3 : bool ; A4 : byte ; A5 : byte[] }
 
 [<Fact>]
 let ``Shape Record 5`` () =
-    test <@ match shapeof<Record5> with ShapeFSharpRecord5 _ -> true | _ -> false @>
+    test <@ match shapeof<Record5> with Shape.FSharpRecord5 _ -> true | _ -> false @>
     let shape = shapeof<Record5> |> unbox<IShapeFSharpRecord<Record5, int, string, bool, byte, byte[]>>
     test <@ shape.Properties.Length = 5 @>
     test <@ shape.IsFSharpRef = false @>
@@ -320,7 +320,7 @@ type Record6 = { A1 : int ; A2 : string ; A3 : bool ; A4 : byte ; A5 : byte[] ; 
 
 [<Fact>]
 let ``Shape Record 6`` () =
-    test <@ match shapeof<Record6> with ShapeFSharpRecord6 _ -> true | _ -> false @>
+    test <@ match shapeof<Record6> with Shape.FSharpRecord6 _ -> true | _ -> false @>
     let shape = shapeof<Record6> |> unbox<IShapeFSharpRecord<Record6, int, string, bool, byte, byte[], decimal>>
     test <@ shape.Properties.Length = 6 @>
     test <@ shape.IsFSharpRef = false @>
@@ -335,7 +335,7 @@ type Record7 = { A1 : int ; A2 : string ; A3 : bool ; A4 : byte ; A5 : byte[] ; 
 
 [<Fact>]
 let ``Shape Record 7`` () =
-    test <@ match shapeof<Record7> with ShapeFSharpRecord7 _ -> true | _ -> false @>
+    test <@ match shapeof<Record7> with Shape.FSharpRecord7 _ -> true | _ -> false @>
     let shape = shapeof<Record7> |> unbox<IShapeFSharpRecord<Record7, int, string, bool, byte, byte[], decimal, int16>>
     test <@ shape.Properties.Length = 7 @>
     test <@ shape.IsFSharpRef = false @>
@@ -349,9 +349,9 @@ let ``Shape Record 7`` () =
 
 [<Fact>]
 let ``Shape F# ref`` () =
-    test <@ match shapeof<int ref> with ShapeFSharpRecord1 r -> r.IsFSharpRef | _ -> false @>
+    test <@ match shapeof<int ref> with Shape.FSharpRecord1 r -> r.IsFSharpRef | _ -> false @>
     let accepter = { new IFSharpRefVisitor<bool> with member __.Visit<'T>() = typeof<'T> = typeof<int> }
-    test <@ match shapeof<int ref> with ShapeFSharpRef s -> s.Accept accepter | _ -> false @>
+    test <@ match shapeof<int ref> with Shape.FSharpRef s -> s.Accept accepter | _ -> false @>
     let shape = shapeof<int ref> |> unbox<IShapeFSharpRecord<int ref, int>>
     test <@ shape.Project1(ref 42) = 42 @>
     test <@ shape.Construct(42).Value = 42 @>
@@ -361,7 +361,7 @@ type Union1 = C1U1 of int * string
 
 [<Fact>]
 let ``Shape Union 1`` () =
-    test <@ match shapeof<Union1> with ShapeFSharpUnion1 u -> not u.IsFSharpChoice | _ -> false @>
+    test <@ match shapeof<Union1> with Shape.FSharpUnion1 u -> not u.IsFSharpChoice | _ -> false @>
     let shape = shapeof<Union1> |> unbox<IShapeFSharpUnion<Union1, int * string>>
     test <@ not shape.IsFSharpChoice @>
     test <@ not shape.IsFSharpList @>
@@ -374,7 +374,7 @@ type Union2 =
 
 [<Fact>]
 let ``Shape Union 2`` () =
-    test <@ match shapeof<Union2> with ShapeFSharpUnion2 u -> not u.IsFSharpChoice | _ -> false @>
+    test <@ match shapeof<Union2> with Shape.FSharpUnion2 u -> not u.IsFSharpChoice | _ -> false @>
     let shape = shapeof<Union2> |> unbox<IShapeFSharpUnion<Union2, int * string, unit>>
     test <@ not shape.IsFSharpChoice @>
     test <@ not shape.IsFSharpList @>
@@ -391,7 +391,7 @@ type Union3 =
 
 [<Fact>]
 let ``Shape Union 3`` () =
-    test <@ match shapeof<Union3> with ShapeFSharpUnion3 u -> not u.IsFSharpChoice | _ -> false @>
+    test <@ match shapeof<Union3> with Shape.FSharpUnion3 u -> not u.IsFSharpChoice | _ -> false @>
     let shape = shapeof<Union3> |> unbox<IShapeFSharpUnion<Union3, int * string, unit, int>>
     test <@ not shape.IsFSharpChoice @>
     test <@ not shape.IsFSharpList @>
@@ -410,7 +410,7 @@ type Union4 =
 
 [<Fact>]
 let ``Shape Union 4`` () =
-    test <@ match shapeof<Union4> with ShapeFSharpUnion4 u -> not u.IsFSharpChoice | _ -> false @>
+    test <@ match shapeof<Union4> with Shape.FSharpUnion4 u -> not u.IsFSharpChoice | _ -> false @>
     let shape = shapeof<Union4> |> unbox<IShapeFSharpUnion<Union4, int * string, unit, int, unit>>
     test <@ not shape.IsFSharpChoice @>
     test <@ not shape.IsFSharpList @>
@@ -431,7 +431,7 @@ type Union5 =
 
 [<Fact>]
 let ``Shape Union 5`` () =
-    test <@ match shapeof<Union5> with ShapeFSharpUnion5 u -> not u.IsFSharpChoice | _ -> false @>
+    test <@ match shapeof<Union5> with Shape.FSharpUnion5 u -> not u.IsFSharpChoice | _ -> false @>
     let shape = shapeof<Union5> |> unbox<IShapeFSharpUnion<Union5, int * string, unit, int, unit, int * bool * byte[]>>
     test <@ not shape.IsFSharpChoice @>
     test <@ not shape.IsFSharpList @>
@@ -454,7 +454,7 @@ type Union6 =
 
 [<Fact>]
 let ``Shape Union 6`` () =
-    test <@ match shapeof<Union6> with ShapeFSharpUnion6 u -> not u.IsFSharpChoice | _ -> false @>
+    test <@ match shapeof<Union6> with Shape.FSharpUnion6 u -> not u.IsFSharpChoice | _ -> false @>
     let shape = shapeof<Union6> |> unbox<IShapeFSharpUnion<Union6, int * string, unit, int, unit, int * bool * byte[], string>>
     test <@ not shape.IsFSharpChoice @>
     test <@ not shape.IsFSharpList @>
@@ -479,7 +479,7 @@ type Union7 =
 
 [<Fact>]
 let ``Shape Union 7`` () =
-    test <@ match shapeof<Union7> with ShapeFSharpUnion7 u -> not u.IsFSharpChoice | _ -> false @>
+    test <@ match shapeof<Union7> with Shape.FSharpUnion7 u -> not u.IsFSharpChoice | _ -> false @>
     let shape = shapeof<Union7> |> unbox<IShapeFSharpUnion<Union7, int * string, unit, int, unit, int * bool * byte[], string, unit>>
     test <@ not shape.IsFSharpChoice @>
     test <@ not shape.IsFSharpList @>
@@ -497,8 +497,8 @@ let ``Shape Union 7`` () =
 
 [<Fact>]
 let ``Shape F# Option`` () =
-    test <@ match shapeof<int option> with ShapeFSharpUnion u -> u.IsFSharpOption | _ -> false @>
-    test <@ match shapeof<int option> with ShapeFSharpOption _ -> true | _ -> false @>
+    test <@ match shapeof<int option> with Shape.FSharpUnion u -> u.IsFSharpOption | _ -> false @>
+    test <@ match shapeof<int option> with Shape.FSharpOption _ -> true | _ -> false @>
     let shape = shapeof<int option> |> unbox<IShapeFSharpUnion<int option, unit, int>>
     test <@ shape.Project None = Choice1Of2 () @>
     test <@ shape.Project (Some 42) = Choice2Of2 42 @>
@@ -507,8 +507,8 @@ let ``Shape F# Option`` () =
 
 [<Fact>]
 let ``Shape F# list`` () =
-    test <@ match shapeof<int list> with ShapeFSharpUnion u -> u.IsFSharpList | _ -> false @>
-    test <@ match shapeof<int list> with ShapeFSharpList _ -> true | _ -> false @>
+    test <@ match shapeof<int list> with Shape.FSharpUnion u -> u.IsFSharpList | _ -> false @>
+    test <@ match shapeof<int list> with Shape.FSharpList _ -> true | _ -> false @>
     let shape = shapeof<int list> |> unbox<IShapeFSharpUnion<int list, unit, int * int list>>
     test <@ shape.Project [] = Choice1Of2 () @>
     test <@ shape.Project [1;2] = Choice2Of2(1,[2]) @>
@@ -517,7 +517,7 @@ let ``Shape F# list`` () =
 
 [<Fact>]
 let ``Shape F# Choice`` () =
-    test <@ match shapeof<Choice<int,string>> with ShapeFSharpUnion u -> u.IsFSharpChoice | _ -> false @>
+    test <@ match shapeof<Choice<int,string>> with Shape.FSharpUnion u -> u.IsFSharpChoice | _ -> false @>
     let shape = shapeof<Choice<int, string>> |> unbox<IShapeFSharpUnion<Choice<int, string>, int, string>>
     test <@ shape.Project (Choice1Of2 2) = Choice1Of2 2 @>
     test <@ shape.Project (Choice2Of2 "42") = Choice2Of2 "42" @>

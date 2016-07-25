@@ -5,11 +5,11 @@ open TypeShape
 let rec mkPrinter<'T> () : 'T -> string = mkPrinterUntyped typeof<'T> :?> _
 and private mkPrinterUntyped (t : Type) : obj =
     match getShape t with
-    | ShapeUnit -> box(fun () -> "()")
-    | ShapeBool -> box(sprintf "%b")
-    | ShapeInt32 -> box(sprintf "%d")
-    | ShapeString -> box(sprintf "\"%s\"")
-    | ShapeFSharpOption s ->
+    | Shape.Unit -> box(fun () -> "()")
+    | Shape.Bool -> box(sprintf "%b")
+    | Shape.Int32 -> box(sprintf "%d")
+    | Shape.String -> box(sprintf "\"%s\"")
+    | Shape.FSharpOption s ->
         s.Accept {
             new IFSharpOptionVisitor<obj> with
                 member __.Visit<'T> () =
@@ -17,7 +17,7 @@ and private mkPrinterUntyped (t : Type) : obj =
                     box(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
         }
 
-    | ShapeFSharpList s ->
+    | Shape.FSharpList s ->
         s.Accept {
             new IFSharpListVisitor<obj> with
                 member __.Visit<'T> () =
@@ -25,7 +25,7 @@ and private mkPrinterUntyped (t : Type) : obj =
                     box(fun ts -> ts |> List.map tp |> String.concat "; " |> sprintf "[%s]")
         }
 
-    | ShapeTuple2 s ->
+    | Shape.Tuple2 s ->
         s.Accept {
             new ITuple2Visitor<obj> with
                 member __.Visit<'T, 'S> () =
