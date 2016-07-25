@@ -7,6 +7,7 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape", "src\TypeShape\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{5BA09F57-003D-4663-869C-CEE98253AD1F}"
 	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
 		.travis.yml = .travis.yml
 		appveyor.yml = appveyor.yml
 		build.cmd = build.cmd

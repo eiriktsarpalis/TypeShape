@@ -63,8 +63,6 @@
     <Compile Include="TypeShape.fs" />
     <None Include="Script.fsx" />
     <None Include="paket.references" />
-    <None Include="paket.template" />
-    <Content Include="App.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
