@@ -8,6 +8,7 @@ module TypeShape
 
 open System
 open System.Collections.Generic
+open System.Collections.Concurrent
 open System.Reflection
 open Microsoft.FSharp.Reflection
 
@@ -1136,9 +1137,6 @@ exception UnsupportedShape of Type:Type
 
 module private TypeShapeImpl =
 
-    open System.Reflection
-    open Microsoft.FSharp.Reflection
-
     let allMembers =
         BindingFlags.NonPublic ||| BindingFlags.Public |||
             BindingFlags.Instance ||| BindingFlags.Static |||
@@ -1172,15 +1170,18 @@ module private TypeShapeImpl =
         
     /// use reflection to bootstrap a shape instance
     let resolveTypeShape (addOnResolver : Type -> TypeShape option) (t : Type) : TypeShape =
-        match addOnResolver t with
-        | Some ts -> ts
-        | None ->
-
         if t.IsGenericTypeDefinition then raise <| UnsupportedShape t
         elif t.IsGenericParameter then raise <| UnsupportedShape t
         elif t = canon then raise <| UnsupportedShape t
-        elif t.IsEnum then 
-            activate2 (getGenericEnumType()) t <| Enum.GetUnderlyingType t
+        elif t.IsByRef || t.IsPointer then raise <| UnsupportedShape t
+
+        match addOnResolver t with
+        | Some ts when ts.Type = t -> ts
+        | Some ts -> sprintf "Resolved shape for type '%O' was '%O'." t ts.Type |> invalidOp
+        | None ->
+
+        if t.IsEnum then 
+            activate2 (getGenericEnumType()) t (Enum.GetUnderlyingType t)
 
         elif t.IsArray then
             let et = t.GetElementType()
@@ -1211,7 +1212,6 @@ module private TypeShapeImpl =
         elif FSharpType.IsFunction t then
             let d,c = FSharpType.GetFunctionElements t
             activate2 typedefof<ShapeFSharpFunc<_,_>> d c
-
 
         elif FSharpType.IsRecord(t, allMembers) then
             let genTy = 
@@ -1317,7 +1317,7 @@ module private TypeShapeImpl =
             activate1 typedefof<TypeShape<_>> t
 
 
-    let dict = new System.Collections.Concurrent.ConcurrentDictionary<Type, TypeShape>()
+    let private dict = new ConcurrentDictionary<Type, TypeShape>()
     let resolveTypeShapeCached(t : Type) = dict.GetOrAdd(t, resolveTypeShape (fun _ -> None))
 
 //////////////////////////////////
@@ -1370,9 +1370,11 @@ module Shape =
     let (|Int16|_|) t = test0<int16> t
     let (|Int32|_|) t = test0<int32> t
     let (|Int64|_|) t = test0<int64> t
+    let (|IntPtr|_|) t = test0<nativeint> t
     let (|UInt16|_|) t = test0<uint16> t
     let (|UInt32|_|) t = test0<uint32> t
     let (|UInt64|_|) t = test0<uint64> t
+    let (|UIntPtr|_|) t = test0<unativeint> t
     let (|Single|_|) t = test0<single> t
     let (|Double|_|) t = test0<double> t
     let (|Char|_|) t = test0<char> t
