@@ -148,6 +148,13 @@ let ``Shape Exception`` () =
     test <@ match shapeof<System.IO.FileNotFoundException> with Shape.Exception s -> s.Accept accepter | _ -> false @>
 
 [<Fact>]
+let ``Shape Delegate`` () =
+    let accepter =
+        { new IDelegateVisitor<bool> with
+            member __.Visit<'Delegate when 'Delegate :> Delegate>() = typeof<'Delegate> = typeof<Predicate<string>> }
+    test <@ match shapeof<Predicate<string>> with Shape.Delegate s -> s.Accept accepter | _ -> false @>
+
+[<Fact>]
 let ``Shape Enumerable`` () =
     let accepter t =
         { new IEnumerableVisitor<bool> with

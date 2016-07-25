@@ -31,9 +31,6 @@ type TypeShape<'T> =
     override __.Type = typeof<'T>
     override __.Accept v = v.Visit<'T> ()
 
-
-
-
 //////////////////////////////////////
 ///////////// Section: Core BCL types
 
@@ -63,6 +60,19 @@ type private ShapeNullable<'T when 'T : (new : unit -> 'T) and 'T :> ValueType a
     interface IShapeNullable with
         member __.Accept v = v.Visit<'T> ()
 
+///////////// Delegates
+
+type IDelegateVisitor<'R> =
+    abstract Visit<'Delegate when 'Delegate :> Delegate> : unit -> 'R
+
+type IShapeDelegate =
+    abstract Accept : IDelegateVisitor<'R> -> 'R
+
+type private ShapeDelegate<'Delegate when 'Delegate :> Delegate>() =
+    inherit TypeShape<'Delegate>()
+    interface IShapeDelegate with
+        member __.Accept v = v.Visit<'Delegate>()
+
 ///////////// System.Tuple
 
 type IShapeTuple = interface end
@@ -79,6 +89,8 @@ type private ShapeTuple<'T> () =
     interface IShapeTuple1 with
         member __.Accept v = v.Visit<'T> ()
 
+/////////////
+
 type ITuple2Visitor<'R> =
     abstract Visit<'T1, 'T2> : unit -> 'R
 
@@ -90,6 +102,8 @@ type private ShapeTuple<'T1, 'T2> () =
     inherit TypeShape<'T1 * 'T2> ()
     interface IShapeTuple2 with
         member __.Accept v = v.Visit<'T1,'T2> ()
+
+/////////////
 
 type ITuple3Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3> : unit -> 'R
@@ -103,6 +117,8 @@ type private ShapeTuple<'T1, 'T2, 'T3> () =
     interface IShapeTuple3 with
         member __.Accept v = v.Visit<'T1, 'T2, 'T3> ()
 
+/////////////
+
 type ITuple4Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4> : unit -> 'R
 
@@ -114,6 +130,8 @@ type private ShapeTuple<'T1, 'T2, 'T3, 'T4> () =
     inherit TypeShape<'T1 * 'T2 * 'T3 * 'T4> ()
     interface IShapeTuple4 with
         member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4> ()
+
+/////////////
 
 type ITuple5Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5> : unit -> 'R
@@ -127,6 +145,8 @@ type private ShapeTuple<'T1, 'T2, 'T3, 'T4, 'T5> () =
     interface IShapeTuple5 with
         member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5> ()
 
+/////////////
+
 type ITuple6Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> : unit -> 'R
 
@@ -139,6 +159,8 @@ type private ShapeTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> () =
     interface IShapeTuple6 with
         member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> ()
 
+/////////////
+
 type ITuple7Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> : unit -> 'R
 
@@ -150,6 +172,8 @@ type private ShapeTuple<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> () =
     inherit TypeShape<'T1 * 'T2 * 'T3 * 'T4 * 'T5 * 'T6 * 'T7> ()
     interface IShapeTuple7 with
         member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> ()
+
+/////////////
 
 type ITuple8Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> : unit -> 'R
@@ -1137,26 +1161,26 @@ exception UnsupportedShape of Type:Type
 
 module private TypeShapeImpl =
 
-    let allMembers =
+    let private allMembers =
         BindingFlags.NonPublic ||| BindingFlags.Public |||
             BindingFlags.Instance ||| BindingFlags.Static |||
                 BindingFlags.FlattenHierarchy
 
     // typedefof does not work properly with 'enum' constraints
-    let getGenericEnumType () = 
+    let private getGenericEnumType () = 
         typeof<ShapeEnum<BindingFlags,int>>.GetGenericTypeDefinition()
 
-    let activateArgs (gt : Type) (tp : Type []) (args : obj[]) =
+    let private activateArgs (gt : Type) (tp : Type []) (args : obj[]) =
         let ti = gt.MakeGenericType tp
         let ctypes = args |> Array.map (fun o -> o.GetType())
         let ctor = ti.GetConstructor(allMembers, null, CallingConventions.Standard, ctypes, [||])
         ctor.Invoke args :?> TypeShape
 
-    let activate (gt : Type) (tp : Type []) = activateArgs gt tp [||]
-    let activate1 (gt : Type) (tp : Type) = activate gt [|tp|]
-    let activate2 (gt : Type) (p1 : Type) (p2 : Type) = activate gt [|p1 ; p2|]
+    let private activate (gt : Type) (tp : Type []) = activateArgs gt tp [||]
+    let private activate1 (gt : Type) (tp : Type) = activate gt [|tp|]
+    let private activate2 (gt : Type) (p1 : Type) (p2 : Type) = activate gt [|p1 ; p2|]
 
-    let canon = Type.GetType("System.__Canon")
+    let private canon = Type.GetType("System.__Canon")
 
     /// correctly resolves if type is assignable to interface
     let rec private isAssignableFrom (interfaceTy : Type) (ty : Type) =
@@ -1191,6 +1215,9 @@ module private TypeShapeImpl =
             | 3 -> activate1 typedefof<ShapeArray3D<_>> et
             | 4 -> activate1 typedefof<ShapeArray4D<_>> et
             | _ -> raise <| UnsupportedShape t
+
+        elif isAssignableFrom typeof<Delegate> t then
+            activate1 typedefof<ShapeDelegate<_>> t
 
         elif FSharpType.IsTuple t then
             let gas = t.GetGenericArguments()
@@ -1396,6 +1423,8 @@ module Shape =
     let (|Dictionary|_|) t = test1<IShapeDictionary> t
     let (|HashSet|_|) t = test1<IShapeHashSet> t
     let (|ResizeArray|_|) t = test1<IShapeResizeArray> t
+    let (|Delegate|_|) t = test1<IShapeDelegate> t
+    let (|Exception|_|) t = test1<IShapeException> t
 
     let (|Array|_|) t = test1<IShapeArray> t
     let (|Array2D|_|) t = test1<IShapeArray2D> t
@@ -1418,7 +1447,6 @@ module Shape =
     let (|FSharpSet|_|) t = test1<IShapeFSharpSet> t
     let (|FSharpMap|_|) t = test1<IShapeFSharpMap> t
     let (|FSharpFunc|_|) t = test1<IShapeFSharpFunc> t
-    let (|Exception|_|) t = test1<IShapeException> t
 
     let (|FSharpUnion|_|) t = test1<IShapeFSharpUnion> t
     let (|FSharpUnion1|_|) t = test1<IShapeFSharpUnion1> t
@@ -1428,6 +1456,8 @@ module Shape =
     let (|FSharpUnion5|_|) t = test1<IShapeFSharpUnion5> t
     let (|FSharpUnion6|_|) t = test1<IShapeFSharpUnion6> t
     let (|FSharpUnion7|_|) t = test1<IShapeFSharpUnion7> t
+
+    let (|FSharpChoice|_|) = function FSharpUnion s when s.IsFSharpChoice -> SomeU | _ -> None
 
     let (|FSharpRecord|_|) t = test1<IShapeFSharpRecord> t
     let (|FSharpRecord1|_|) t = test1<IShapeFSharpRecord1> t
