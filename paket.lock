@@ -3,7 +3,7 @@ NUGET
   remote: https://www.nuget.org/api/v2
     FsCheck (2.5)
       FSharp.Core (>= 3.1.2.5)
-    FSharp.Core (4.0.0.1) - redirects: force
+    FSharp.Core (4.0.0.1)
     Unquote (3.1.1)
     xunit (2.1)
       xunit.assert (2.1)

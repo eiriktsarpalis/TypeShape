@@ -1,7 +1,6 @@
 framework: >= net45
 source https://nuget.org/api/v2
 
-nuget FSharp.Core redirects: force
 nuget xunit ~> 2.0
 nuget xunit.extensions
 nuget xunit.runner.console
