@@ -8,6 +8,7 @@ open Fake.Git
 open Fake.AssemblyInfoFile
 open Fake.ReleaseNotesHelper
 open Fake.UserInputHelper
+open Fake.Testing.XUnit2
 open System
 open System.IO
 #if MONO
@@ -48,7 +49,7 @@ let tags = ""
 let solutionFile  = "TypeShape.sln"
 
 // Pattern specifying assemblies to be tested using NUnit
-let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
+let testAssemblies = "bin/TypeShape.Tests.dll"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted
@@ -140,15 +141,16 @@ Target "Build" (fun _ ->
 )
 
 // --------------------------------------------------------------------------------------
-// Run the unit tests using test runner
+// Run the unit tests using test runner & kill test runner when complete
 
 Target "RunTests" (fun _ ->
-    !! testAssemblies
-    |> NUnit (fun p ->
+    [testAssemblies]
+    |> xUnit2 (fun (p : XUnit2Params) -> 
         { p with
-            DisableShadowCopy = true
             TimeOut = TimeSpan.FromMinutes 20.
-            OutputFile = "TestResults.xml" })
+            Parallel = ParallelMode.Collections
+
+            HtmlOutputPath = Some "xunit.html"})
 )
 
 #if MONO
