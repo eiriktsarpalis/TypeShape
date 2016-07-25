@@ -5,6 +5,9 @@ Borrows from ideas used in the FsPickler [implementation](http://mbraceproject.g
 Uses a combination of active patterns and F# object expressions and minimizes the
 amount of reflection and unsafe code required by the user in such applications.
 
+TypeShape is not a metaprogramming library and does not emit IL at runtime;
+It only relies on basic reflection APIs.
+
 ### Installing
 
 To incorporate TypeShape in your project place the following line in your
