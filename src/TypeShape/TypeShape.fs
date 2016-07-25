@@ -1412,7 +1412,6 @@ module Shape =
     let (|TimeSpan|_|) t = test0<TimeSpan> t
     let (|DateTime|_|) t = test0<DateTime> t
     let (|DateTimeOffset|_|) t = test0<DateTimeOffset> t
-    let (|DBNull|_|) t = test0<DBNull> t
     let (|Unit|_|) t = test0<unit> t
     let (|FSharpUnit|_|) t = test0<unit> t
     let (|ByteArray|_|) t = test0<byte []> t
