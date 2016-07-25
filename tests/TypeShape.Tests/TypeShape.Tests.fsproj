@@ -74,6 +74,7 @@
   <Import Project="..\..\.paket\paket.targets" />
   <ItemGroup>
     <Compile Include="Tests.fs" />
+    <None Include="Script.fsx" />
     <None Include="paket.references" />
     <Content Include="App.config" />
   </ItemGroup>

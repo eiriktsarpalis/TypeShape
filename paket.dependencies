@@ -1,5 +1,5 @@
 framework: >= net45
-redirects: force
+redirects: on
 source https://nuget.org/api/v2
 
 nuget xunit ~> 2.0
