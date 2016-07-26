@@ -1025,7 +1025,7 @@ type private ShapeFSharpUnion<'Union, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'C
 ///////////// 7-case union
 
 type IFSharpUnion7Visitor<'R> =
-    abstract Visit<'Union, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6, 'Case7> : ShapeFSharpUnion<'Union, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6, 'Case7> -> 'R
+    abstract Visit<'Union, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6, 'Case7> : IShapeFSharpUnion<'Union, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6, 'Case7> -> 'R
 
 and IShapeFSharpUnion7 =
     inherit IShapeFSharpUnion
@@ -1044,7 +1044,7 @@ and IShapeFSharpUnion<'Union, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6, 'C
     abstract Construct7 : 'Case7 -> 'Union
 
 
-and ShapeFSharpUnion<'Union, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6, 'Case7> private (info : UnionInfo) =
+type private ShapeFSharpUnion<'Union, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6, 'Case7> (info : UnionInfo) =
     inherit TypeShape<'Union>()
     interface IShapeFSharpUnion<'Union, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'Case6, 'Case7> with
         member __.IsFSharpOption = false
@@ -1107,7 +1107,7 @@ type IFSharpOptionVisitor<'R> =
 type IShapeFSharpOption =
     abstract Accept : IFSharpOptionVisitor<'R> -> 'R
 
-type ShapeFSharpOption<'T> (unionCases : UnionCaseInfo list) =
+type private ShapeFSharpOption<'T> (unionCases : UnionCaseInfo list) =
     inherit TypeShape<'T option> ()
     interface IShapeFSharpOption with
         member __.Accept v = v.Visit<'T> ()
@@ -1132,7 +1132,7 @@ type IFSharpListVisitor<'R> =
 type IShapeFSharpList =
     abstract Accept : IFSharpListVisitor<'R> -> 'R
 
-type ShapeFSharpList<'T> (unionCases : UnionCaseInfo list) =
+type private ShapeFSharpList<'T> (unionCases : UnionCaseInfo list) =
     inherit TypeShape<'T list> ()
     interface IShapeFSharpList with
         member __.Accept v = v.Visit<'T> ()
