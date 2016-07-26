@@ -17,7 +17,7 @@ github eiriktsarpalis/TypeShape src/TypeShape/TypeShape.fs
 ```
 and in `paket.references`:
 ```
-File: TypeShape.fs
+File: TypeShape.fs TypeShape
 ```
 You can hide the TypeShape API from your project 
 by enabling the `TYPESHAPE_HIDE` build conditional.
