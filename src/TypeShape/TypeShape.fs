@@ -1170,20 +1170,21 @@ module private TypeShapeImpl =
     let private getGenericEnumType () = 
         typeof<ShapeEnum<BindingFlags,int>>.GetGenericTypeDefinition()
 
-    let private activateArgs (gt : Type) (tp : Type []) (args : obj[]) =
-        let ti = gt.MakeGenericType tp
+    let activateGen (gt : Type) (tp : Type []) (args : obj[]) =
+        let ti = if tp.Length = 0 then gt else gt.MakeGenericType tp
         let ctypes = args |> Array.map (fun o -> o.GetType())
         let ctor = ti.GetConstructor(allMembers, null, CallingConventions.Standard, ctypes, [||])
-        ctor.Invoke args :?> TypeShape
+        ctor.Invoke args
 
-    let private activate (gt : Type) (tp : Type []) = activateArgs gt tp [||]
-    let private activate1 (gt : Type) (tp : Type) = activate gt [|tp|]
-    let private activate2 (gt : Type) (p1 : Type) (p2 : Type) = activate gt [|p1 ; p2|]
+    let private activateArgs (gt : Type) (tp : Type []) args = activateGen gt tp args :?> TypeShape
+    let private activate (gt : Type) (tp : Type []) = activateGen gt tp [||] :?> TypeShape
+    let private activate1 (gt : Type) (tp : Type) = activateGen gt [|tp|] [||] :?> TypeShape
+    let private activate2 (gt : Type) (p1 : Type) (p2 : Type) = activateGen gt [|p1 ; p2|] [||] :?> TypeShape
 
     let private canon = Type.GetType("System.__Canon")
 
     /// correctly resolves if type is assignable to interface
-    let rec private isAssignableFrom (interfaceTy : Type) (ty : Type) =
+    let rec isAssignableFrom (interfaceTy : Type) (ty : Type) =
         let proj (t : Type) = t.Assembly, t.Namespace, t.Name, t.MetadataToken
         if interfaceTy = ty then true
         elif ty.GetInterfaces() |> Array.exists(fun if0 -> proj if0 = proj interfaceTy) then true
@@ -1350,25 +1351,44 @@ module private TypeShapeImpl =
 //////////////////////////////////
 ///////////// Section: Public API
 
+/// Resolver function used for generating add-on TypeShapes
+type TypeShapeResolver = Type -> TypeShape option
+
 type TypeShape with
 
     /// <summary>
     ///     Computes the type shape for given type
     /// </summary>
     /// <param name="t">System.Type to be resolved.</param>
-    /// <param name="addOnResolver">User supplied add-on resolver for custom shapes.</param>
-    static member Resolve (t : Type, ?addOnResolver : Type -> TypeShape option) = 
+    /// <param name="addOnResolvers">User supplied add-on resolvers for custom shapes.</param>
+    static member Resolve (t : Type, [<ParamArray>]addOnResolvers : TypeShapeResolver []) = 
         if t = null then raise <| ArgumentNullException()
-        match addOnResolver with
-        | None -> TypeShapeImpl.resolveTypeShapeCached t
-        | Some r -> TypeShapeImpl.resolveTypeShape r t
+        if Array.isEmpty addOnResolvers then TypeShapeImpl.resolveTypeShapeCached t
+        else
+            let rec resolver i t =
+                if i = addOnResolvers.Length then None
+                else 
+                    match addOnResolvers.[i] t with 
+                    | None -> resolver (i + 1) t 
+                    | Some _ as a -> a
+
+            TypeShapeImpl.resolveTypeShape (resolver 0) t
 
     /// <summary>
     ///     Computes the type shape for given type
     /// </summary>
-    /// <param name="addOnResolver">User supplied add-on resolver for custom shapes.</param>
-    static member Resolve<'T> (?addOnResolver : Type -> TypeShape option) =
-        TypeShape.Resolve(typeof<'T>, ?addOnResolver = addOnResolver) :?> TypeShape<'T>
+    /// <param name="addOnResolvers">User supplied add-on resolvers for custom shapes.</param>
+    static member Resolve<'T> ([<ParamArray>]addOnResolvers : TypeShapeResolver []) =
+        TypeShape.Resolve(typeof<'T>, addOnResolvers = addOnResolvers) :?> TypeShape<'T>
+
+type Activator with
+    /// Generic edition of the activator method which support type parameters and private types
+    static member CreateInstanceGeneric(typ : Type, ?typeParams : Type[], ?ctorArgs : obj[]) =
+        TypeShapeImpl.activateGen typ (defaultArg typeParams [||]) (defaultArg ctorArgs [||])
+
+type Type with
+    /// Checks if interface type is assignable from given type
+    member ifTy.IsInterfaceAssignableFrom(s : Type) = TypeShapeImpl.isAssignableFrom ifTy s
 
 [<AutoOpen>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -1386,9 +1406,10 @@ module Shape =
         | :? TypeShape<'T> -> SomeU
         | _ -> None
 
-    let inline private test1<'If> (t : TypeShape) =
+    /// Tests if given type shape is of given interface type
+    let inline test<'Interface> (t : TypeShape) =
         match t :> obj with
-        | :? 'If as f -> Some f
+        | :? 'Interface as f -> Some f
         | _ -> None
 
     let (|Bool|_|) t = test0<bool> t
@@ -1416,59 +1437,59 @@ module Shape =
     let (|FSharpUnit|_|) t = test0<unit> t
     let (|ByteArray|_|) t = test0<byte []> t
     
-    let (|Nullable|_|) t = test1<IShapeNullable> t
-    let (|Enum|_|) t = test1<IShapeEnum> t
-    let (|KeyValuePair|_|) t = test1<IShapeKeyValuePair> t
-    let (|Dictionary|_|) t = test1<IShapeDictionary> t
-    let (|HashSet|_|) t = test1<IShapeHashSet> t
-    let (|ResizeArray|_|) t = test1<IShapeResizeArray> t
-    let (|Delegate|_|) t = test1<IShapeDelegate> t
-    let (|Exception|_|) t = test1<IShapeException> t
+    let (|Nullable|_|) t = test<IShapeNullable> t
+    let (|Enum|_|) t = test<IShapeEnum> t
+    let (|KeyValuePair|_|) t = test<IShapeKeyValuePair> t
+    let (|Dictionary|_|) t = test<IShapeDictionary> t
+    let (|HashSet|_|) t = test<IShapeHashSet> t
+    let (|ResizeArray|_|) t = test<IShapeResizeArray> t
+    let (|Delegate|_|) t = test<IShapeDelegate> t
+    let (|Exception|_|) t = test<IShapeException> t
 
-    let (|Array|_|) t = test1<IShapeArray> t
-    let (|Array2D|_|) t = test1<IShapeArray2D> t
-    let (|Array3D|_|) t = test1<IShapeArray3D> t
-    let (|Array4D|_|) t = test1<IShapeArray4D> t
+    let (|Array|_|) t = test<IShapeArray> t
+    let (|Array2D|_|) t = test<IShapeArray2D> t
+    let (|Array3D|_|) t = test<IShapeArray3D> t
+    let (|Array4D|_|) t = test<IShapeArray4D> t
 
-    let (|Tuple|_|)  t = test1<IShapeTuple> t
-    let (|Tuple1|_|) t = test1<IShapeTuple1> t
-    let (|Tuple2|_|) t = test1<IShapeTuple2> t
-    let (|Tuple3|_|) t = test1<IShapeTuple3> t
-    let (|Tuple4|_|) t = test1<IShapeTuple4> t
-    let (|Tuple5|_|) t = test1<IShapeTuple5> t
-    let (|Tuple6|_|) t = test1<IShapeTuple6> t
-    let (|Tuple7|_|) t = test1<IShapeTuple7> t
-    let (|Tuple8|_|) t = test1<IShapeTuple8> t
+    let (|Tuple|_|)  t = test<IShapeTuple> t
+    let (|Tuple1|_|) t = test<IShapeTuple1> t
+    let (|Tuple2|_|) t = test<IShapeTuple2> t
+    let (|Tuple3|_|) t = test<IShapeTuple3> t
+    let (|Tuple4|_|) t = test<IShapeTuple4> t
+    let (|Tuple5|_|) t = test<IShapeTuple5> t
+    let (|Tuple6|_|) t = test<IShapeTuple6> t
+    let (|Tuple7|_|) t = test<IShapeTuple7> t
+    let (|Tuple8|_|) t = test<IShapeTuple8> t
 
-    let (|FSharpList|_|) t = test1<IShapeFSharpList> t
-    let (|FSharpOption|_|) t = test1<IShapeFSharpOption> t
-    let (|FSharpRef|_|) t = test1<IShapeFSharpRef> t
-    let (|FSharpSet|_|) t = test1<IShapeFSharpSet> t
-    let (|FSharpMap|_|) t = test1<IShapeFSharpMap> t
-    let (|FSharpFunc|_|) t = test1<IShapeFSharpFunc> t
+    let (|FSharpList|_|) t = test<IShapeFSharpList> t
+    let (|FSharpOption|_|) t = test<IShapeFSharpOption> t
+    let (|FSharpRef|_|) t = test<IShapeFSharpRef> t
+    let (|FSharpSet|_|) t = test<IShapeFSharpSet> t
+    let (|FSharpMap|_|) t = test<IShapeFSharpMap> t
+    let (|FSharpFunc|_|) t = test<IShapeFSharpFunc> t
 
-    let (|FSharpUnion|_|) t = test1<IShapeFSharpUnion> t
-    let (|FSharpUnion1|_|) t = test1<IShapeFSharpUnion1> t
-    let (|FSharpUnion2|_|) t = test1<IShapeFSharpUnion2> t
-    let (|FSharpUnion3|_|) t = test1<IShapeFSharpUnion3> t
-    let (|FSharpUnion4|_|) t = test1<IShapeFSharpUnion4> t
-    let (|FSharpUnion5|_|) t = test1<IShapeFSharpUnion5> t
-    let (|FSharpUnion6|_|) t = test1<IShapeFSharpUnion6> t
-    let (|FSharpUnion7|_|) t = test1<IShapeFSharpUnion7> t
+    let (|FSharpUnion|_|) t = test<IShapeFSharpUnion> t
+    let (|FSharpUnion1|_|) t = test<IShapeFSharpUnion1> t
+    let (|FSharpUnion2|_|) t = test<IShapeFSharpUnion2> t
+    let (|FSharpUnion3|_|) t = test<IShapeFSharpUnion3> t
+    let (|FSharpUnion4|_|) t = test<IShapeFSharpUnion4> t
+    let (|FSharpUnion5|_|) t = test<IShapeFSharpUnion5> t
+    let (|FSharpUnion6|_|) t = test<IShapeFSharpUnion6> t
+    let (|FSharpUnion7|_|) t = test<IShapeFSharpUnion7> t
 
     let (|FSharpChoice|_|) = function FSharpUnion s when s.IsFSharpChoice -> SomeU | _ -> None
 
-    let (|FSharpRecord|_|) t = test1<IShapeFSharpRecord> t
-    let (|FSharpRecord1|_|) t = test1<IShapeFSharpRecord1> t
-    let (|FSharpRecord2|_|) t = test1<IShapeFSharpRecord2> t
-    let (|FSharpRecord3|_|) t = test1<IShapeFSharpRecord3> t
-    let (|FSharpRecord4|_|) t = test1<IShapeFSharpRecord4> t
-    let (|FSharpRecord5|_|) t = test1<IShapeFSharpRecord5> t
-    let (|FSharpRecord6|_|) t = test1<IShapeFSharpRecord6> t
-    let (|FSharpRecord7|_|) t = test1<IShapeFSharpRecord7> t
+    let (|FSharpRecord|_|) t = test<IShapeFSharpRecord> t
+    let (|FSharpRecord1|_|) t = test<IShapeFSharpRecord1> t
+    let (|FSharpRecord2|_|) t = test<IShapeFSharpRecord2> t
+    let (|FSharpRecord3|_|) t = test<IShapeFSharpRecord3> t
+    let (|FSharpRecord4|_|) t = test<IShapeFSharpRecord4> t
+    let (|FSharpRecord5|_|) t = test<IShapeFSharpRecord5> t
+    let (|FSharpRecord6|_|) t = test<IShapeFSharpRecord6> t
+    let (|FSharpRecord7|_|) t = test<IShapeFSharpRecord7> t
 
-    let (|Collection|_|) t = test1<IShapeCollection> t
-    let (|Enumerable|_|) t = test1<IShapeEnumerable> t
+    let (|Collection|_|) t = test<IShapeCollection> t
+    let (|Enumerable|_|) t = test<IShapeEnumerable> t
 
     let (|Primitive|_|) (t : TypeShape) =
         match t with

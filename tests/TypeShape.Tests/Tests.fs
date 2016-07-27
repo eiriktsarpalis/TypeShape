@@ -10,6 +10,9 @@ open FsCheck
 
 open TypeShape
 
+open System.Runtime.Serialization
+open TypeShape_ISerializableExtensions
+
 let check<'T>(prop : 'T -> bool) = Check.QuickThrowOnFailure prop
 
 let testPrim<'T>() = 
@@ -246,6 +249,24 @@ let ``Shape F# Set`` () =
             member __.Visit<'T when 'T : comparison>() = typeof<'T> = typeof<string> }
 
     test <@ match shapeof<Set<string>> with Shape.FSharpSet s -> s.Accept accepter | _ -> false @>
+
+[<Fact>]
+let ``Shape ISerializable`` () =
+    let shape = TypeShape.Resolve(typeof<ISerializable>, ShapeSerializable.Resolver)
+    let accepter =
+        { new ISerializableVisitor<bool> with
+            member __.Visit<'T when 'T :> ISerializable> () = typeof<'T> = typeof<ISerializable> }
+
+    test <@ match shape with Shape.ISerializable s -> s.Accept accepter | _ -> false @>
+
+[<Fact>]
+let ``Exception should not resolve to ISerializable`` () =
+    let shape = TypeShape.Resolve(typeof<exn>, ShapeSerializable.Resolver)
+    let accepter =
+        { new ISerializableVisitor<bool> with
+            member __.Visit<'T when 'T :> ISerializable> () = false }
+
+    test <@ match shape with Shape.ISerializable s -> s.Accept accepter | Shape.Exception _ -> true | _ -> false @>
 
 [<Fact>]
 let ``Shape F# Map`` () =
