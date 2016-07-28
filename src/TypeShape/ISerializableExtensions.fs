@@ -21,7 +21,8 @@ type private ShapeISerializable<'T when 'T :> ISerializable> () =
     interface IShapeISerializable with
         member __.Accept v = v.Visit<'T>()
 
-type ShapeSerializable =
+type ShapeISerializable =
+    /// Add-on resolver used for identifying ISerializable instances
     static member Resolver : TypeShapeResolver =
         fun (t : Type) ->
             if typeof<exn>.IsAssignableFrom t then None
