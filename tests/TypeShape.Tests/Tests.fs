@@ -159,31 +159,30 @@ let ``Shape Delegate`` () =
 
 [<Fact>]
 let ``Shape Enumerable`` () =
-    let accepter t =
+    let accepter e t =
         { new IEnumerableVisitor<bool> with
-            member __.Visit<'T>() = typeof<'T> = t }
-    test <@ match shapeof<int []> with Shape.Enumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<int list> with Shape.Enumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<seq<int>> with Shape.Enumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<ResizeArray<int>> with Shape.Enumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<HashSet<int>> with Shape.Enumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<Dictionary<int, string>> with Shape.Enumerable s -> s.Accept (accepter typeof<KeyValuePair<int, string>>) | _ -> false @>
-    test <@ match shapeof<Set<int>> with Shape.Enumerable s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<Map<int, string>> with Shape.Enumerable s -> s.Accept (accepter typeof<KeyValuePair<int, string>>) | _ -> false @>
+            member __.Visit<'E, 'T when 'E :> seq<'T>>() = typeof<'T> = t && typeof<'E> = e }
+    test <@ match shapeof<int []> with Shape.Enumerable s -> s.Accept (accepter typeof<int []> typeof<int>) | _ -> false @>
+    test <@ match shapeof<int list> with Shape.Enumerable s -> s.Accept (accepter typeof<int list> typeof<int>) | _ -> false @>
+    test <@ match shapeof<seq<int>> with Shape.Enumerable s -> s.Accept (accepter typeof<seq<int>> typeof<int>) | _ -> false @>
+    test <@ match shapeof<ResizeArray<int>> with Shape.Enumerable s -> s.Accept (accepter typeof<ResizeArray<int>> typeof<int>) | _ -> false @>
+    test <@ match shapeof<HashSet<int>> with Shape.Enumerable s -> s.Accept (accepter typeof<HashSet<int>> typeof<int>) | _ -> false @>
+    test <@ match shapeof<Dictionary<int, string>> with Shape.Enumerable s -> s.Accept (accepter typeof<Dictionary<int,string>> typeof<KeyValuePair<int, string>>) | _ -> false @>
+    test <@ match shapeof<Set<int>> with Shape.Enumerable s -> s.Accept (accepter typeof<Set<int>> typeof<int>) | _ -> false @>
+    test <@ match shapeof<Map<int, string>> with Shape.Enumerable s -> s.Accept (accepter typeof<Map<int,string>> typeof<KeyValuePair<int, string>>) | _ -> false @>
 
 [<Fact>]
 let ``Shape Collection`` () =
-    let accepter t =
+    let accepter c t =
         { new ICollectionVisitor<bool> with
-            member __.Visit<'T>() = typeof<'T> = t }
-    test <@ match shapeof<int []> with Shape.Collection s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<int list> with Shape.Collection s -> s.Accept (accepter typeof<int>) | _ -> false @>
+            member __.Visit<'C, 'T when 'C :> ICollection<'T>>() = typeof<'T> = t && typeof<'C> = c}
+    test <@ match shapeof<int []> with Shape.Collection s -> s.Accept (accepter typeof<int []> typeof<int>) | _ -> false @>
     test <@ match shapeof<seq<int>> with Shape.Collection s -> false | _ -> true @>
-    test <@ match shapeof<ResizeArray<int>> with Shape.Collection s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<HashSet<int>> with Shape.Collection s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<Dictionary<int, string>> with Shape.Collection s -> s.Accept (accepter typeof<KeyValuePair<int, string>>) | _ -> false @>
-    test <@ match shapeof<Set<int>> with Shape.Collection s -> s.Accept (accepter typeof<int>) | _ -> false @>
-    test <@ match shapeof<Map<int, string>> with Shape.Collection s -> s.Accept (accepter typeof<KeyValuePair<int, string>>) | _ -> false @>
+    test <@ match shapeof<ResizeArray<int>> with Shape.Collection s -> s.Accept (accepter typeof<ResizeArray<int>> typeof<int>) | _ -> false @>
+    test <@ match shapeof<HashSet<int>> with Shape.Collection s -> s.Accept (accepter typeof<HashSet<int>> typeof<int>) | _ -> false @>
+    test <@ match shapeof<Dictionary<int, string>> with Shape.Collection s -> s.Accept (accepter typeof<Dictionary<int, string>> typeof<KeyValuePair<int, string>>) | _ -> false @>
+    test <@ match shapeof<Set<int>> with Shape.Collection s -> s.Accept (accepter typeof<Set<int>> typeof<int>) | _ -> false @>
+    test <@ match shapeof<Map<int, string>> with Shape.Collection s -> s.Accept (accepter typeof<Map<int,string>> typeof<KeyValuePair<int, string>>) | _ -> false @>
 
 [<Fact>]
 let ``Shape KeyValuePair`` () =

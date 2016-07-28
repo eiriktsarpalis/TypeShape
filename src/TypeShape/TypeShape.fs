@@ -222,31 +222,31 @@ type private ShapeException<'exn when 'exn :> exn> (isFSharpExn : bool) =
 ///////////// IEnumerable
 
 type IEnumerableVisitor<'R> =
-    abstract Visit<'T> : unit -> 'R
+    abstract Visit<'Enum, 'T when 'Enum :> seq<'T>> : unit -> 'R
 
 type IShapeEnumerable =
     abstract Accept : IEnumerableVisitor<'R> -> 'R
 
-type private ShapeEnumerable<'T>() =
-    inherit TypeShape<seq<'T>> ()
+type private ShapeEnumerable<'Enum, 'T when 'Enum :> seq<'T>>() =
+    inherit TypeShape<'Enum> ()
     interface IShapeEnumerable with
-        member __.Accept v = v.Visit<'T> ()
+        member __.Accept v = v.Visit<'Enum, 'T> ()
 
 ///////////// Collection
 
 type ICollectionVisitor<'R> =
-    abstract Visit<'T> : unit -> 'R
+    abstract Visit<'Collection, 'T when 'Collection :> ICollection<'T>> : unit -> 'R
 
 type IShapeCollection =
     abstract Accept : ICollectionVisitor<'R> -> 'R
 
-type private ShapeCollection<'T>() =
-    inherit TypeShape<ICollection<'T>>()
+type private ShapeCollection<'Collection, 'T when 'Collection :> ICollection<'T>>() =
+    inherit TypeShape<'Collection>()
     interface IShapeCollection with
-        member __.Accept v = v.Visit<'T> ()
+        member __.Accept v = v.Visit<'Collection, 'T> ()
 
     interface IShapeEnumerable with
-        member __.Accept v = v.Visit<'T> ()
+        member __.Accept v = v.Visit<'Collection, 'T> ()
 
 ///////////// KeyValuePair
 
@@ -277,10 +277,10 @@ type private ShapeArray<'T>() =
         member __.Accept v = v.Visit<'T> ()
 
     interface IShapeCollection with
-        member __.Accept v = v.Visit<'T> ()
+        member __.Accept v = v.Visit<'T[], 'T> ()
 
     interface IShapeEnumerable with
-        member __.Accept v = v.Visit<'T> ()
+        member __.Accept v = v.Visit<'T[], 'T> ()
 
 ///////////// Array 2D
 
@@ -332,9 +332,9 @@ type IShapeResizeArray =
 type private ShapeResizeArray<'T> () =
     inherit TypeShape<ResizeArray<'T>> ()
     interface IShapeEnumerable with
-        member __.Accept v = v.Visit<'T> ()
+        member __.Accept v = v.Visit<ResizeArray<'T>, 'T> ()
     interface IShapeCollection with
-        member __.Accept v = v.Visit<'T> ()
+        member __.Accept v = v.Visit<ResizeArray<'T>, 'T> ()
     interface IShapeResizeArray with
         member __.Accept v = v.Visit<'T> ()
 
@@ -350,9 +350,9 @@ type IShapeDictionary =
 type private ShapeDictionary<'K, 'V when 'K : equality> () =
     inherit TypeShape<Dictionary<'K, 'V>> ()
     interface IShapeEnumerable with
-        member __.Accept v = v.Visit<KeyValuePair<'K, 'V>> ()
+        member __.Accept v = v.Visit<Dictionary<'K,'V>, KeyValuePair<'K, 'V>> ()
     interface IShapeCollection with
-        member __.Accept v = v.Visit<KeyValuePair<'K, 'V>> ()
+        member __.Accept v = v.Visit<Dictionary<'K,'V>, KeyValuePair<'K, 'V>> ()
     interface IShapeDictionary with
         member __.Accept v = v.Visit<'K, 'V> ()
 
@@ -367,9 +367,9 @@ type IShapeHashSet =
 type private ShapeHashSet<'T when 'T : equality> () =
     inherit TypeShape<HashSet<'T>> ()
     interface IShapeEnumerable with
-        member __.Accept v = v.Visit<'T> ()
+        member __.Accept v = v.Visit<HashSet<'T>, 'T> ()
     interface IShapeCollection with
-        member __.Accept v = v.Visit<'T> ()
+        member __.Accept v = v.Visit<HashSet<'T>, 'T> ()
     interface IShapeHashSet with
         member __.Accept v = v.Visit<'T> ()
 
@@ -384,9 +384,9 @@ type IShapeFSharpSet =
 type private ShapeFSharpSet<'T when 'T : comparison> () =
     inherit TypeShape<Set<'T>> ()
     interface IShapeEnumerable with
-        member __.Accept v = v.Visit<'T> ()
+        member __.Accept v = v.Visit<Set<'T>, 'T> ()
     interface IShapeCollection with
-        member __.Accept v = v.Visit<'T> ()
+        member __.Accept v = v.Visit<Set<'T>, 'T> ()
     interface IShapeFSharpSet with
         member __.Accept v = v.Visit<'T> ()
 
@@ -401,9 +401,9 @@ type IShapeFSharpMap =
 type private ShapeFSharpMap<'K, 'V when 'K : comparison> () =
     inherit TypeShape<Map<'K,'V>> ()
     interface IShapeEnumerable with
-        member __.Accept v = v.Visit<KeyValuePair<'K, 'V>> ()
+        member __.Accept v = v.Visit<Map<'K,'V>, KeyValuePair<'K, 'V>> ()
     interface IShapeCollection with
-        member __.Accept v = v.Visit<KeyValuePair<'K, 'V>> ()
+        member __.Accept v = v.Visit<Map<'K,'V>, KeyValuePair<'K, 'V>> ()
     interface IShapeFSharpMap with
         member __.Accept v = v.Visit<'K, 'V>()
 
@@ -1137,9 +1137,7 @@ type private ShapeFSharpList<'T> (unionCases : UnionCaseInfo list) =
     interface IShapeFSharpList with
         member __.Accept v = v.Visit<'T> ()
     interface IShapeEnumerable with
-        member __.Accept v = v.Visit<'T> ()
-    interface IShapeCollection with
-        member __.Accept v = v.Visit<'T> ()
+        member __.Accept v = v.Visit<'T list, 'T> ()
     interface IShapeFSharpUnion<'T list, unit, 'T * 'T list> with
         member __.GetTag a = match a with [] -> 0 | _ -> 1
         member __.GetTagUntyped o = match o :?> 'T list with [] -> 0 | _ -> 1
@@ -1336,9 +1334,9 @@ module private TypeShapeImpl =
             elif gt = typedefof<KeyValuePair<_,_>> then
                 activate typedefof<ShapeKeyValuePair<_,_>> gas
             elif isAssignableFrom typedefof<ICollection<_>> gt then
-                activate typedefof<ShapeCollection<_>> gas
+                activate typedefof<ShapeCollection<_,_>> [|t; gas.[0]|]
             elif isAssignableFrom typedefof<IEnumerable<_>> gt then
-                activate typedefof<ShapeEnumerable<_>> gas
+                activate typedefof<ShapeEnumerable<_,_>> [|t; gas.[0]|]
             else
                 activate1 typedefof<TypeShape<_>> t
         else 
