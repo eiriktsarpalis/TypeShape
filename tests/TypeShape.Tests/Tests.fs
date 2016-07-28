@@ -252,7 +252,7 @@ let ``Shape F# Set`` () =
 
 [<Fact>]
 let ``Shape ISerializable`` () =
-    let shape = TypeShape.Resolve(typeof<ISerializable>, ShapeSerializable.Resolver)
+    let shape = TypeShape.Resolve(typeof<ISerializable>, ShapeISerializable.Resolver)
     let accepter =
         { new ISerializableVisitor<bool> with
             member __.Visit<'T when 'T :> ISerializable> () = typeof<'T> = typeof<ISerializable> }
@@ -261,7 +261,7 @@ let ``Shape ISerializable`` () =
 
 [<Fact>]
 let ``Exception should not resolve to ISerializable`` () =
-    let shape = TypeShape.Resolve(typeof<exn>, ShapeSerializable.Resolver)
+    let shape = TypeShape.Resolve(typeof<exn>, ShapeISerializable.Resolver)
     let accepter =
         { new ISerializableVisitor<bool> with
             member __.Visit<'T when 'T :> ISerializable> () = false }
