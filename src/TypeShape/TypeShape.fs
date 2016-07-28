@@ -1490,19 +1490,3 @@ module Shape =
 
     let (|Collection|_|) t = test<IShapeCollection> t
     let (|Enumerable|_|) t = test<IShapeEnumerable> t
-
-    let (|Primitive|_|) (t : TypeShape) =
-        match t with
-        | :? TypeShape<bool>  
-        | :? TypeShape<byte>  
-        | :? TypeShape<sbyte> 
-        | :? TypeShape<int16> 
-        | :? TypeShape<int32> 
-        | :? TypeShape<int64> 
-        | :? TypeShape<uint16>
-        | :? TypeShape<uint32>
-        | :? TypeShape<uint64>
-        | :? TypeShape<single>
-        | :? TypeShape<double>
-        | :? TypeShape<decimal> -> SomeU
-        | _ -> None
