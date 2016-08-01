@@ -392,6 +392,54 @@ let ``Shape F# ref`` () =
     let accepter = { new IFSharpRefVisitor<bool> with member __.Visit<'T>() = typeof<'T> = typeof<int> }
     test <@ match shapeof<int ref> with Shape.FSharpRef s -> s.Accept accepter | _ -> false @>
 
+[<Fact>]
+let ``Shape F# choice 2`` () =
+    let accepter = { new IFSharpChoice2Visitor<bool> with member __.Visit<'T1,'T2>() = typeof<'T1> = typeof<int> && typeof<'T2> = typeof<string> }
+    test <@ match shapeof<Choice<int,string>> with Shape.FSharpChoice2 c -> c.Accept accepter | _ -> false @>
+
+[<Fact>]
+let ``Shape F# choice 3`` () =
+    let accepter = { new IFSharpChoice3Visitor<bool> with member __.Visit<'T1,'T2,'T3>() = typeof<'T1> = typeof<int> && typeof<'T2> = typeof<string> && typeof<'T3> = typeof<bool> }
+    test <@ match shapeof<Choice<int,string,bool>> with Shape.FSharpChoice3 c -> c.Accept accepter | _ -> false @>
+
+[<Fact>]
+let ``Shape F# choice 4`` () =
+    let accepter = 
+        { new IFSharpChoice4Visitor<bool> with 
+            member __.Visit<'T1,'T2,'T3,'T4>() = 
+                typeof<'T1> = typeof<int> && typeof<'T2> = typeof<string> && 
+                typeof<'T3> = typeof<bool> && typeof<'T4> = typeof<byte[]> }
+    test <@ match shapeof<Choice<int,string,bool,byte[]>> with Shape.FSharpChoice4 c -> c.Accept accepter | _ -> false @>
+
+[<Fact>]
+let ``Shape F# choice 5`` () =
+    let accepter = 
+        { new IFSharpChoice5Visitor<bool> with 
+            member __.Visit<'T1,'T2,'T3,'T4,'T5>() = 
+                typeof<'T1> = typeof<int> && typeof<'T2> = typeof<string> && 
+                typeof<'T3> = typeof<bool> && typeof<'T4> = typeof<byte[]> &&
+                typeof<'T5> = typeof<sbyte> }
+    test <@ match shapeof<Choice<int,string,bool,byte[],sbyte>> with Shape.FSharpChoice5 c -> c.Accept accepter | _ -> false @>
+
+[<Fact>]
+let ``Shape F# choice 6`` () =
+    let accepter = 
+        { new IFSharpChoice6Visitor<bool> with 
+            member __.Visit<'T1,'T2,'T3,'T4,'T5,'T6>() = 
+                typeof<'T1> = typeof<int> && typeof<'T2> = typeof<string> && 
+                typeof<'T3> = typeof<bool> && typeof<'T4> = typeof<byte[]> &&
+                typeof<'T5> = typeof<sbyte> && typeof<'T6> = typeof<decimal> }
+    test <@ match shapeof<Choice<int,string,bool,byte[],sbyte,decimal>> with Shape.FSharpChoice6 c -> c.Accept accepter | _ -> false @>
+
+[<Fact>]
+let ``Shape F# choice 7`` () =
+    let accepter = 
+        { new IFSharpChoice7Visitor<bool> with 
+            member __.Visit<'T1,'T2,'T3,'T4,'T5,'T6,'T7>() = 
+                typeof<'T1> = typeof<int> && typeof<'T2> = typeof<string> && 
+                typeof<'T3> = typeof<bool> && typeof<'T4> = typeof<byte[]> &&
+                typeof<'T5> = typeof<sbyte> && typeof<'T6> = typeof<decimal> && typeof<'T7> = typeof<float> }
+    test <@ match shapeof<Choice<int,string,bool,byte[],sbyte,decimal,float>> with Shape.FSharpChoice7 c -> c.Accept accepter | _ -> false @>
 
 type Union1 = C1U1 of int * string
 

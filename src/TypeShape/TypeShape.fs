@@ -1006,6 +1006,78 @@ type private ShapeFSharpList<'T> () =
     interface IShapeFSharpList with
         member __.Accept v = v.Visit<'T> ()
 
+///////////// F# Choice 2
+
+type IFSharpChoice2Visitor<'R> =
+    abstract Visit<'T1,'T2> : unit -> 'R
+
+type IShapeFSharpChoice2 =
+    abstract Accept : IFSharpChoice2Visitor<'R> -> 'R
+
+type private ShapeFSharpChoice<'T1, 'T2> () =
+    interface IShapeFSharpChoice2 with
+        member __.Accept v = v.Visit<'T1,'T2>()
+
+///////////// F# Choice 3
+
+type IFSharpChoice3Visitor<'R> =
+    abstract Visit<'T1,'T2,'T3> : unit -> 'R
+
+type IShapeFSharpChoice3 =
+    abstract Accept : IFSharpChoice3Visitor<'R> -> 'R
+
+type private ShapeFSharpChoice<'T1, 'T2, 'T3> () =
+    interface IShapeFSharpChoice3 with
+        member __.Accept v = v.Visit<'T1,'T2,'T3>()
+
+///////////// F# Choice 4
+
+type IFSharpChoice4Visitor<'R> =
+    abstract Visit<'T1,'T2,'T3,'T4> : unit -> 'R
+
+type IShapeFSharpChoice4 =
+    abstract Accept : IFSharpChoice4Visitor<'R> -> 'R
+
+type private ShapeFSharpChoice<'T1, 'T2, 'T3, 'T4> () =
+    interface IShapeFSharpChoice4 with
+        member __.Accept v = v.Visit<'T1,'T2,'T3,'T4>()
+
+///////////// F# Choice 5
+
+type IFSharpChoice5Visitor<'R> =
+    abstract Visit<'T1,'T2,'T3,'T4,'T5> : unit -> 'R
+
+type IShapeFSharpChoice5 =
+    abstract Accept : IFSharpChoice5Visitor<'R> -> 'R
+
+type private ShapeFSharpChoice<'T1, 'T2, 'T3, 'T4, 'T5> () =
+    interface IShapeFSharpChoice5 with
+        member __.Accept v = v.Visit<'T1,'T2,'T3,'T4,'T5>()
+
+///////////// F# Choice 6
+
+type IFSharpChoice6Visitor<'R> =
+    abstract Visit<'T1,'T2,'T3,'T4,'T5,'T6> : unit -> 'R
+
+type IShapeFSharpChoice6 =
+    abstract Accept : IFSharpChoice6Visitor<'R> -> 'R
+
+type private ShapeFSharpChoice<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> () =
+    interface IShapeFSharpChoice6 with
+        member __.Accept v = v.Visit<'T1,'T2,'T3,'T4,'T5,'T6>()
+
+///////////// F# Choice 7
+
+type IFSharpChoice7Visitor<'R> =
+    abstract Visit<'T1,'T2,'T3,'T4,'T5,'T6,'T7> : unit -> 'R
+
+type IShapeFSharpChoice7 =
+    abstract Accept : IFSharpChoice7Visitor<'R> -> 'R
+
+type private ShapeFSharpChoice<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> () =
+    interface IShapeFSharpChoice7 with
+        member __.Accept v = v.Visit<'T1,'T2,'T3,'T4,'T5,'T6,'T7>()
+
 ////////////////////////////////////////////
 ///////////// Section: TypeShape resolution
 
@@ -1361,6 +1433,54 @@ module Shape =
         | Generic(td,ta) when td = typedefof<Set<_>> ->
             Activator.CreateInstanceGeneric<ShapeFSharpSet<_>>(ta)
             :?> IShapeFSharpSet
+            |> Some
+        | _ -> None
+
+    let (|FSharpChoice2|_|) (s : TypeShape) =
+        match s.ShapeInfo with
+        | Generic(td,ta) when td = typedefof<Choice<_,_>> ->
+            Activator.CreateInstanceGeneric<ShapeFSharpChoice<_,_>>(ta)
+            :?> IShapeFSharpChoice2
+            |> Some
+        | _ -> None
+
+    let (|FSharpChoice3|_|) (s : TypeShape) =
+        match s.ShapeInfo with
+        | Generic(td,ta) when td = typedefof<Choice<_,_,_>> ->
+            Activator.CreateInstanceGeneric<ShapeFSharpChoice<_,_,_>>(ta)
+            :?> IShapeFSharpChoice3
+            |> Some
+        | _ -> None
+
+    let (|FSharpChoice4|_|) (s : TypeShape) =
+        match s.ShapeInfo with
+        | Generic(td,ta) when td = typedefof<Choice<_,_,_,_>> ->
+            Activator.CreateInstanceGeneric<ShapeFSharpChoice<_,_,_,_>>(ta)
+            :?> IShapeFSharpChoice4
+            |> Some
+        | _ -> None
+
+    let (|FSharpChoice5|_|) (s : TypeShape) =
+        match s.ShapeInfo with
+        | Generic(td,ta) when td = typedefof<Choice<_,_,_,_,_>> ->
+            Activator.CreateInstanceGeneric<ShapeFSharpChoice<_,_,_,_,_>>(ta)
+            :?> IShapeFSharpChoice5
+            |> Some
+        | _ -> None
+
+    let (|FSharpChoice6|_|) (s : TypeShape) =
+        match s.ShapeInfo with
+        | Generic(td,ta) when td = typedefof<Choice<_,_,_,_,_,_>> ->
+            Activator.CreateInstanceGeneric<ShapeFSharpChoice<_,_,_,_,_,_>>(ta)
+            :?> IShapeFSharpChoice6
+            |> Some
+        | _ -> None
+
+    let (|FSharpChoice7|_|) (s : TypeShape) =
+        match s.ShapeInfo with
+        | Generic(td,ta) when td = typedefof<Choice<_,_,_,_,_,_,_>> ->
+            Activator.CreateInstanceGeneric<ShapeFSharpChoice<_,_,_,_,_,_,_>>(ta)
+            :?> IShapeFSharpChoice7
             |> Some
         | _ -> None
 
