@@ -170,6 +170,8 @@ let ``Shape Enumerable`` () =
     test <@ match shapeof<Dictionary<int, string>> with Shape.Enumerable s -> s.Accept (accepter typeof<Dictionary<int,string>> typeof<KeyValuePair<int, string>>) | _ -> false @>
     test <@ match shapeof<Set<int>> with Shape.Enumerable s -> s.Accept (accepter typeof<Set<int>> typeof<int>) | _ -> false @>
     test <@ match shapeof<Map<int, string>> with Shape.Enumerable s -> s.Accept (accepter typeof<Map<int,string>> typeof<KeyValuePair<int, string>>) | _ -> false @>
+    test <@ match shapeof<IDictionary<int, string>> with Shape.Enumerable s -> true | _ -> false @>
+    test <@ match shapeof<Stack<int>> with Shape.Enumerable s -> true | _ -> false @>
 
 [<Fact>]
 let ``Shape Collection`` () =
@@ -183,6 +185,7 @@ let ``Shape Collection`` () =
     test <@ match shapeof<Dictionary<int, string>> with Shape.Collection s -> s.Accept (accepter typeof<Dictionary<int, string>> typeof<KeyValuePair<int, string>>) | _ -> false @>
     test <@ match shapeof<Set<int>> with Shape.Collection s -> s.Accept (accepter typeof<Set<int>> typeof<int>) | _ -> false @>
     test <@ match shapeof<Map<int, string>> with Shape.Collection s -> s.Accept (accepter typeof<Map<int,string>> typeof<KeyValuePair<int, string>>) | _ -> false @>
+    test <@ match shapeof<IDictionary<int, string>> with Shape.Collection s -> true | _ -> false @>
 
 [<Fact>]
 let ``Shape KeyValuePair`` () =

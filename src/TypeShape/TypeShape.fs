@@ -1334,11 +1334,17 @@ module private TypeShapeImpl =
             elif gt = typedefof<KeyValuePair<_,_>> then
                 activate typedefof<ShapeKeyValuePair<_,_>> gas
             elif isAssignableFrom typedefof<ICollection<_>> gt then
-                let ifArgs = t.GetInterface("ICollection`1").GetGenericArguments()
-                activate typedefof<ShapeCollection<_,_>> [|t; ifArgs.[0]|]
+                let cArg =
+                    if gt = typedefof<ICollection<_>> then gas.[0]
+                    else t.GetInterface("ICollection`1").GetGenericArguments().[0]
+
+                activate typedefof<ShapeCollection<_,_>> [|t; cArg|]
             elif isAssignableFrom typedefof<IEnumerable<_>> gt then
-                let ifArgs = t.GetInterface("IEnumerable`1").GetGenericArguments()
-                activate typedefof<ShapeEnumerable<_,_>> [|t; ifArgs.[0]|]
+                let eArg =
+                    if gt = typedefof<IEnumerable<_>> then gas.[0]
+                    else t.GetInterface("IEnumerable`1").GetGenericArguments().[0]
+
+                activate typedefof<ShapeEnumerable<_,_>> [|t; eArg|]
             else
                 activate1 typedefof<TypeShape<_>> t
         else 
