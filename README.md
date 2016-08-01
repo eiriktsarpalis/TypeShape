@@ -76,6 +76,36 @@ for i = 1 to 1000 do ignore <| sprintf "%A" value
 for i = 1 to 1000 do ignore <| p value
 ```
 
+### Supporting F# records and unions
+
+TypeShape can be used to define generic programs which target F# records and unions.
+For instance, we could extent the printer implementation defined above to include
+support for arbitrary F# records containing two fields:
+```fsharp
+    | Shape.FSharpRecord2 s ->
+        s.Accept {
+            new IFSharpRecord2Visitor<obj> with
+                member __.Visit (s : IShapeFSharpRecord<'Record,'Field1,'Field2>) =
+                    let f1p, f2p = mkPrinter<'Field1>(), mkPrinter<'Field2>()
+                    let n1, n2 = s.Properties.[0].Name, s.Properties.[1].Name
+                    box(fun (r:'Record) -> sprintf "{ %s = %s ; %s = %s }" n1 (s.Project1 r |> f1p) n2 (s.Project2 r |> f2p))
+        }
+```
+Similarly, we could also add support for arbitrary F# unions of two union cases:
+```fsharp
+    | Shape.FSharpUnion2 s ->
+        s.Accept {
+            new IFSharpUnion2Visitor<obj> with
+                member __.Visit (s : IShapeFSharpUnion<'Union,'Case1,'Case2>) =
+                    let c1p, c2p = mkPrinter<'Case1>(), mkPrinter<'Case2>()
+                    let n1,n2 = s.UnionCaseInfo.[0].Name, s.UnionCaseInfo.[1].Name
+                    box(fun (u:'Union) ->
+                        match s.Project u with
+                        | Choice1Of2 c1 -> sprintf "%s %s" n1 (c1p c1)
+                        | Choice2Of2 c2 -> sprintf "%s %s" n2 (c2p c2))
+        }
+```
+
 ### Projects using TypeShape
 
 * [FsPickler](https://github.com/mbraceproject/FsPickler/blob/7d86cbd20ff37899ef58d5430f74376e119b7065/src/FsPickler/PicklerGeneration/PicklerGenerator.fs#L38)

@@ -34,12 +34,40 @@ and private mkPrinterUntyped (t : Type) : obj =
                     box(fun (t : 'T, s : 'S) -> sprintf "(%s, %s)" (tp t) (sp s))
         }
 
+    | Shape.FSharpRecord2 s ->
+        s.Accept {
+            new IFSharpRecord2Visitor<obj> with
+                member __.Visit (s : IShapeFSharpRecord<'Record,'Field1,'Field2>) =
+                    let f1p,f2p = mkPrinter<'Field1>(), mkPrinter<'Field2>()
+                    let n1,n2 = s.Properties.[0].Name, s.Properties.[1].Name
+                    box(fun (r:'Record) -> sprintf "{ %s = %s ; %s = %s }" n1 (s.Project1 r |> f1p) n2 (s.Project2 r |> f2p))
+        }
+
+    | Shape.FSharpUnion2 s ->
+        s.Accept {
+            new IFSharpUnion2Visitor<obj> with
+                member __.Visit (s : IShapeFSharpUnion<'Union,'Case1,'Case2>) =
+                    let c1p, c2p = mkPrinter<'Case1>(), mkPrinter<'Case2>()
+                    let n1,n2 = s.UnionCaseInfo.[0].Name, s.UnionCaseInfo.[1].Name
+                    box(fun (u:'Union) ->
+                        match s.Project u with
+                        | Choice1Of2 c1 -> sprintf "%s %s" n1 (c1p c1)
+                        | Choice2Of2 c2 -> sprintf "%s %s" n2 (c2p c2))
+        }
+
     | _ -> failwithf "unsupported type '%O'" t
 
 
 
 let p = mkPrinter<(int list * string option) * (bool * unit)> ()
 p (([1 .. 5], None), (false, ()))
+
+type Foo = { A : int ; B : string }
+type Bar = A of int * string | B of int
+
+let q = mkPrinter<Foo * Bar list>()
+
+q ({ A =2 ; B = "42"}, [B 42; A(2,"42")])
 
 #time "on"
 let value = (([1 .. 5], Some "42"), (false, ()))
