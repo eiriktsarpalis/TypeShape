@@ -106,6 +106,12 @@ Similarly, we could also add support for arbitrary F# unions of two union cases:
         }
 ```
 
+### Extensibility
+
+TypeShape can be extended to incorporate new active patterns supporting arbitrary shapes.
+Here's an [example](https://github.com/eiriktsarpalis/TypeShape/blob/c1a9e80da58b7242d0f10d2875e1ed7075016571/src/TypeShape/ISerializableExtensions.fs) 
+illustrating how TypeShape can be extended to support ISerializable shapes.
+
 ### Projects using TypeShape
 
 * [FsPickler](https://github.com/mbraceproject/FsPickler/blob/7d86cbd20ff37899ef58d5430f74376e119b7065/src/FsPickler/PicklerGeneration/PicklerGenerator.fs#L38)
