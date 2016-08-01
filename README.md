@@ -76,6 +76,11 @@ for i = 1 to 1000 do ignore <| sprintf "%A" value
 for i = 1 to 1000 do ignore <| p value
 ```
 
+### Projects using TypeShape
+
+* [FsPickler](https://github.com/mbraceproject/FsPickler/blob/7d86cbd20ff37899ef58d5430f74376e119b7065/src/FsPickler/PicklerGeneration/PicklerGenerator.fs#L38)
+* [FSharp.AWS.DynamoDB](https://github.com/fsprojects/FSharp.AWS.DynamoDB/blob/b5cde91fae2630562188bdff6e16cda0208c330b/src/FSharp.AWS.DynamoDB/Picklers/PicklerResolver.fs#L23)
+
 ### Build Status
 
 Head (branch `master`), Build & Unit tests
