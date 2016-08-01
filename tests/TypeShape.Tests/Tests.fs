@@ -254,21 +254,11 @@ let ``Shape F# Set`` () =
 
 [<Fact>]
 let ``Shape ISerializable`` () =
-    let shape = TypeShape.Resolve(typeof<ISerializable>, ShapeISerializable.Resolver)
     let accepter =
         { new ISerializableVisitor<bool> with
-            member __.Visit<'T when 'T :> ISerializable> () = typeof<'T> = typeof<ISerializable> }
+            member __.Visit<'T when 'T :> ISerializable> () = typeof<'T> = typeof<exn> }
 
-    test <@ match shape with Shape.ISerializable s -> s.Accept accepter | _ -> false @>
-
-[<Fact>]
-let ``Exception should not resolve to ISerializable`` () =
-    let shape = TypeShape.Resolve(typeof<exn>, ShapeISerializable.Resolver)
-    let accepter =
-        { new ISerializableVisitor<bool> with
-            member __.Visit<'T when 'T :> ISerializable> () = false }
-
-    test <@ match shape with Shape.ISerializable s -> s.Accept accepter | Shape.Exception _ -> true | _ -> false @>
+    test <@ match shapeof<exn> with Shape.ISerializable s -> s.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape F# Map`` () =
@@ -283,9 +273,12 @@ type Record1 = { A1 : int }
 [<Fact>]
 let ``Shape Record 1`` () =
     test <@ match shapeof<Record1> with Shape.FSharpRecord1 _ -> true | _ -> false @>
-    let shape = shapeof<Record1> |> unbox<IShapeFSharpRecord<Record1, int>>
+    let shape = 
+        match shapeof<Record1> with
+        | Shape.FSharpRecord1 (:? IShapeFSharpRecord<Record1, int> as r) -> r
+        | _ -> raise <| new InvalidCastException()
+        
     test <@ shape.Properties.Length = 1 @>
-    test <@ shape.IsFSharpRef = false @>
     check(fun (r:Record1) -> shape.Construct(shape.Project1 r) = r)
     check(fun (a1:int) -> shape.Project1(shape.Construct a1) = a1)
 
@@ -294,9 +287,12 @@ type Record2 = { A1 : int ; A2 : string }
 [<Fact>]
 let ``Shape Record 2`` () =
     test <@ match shapeof<Record2> with Shape.FSharpRecord2 _ -> true | _ -> false @>
-    let shape = shapeof<Record2> |> unbox<IShapeFSharpRecord<Record2, int, string>>
+    let shape = 
+        match shapeof<Record2> with
+        | Shape.FSharpRecord2 (:? IShapeFSharpRecord<Record2, int, string> as r) -> r
+        | _ -> raise <| new InvalidCastException()
+
     test <@ shape.Properties.Length = 2 @>
-    test <@ shape.IsFSharpRef = false @>
     check(fun (r:Record2) -> shape.Construct(shape.Project1 r, shape.Project2 r) = r)
     check(fun (a1:int, a2:string) -> 
         let r = shape.Construct(a1, a2)
@@ -307,9 +303,12 @@ type Record3 = { A1 : int ; A2 : string ; A3 : bool }
 [<Fact>]
 let ``Shape Record 3`` () =
     test <@ match shapeof<Record3> with Shape.FSharpRecord3 _ -> true | _ -> false @>
-    let shape = shapeof<Record3> |> unbox<IShapeFSharpRecord<Record3, int, string, bool>>
+    let shape = 
+        match shapeof<Record3> with
+        | Shape.FSharpRecord3 (:? IShapeFSharpRecord<Record3, int, string, bool> as r) -> r
+        | _ -> raise <| new InvalidCastException()
+
     test <@ shape.Properties.Length = 3 @>
-    test <@ shape.IsFSharpRef = false @>
     check(fun (r:Record3) -> shape.Construct(shape.Project1 r, shape.Project2 r, shape.Project3 r) = r)
     check(fun (a1:int, a2:string, a3:bool) -> 
         let r = shape.Construct(a1, a2, a3)
@@ -321,9 +320,11 @@ type Record4 = { A1 : int ; A2 : string ; A3 : bool ; A4 : byte }
 [<Fact>]
 let ``Shape Record 4`` () =
     test <@ match shapeof<Record4> with Shape.FSharpRecord4 _ -> true | _ -> false @>
-    let shape = shapeof<Record4> |> unbox<IShapeFSharpRecord<Record4, int, string, bool, byte>>
+    let shape = 
+        match shapeof<Record4> with
+        | Shape.FSharpRecord4 (:? IShapeFSharpRecord<Record4, int, string, bool, byte> as r) -> r
+        | _ -> raise <| new InvalidCastException()
     test <@ shape.Properties.Length = 4 @>
-    test <@ shape.IsFSharpRef = false @>
     check(fun (r:Record4) -> shape.Construct(shape.Project1 r, shape.Project2 r, shape.Project3 r, shape.Project4 r) = r)
     check(fun (a1:int, a2:string, a3:bool, a4:byte) -> 
         let r = shape.Construct(a1, a2, a3, a4)
@@ -335,9 +336,11 @@ type Record5 = { A1 : int ; A2 : string ; A3 : bool ; A4 : byte ; A5 : byte[] }
 [<Fact>]
 let ``Shape Record 5`` () =
     test <@ match shapeof<Record5> with Shape.FSharpRecord5 _ -> true | _ -> false @>
-    let shape = shapeof<Record5> |> unbox<IShapeFSharpRecord<Record5, int, string, bool, byte, byte[]>>
+    let shape = 
+        match shapeof<Record5> with
+        | Shape.FSharpRecord5 (:? IShapeFSharpRecord<Record5, int, string, bool, byte, byte[]> as r) -> r
+        | _ -> raise <| new InvalidCastException()
     test <@ shape.Properties.Length = 5 @>
-    test <@ shape.IsFSharpRef = false @>
     check(fun (r:Record5) -> shape.Construct(shape.Project1 r, shape.Project2 r, shape.Project3 r, shape.Project4 r, shape.Project5 r) = r)
     check(fun (a1:int, a2:string, a3:bool, a4:byte, a5:byte[]) -> 
         let r = shape.Construct(a1, a2, a3, a4, a5)
@@ -351,9 +354,12 @@ type Record6 = { A1 : int ; A2 : string ; A3 : bool ; A4 : byte ; A5 : byte[] ; 
 [<Fact>]
 let ``Shape Record 6`` () =
     test <@ match shapeof<Record6> with Shape.FSharpRecord6 _ -> true | _ -> false @>
-    let shape = shapeof<Record6> |> unbox<IShapeFSharpRecord<Record6, int, string, bool, byte, byte[], decimal>>
+    let shape = 
+        match shapeof<Record6> with
+        | Shape.FSharpRecord6 (:? IShapeFSharpRecord<Record6, int, string, bool, byte, byte[], decimal> as r) -> r
+        | _ -> raise <| new InvalidCastException()
+
     test <@ shape.Properties.Length = 6 @>
-    test <@ shape.IsFSharpRef = false @>
     check(fun (r:Record6) -> shape.Construct(shape.Project1 r, shape.Project2 r, shape.Project3 r, shape.Project4 r, shape.Project5 r, shape.Project6 r) = r)
     check(fun (a1:int, a2:string, a3:bool, a4:byte, a5:byte[], a6:decimal) -> 
         let r = shape.Construct(a1, a2, a3, a4, a5, a6)
@@ -366,9 +372,12 @@ type Record7 = { A1 : int ; A2 : string ; A3 : bool ; A4 : byte ; A5 : byte[] ; 
 [<Fact>]
 let ``Shape Record 7`` () =
     test <@ match shapeof<Record7> with Shape.FSharpRecord7 _ -> true | _ -> false @>
-    let shape = shapeof<Record7> |> unbox<IShapeFSharpRecord<Record7, int, string, bool, byte, byte[], decimal, int16>>
+    let shape = 
+        match shapeof<Record7> with
+        | Shape.FSharpRecord7 (:? IShapeFSharpRecord<Record7, int, string, bool, byte, byte[], decimal, int16> as r) -> r
+        | _ -> raise <| new InvalidCastException()
+
     test <@ shape.Properties.Length = 7 @>
-    test <@ shape.IsFSharpRef = false @>
     check(fun (r:Record7) -> shape.Construct(shape.Project1 r, shape.Project2 r, shape.Project3 r, shape.Project4 r, shape.Project5 r, shape.Project6 r, shape.Project7 r) = r)
     check(fun (a1:int, a2:string, a3:bool, a4:byte, a5:byte[], a6:decimal, a7:int16) -> 
         let r = shape.Construct(a1, a2, a3, a4, a5, a6, a7)
@@ -379,23 +388,21 @@ let ``Shape Record 7`` () =
 
 [<Fact>]
 let ``Shape F# ref`` () =
-    test <@ match shapeof<int ref> with Shape.FSharpRecord1 r -> r.IsFSharpRef | _ -> false @>
+    test <@ match shapeof<int ref> with Shape.FSharpRecord1 r -> r.Properties.Length = 1 | _ -> false @>
     let accepter = { new IFSharpRefVisitor<bool> with member __.Visit<'T>() = typeof<'T> = typeof<int> }
     test <@ match shapeof<int ref> with Shape.FSharpRef s -> s.Accept accepter | _ -> false @>
-    let shape = shapeof<int ref> |> unbox<IShapeFSharpRecord<int ref, int>>
-    test <@ shape.Project1(ref 42) = 42 @>
-    test <@ shape.Construct(42).Value = 42 @>
 
 
 type Union1 = C1U1 of int * string
 
 [<Fact>]
 let ``Shape Union 1`` () =
-    test <@ match shapeof<Union1> with Shape.FSharpUnion1 u -> not u.IsFSharpChoice | _ -> false @>
-    let shape = shapeof<Union1> |> unbox<IShapeFSharpUnion<Union1, int * string>>
-    test <@ not shape.IsFSharpChoice @>
-    test <@ not shape.IsFSharpList @>
-    test <@ not shape.IsFSharpOption @>
+    test <@ match shapeof<Union1> with Shape.FSharpUnion1 u -> u.UnionCaseInfo.Length = 1 | _ -> false @>
+    let shape = 
+        match shapeof<Union1> with 
+        | Shape.FSharpUnion1 (:? IShapeFSharpUnion<Union1, int * string> as u) -> u
+        | _ -> raise <| InvalidCastException()
+
     check(fun (u:Union1) -> shape.Construct1(shape.Project u) = u )
 
 type Union2 = 
@@ -404,11 +411,12 @@ type Union2 =
 
 [<Fact>]
 let ``Shape Union 2`` () =
-    test <@ match shapeof<Union2> with Shape.FSharpUnion2 u -> not u.IsFSharpChoice | _ -> false @>
-    let shape = shapeof<Union2> |> unbox<IShapeFSharpUnion<Union2, int * string, unit>>
-    test <@ not shape.IsFSharpChoice @>
-    test <@ not shape.IsFSharpList @>
-    test <@ not shape.IsFSharpOption @>
+    test <@ match shapeof<Union2> with Shape.FSharpUnion2 u -> u.UnionCaseInfo.Length = 2 | _ -> false @>
+    let shape = 
+        match shapeof<Union2> with 
+        | Shape.FSharpUnion2 (:? IShapeFSharpUnion<Union2, int * string, unit> as u) -> u
+        | _ -> raise <| InvalidCastException()
+
     check(fun (u:Union2) -> 
         match shape.Project u with
         | Choice1Of2 t -> shape.Construct1 t = u
@@ -421,11 +429,12 @@ type Union3 =
 
 [<Fact>]
 let ``Shape Union 3`` () =
-    test <@ match shapeof<Union3> with Shape.FSharpUnion3 u -> not u.IsFSharpChoice | _ -> false @>
-    let shape = shapeof<Union3> |> unbox<IShapeFSharpUnion<Union3, int * string, unit, int>>
-    test <@ not shape.IsFSharpChoice @>
-    test <@ not shape.IsFSharpList @>
-    test <@ not shape.IsFSharpOption @>
+    test <@ match shapeof<Union3> with Shape.FSharpUnion3 u -> u.UnionCaseInfo.Length = 3 | _ -> false @>
+    let shape = 
+        match shapeof<Union3> with 
+        | Shape.FSharpUnion3 (:? IShapeFSharpUnion<Union3, int * string, unit, int> as u) -> u
+        | _ -> raise <| InvalidCastException()
+
     check(fun (u:Union3) -> 
         match shape.Project u with
         | Choice1Of3 t -> shape.Construct1 t = u
@@ -440,11 +449,12 @@ type Union4 =
 
 [<Fact>]
 let ``Shape Union 4`` () =
-    test <@ match shapeof<Union4> with Shape.FSharpUnion4 u -> not u.IsFSharpChoice | _ -> false @>
-    let shape = shapeof<Union4> |> unbox<IShapeFSharpUnion<Union4, int * string, unit, int, unit>>
-    test <@ not shape.IsFSharpChoice @>
-    test <@ not shape.IsFSharpList @>
-    test <@ not shape.IsFSharpOption @>
+    test <@ match shapeof<Union4> with Shape.FSharpUnion4 u -> u.UnionCaseInfo.Length = 4 | _ -> false @>
+    let shape = 
+        match shapeof<Union4> with 
+        | Shape.FSharpUnion4 (:? IShapeFSharpUnion<Union4, int * string, unit, int, unit> as u) -> u
+        | _ -> raise <| InvalidCastException()
+
     check(fun (u:Union4) -> 
         match shape.Project u with
         | Choice1Of4 t -> shape.Construct1 t = u
@@ -461,11 +471,12 @@ type Union5 =
 
 [<Fact>]
 let ``Shape Union 5`` () =
-    test <@ match shapeof<Union5> with Shape.FSharpUnion5 u -> not u.IsFSharpChoice | _ -> false @>
-    let shape = shapeof<Union5> |> unbox<IShapeFSharpUnion<Union5, int * string, unit, int, unit, int * bool * byte[]>>
-    test <@ not shape.IsFSharpChoice @>
-    test <@ not shape.IsFSharpList @>
-    test <@ not shape.IsFSharpOption @>
+    test <@ match shapeof<Union5> with Shape.FSharpUnion5 u -> u.UnionCaseInfo.Length = 5 | _ -> false @>
+    let shape = 
+        match shapeof<Union5> with 
+        | Shape.FSharpUnion5 (:? IShapeFSharpUnion<Union5, int * string, unit, int, unit, int * bool * byte[]> as u) -> u
+        | _ -> raise <| InvalidCastException()
+
     check(fun (u:Union5) -> 
         match shape.Project u with
         | Choice1Of5 t -> shape.Construct1 t = u
@@ -484,11 +495,12 @@ type Union6 =
 
 [<Fact>]
 let ``Shape Union 6`` () =
-    test <@ match shapeof<Union6> with Shape.FSharpUnion6 u -> not u.IsFSharpChoice | _ -> false @>
-    let shape = shapeof<Union6> |> unbox<IShapeFSharpUnion<Union6, int * string, unit, int, unit, int * bool * byte[], string>>
-    test <@ not shape.IsFSharpChoice @>
-    test <@ not shape.IsFSharpList @>
-    test <@ not shape.IsFSharpOption @>
+    test <@ match shapeof<Union6> with Shape.FSharpUnion6 u -> u.UnionCaseInfo.Length = 6 | _ -> false @>
+    let shape = 
+        match shapeof<Union6> with 
+        | Shape.FSharpUnion6 (:? IShapeFSharpUnion<Union6, int * string, unit, int, unit, int * bool * byte[], string> as u) -> u
+        | _ -> raise <| InvalidCastException()
+
     check(fun (u:Union6) -> 
         match shape.Project u with
         | Choice1Of6 t -> shape.Construct1 t = u
@@ -509,11 +521,12 @@ type Union7 =
 
 [<Fact>]
 let ``Shape Union 7`` () =
-    test <@ match shapeof<Union7> with Shape.FSharpUnion7 u -> not u.IsFSharpChoice | _ -> false @>
-    let shape = shapeof<Union7> |> unbox<IShapeFSharpUnion<Union7, int * string, unit, int, unit, int * bool * byte[], string, unit>>
-    test <@ not shape.IsFSharpChoice @>
-    test <@ not shape.IsFSharpList @>
-    test <@ not shape.IsFSharpOption @>
+    test <@ match shapeof<Union7> with Shape.FSharpUnion7 u -> u.UnionCaseInfo.Length = 7 | _ -> false @>
+    let shape = 
+        match shapeof<Union7> with 
+        | Shape.FSharpUnion7 (:? IShapeFSharpUnion<Union7, int * string, unit, int, unit, int * bool * byte[], string, unit> as u) -> u
+        | _ -> raise <| InvalidCastException()
+
     check(fun (u:Union7) -> 
         match shape.Project u with
         | Choice1Of7 t -> shape.Construct1 t = u
@@ -527,29 +540,14 @@ let ``Shape Union 7`` () =
 
 [<Fact>]
 let ``Shape F# Option`` () =
-    test <@ match shapeof<int option> with Shape.FSharpUnion u -> u.IsFSharpOption | _ -> false @>
-    test <@ match shapeof<int option> with Shape.FSharpOption _ -> true | _ -> false @>
-    let shape = shapeof<int option> |> unbox<IShapeFSharpUnion<int option, unit, int>>
-    test <@ shape.Project None = Choice1Of2 () @>
-    test <@ shape.Project (Some 42) = Choice2Of2 42 @>
-    test <@ shape.Construct1 () = None @>
-    test <@ shape.Construct2 42 = Some 42 @>
+    test <@ match shapeof<int option> with Shape.FSharpUnion _ -> true | _ -> false @>
+    test <@ match shapeof<int option> with Shape.FSharpUnion2 _ -> true | _ -> false @>
 
 [<Fact>]
 let ``Shape F# list`` () =
-    test <@ match shapeof<int list> with Shape.FSharpUnion u -> u.IsFSharpList | _ -> false @>
+    test <@ match shapeof<int list> with Shape.FSharpUnion2 _ -> true | _ -> false @>
     test <@ match shapeof<int list> with Shape.FSharpList _ -> true | _ -> false @>
-    let shape = shapeof<int list> |> unbox<IShapeFSharpUnion<int list, unit, int * int list>>
-    test <@ shape.Project [] = Choice1Of2 () @>
-    test <@ shape.Project [1;2] = Choice2Of2(1,[2]) @>
-    test <@ shape.Construct1 () = [] @>
-    test <@ shape.Construct2 (1,[2]) = [1;2] @>
 
 [<Fact>]
 let ``Shape F# Choice`` () =
-    test <@ match shapeof<Choice<int,string>> with Shape.FSharpUnion u -> u.IsFSharpChoice | _ -> false @>
-    let shape = shapeof<Choice<int, string>> |> unbox<IShapeFSharpUnion<Choice<int, string>, int, string>>
-    test <@ shape.Project (Choice1Of2 2) = Choice1Of2 2 @>
-    test <@ shape.Project (Choice2Of2 "42") = Choice2Of2 "42" @>
-    test <@ shape.Construct1 2 = Choice1Of2 2 @>
-    test <@ shape.Construct2 "2" = Choice2Of2 "2" @>
+    test <@ match shapeof<Choice<int,string>> with Shape.FSharpUnion2 _ -> true | _ -> false @>

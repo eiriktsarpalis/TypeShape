@@ -4,8 +4,6 @@ module internal TypeShape_ISerializableExtensions
 module TypeShape_ISerializableExtensions
 #endif
 
-#nowarn "4224"
-
 open TypeShape
 open System
 open System.Runtime.Serialization
@@ -17,21 +15,15 @@ type IShapeISerializable =
     abstract Accept : ISerializableVisitor<'R> -> 'R
 
 type private ShapeISerializable<'T when 'T :> ISerializable> () =
-    inherit TypeShape<'T>()
     interface IShapeISerializable with
         member __.Accept v = v.Visit<'T>()
 
-type ShapeISerializable =
-    /// Add-on resolver used for identifying ISerializable instances
-    static member Resolver : TypeShapeResolver =
-        fun (t : Type) ->
-            if typeof<exn>.IsAssignableFrom t then None
-            elif typeof<ISerializable>.IsInterfaceAssignableFrom t then
-                let shape = Activator.CreateInstanceGeneric(typedefof<ShapeISerializable<_>>, [|t|]) :?> TypeShape
-                Some shape
-            else
-                None
-
 [<RequireQualifiedAccess>]
 module Shape =
-    let (|ISerializable|_|) t = Shape.test<IShapeISerializable> t
+    let (|ISerializable|_|) (shape : TypeShape) =
+        if typeof<ISerializable>.IsInterfaceAssignableFrom shape.Type then
+            Activator.CreateInstanceGeneric<ShapeISerializable<_>>([|shape.Type|])
+            :?> IShapeISerializable
+            |> Some
+        else
+            None
