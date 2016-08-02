@@ -22,6 +22,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{5BA0
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape.Tests", "tests\TypeShape.Tests\TypeShape.Tests.fsproj", "{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{42131FE1-A70A-46AA-9760-C9180B08B951}"
+	ProjectSection(SolutionItems) = preProject
+		samples\printer.fsx = samples\printer.fsx
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
