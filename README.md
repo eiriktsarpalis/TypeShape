@@ -102,6 +102,13 @@ TypeShape can be extended to incorporate new active patterns supporting arbitrar
 Here's an [example](https://github.com/eiriktsarpalis/TypeShape/blob/c1a9e80da58b7242d0f10d2875e1ed7075016571/src/TypeShape/ISerializableExtensions.fs) 
 illustrating how TypeShape can be extended to support ISerializable shapes.
 
+### Additional examples
+
+See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/master/samples) folder for more implementations using TypeShape:
+
+* [Printer.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/samples/printer.fsx) Pretty printer generator for common F# types.
+* [Parser.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/samples/parser.fsx) Parser generator for common F# types using FParsec.
+
 ### Projects using TypeShape
 
 * [FsPickler](https://github.com/mbraceproject/FsPickler/blob/7d86cbd20ff37899ef58d5430f74376e119b7065/src/FsPickler/PicklerGeneration/PicklerGenerator.fs#L38)
