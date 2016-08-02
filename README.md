@@ -1,26 +1,16 @@
 # TypeShape
 
-TypeShape is a small F# library for practical generic programming.
-Borrows from ideas used in the FsPickler [implementation](http://mbraceproject.github.io/FsPickler/overview.html#Pickler-Generation).
-Uses a combination of active patterns and F# object expressions to minimize the
-amount of reflection and unsafe code required by the user in such applications.
+TypeShape is a small, extensible F# library for practical generic programming.
+Borrowing from ideas used in the FsPickler [implementation](http://mbraceproject.github.io/FsPickler/overview.html#Pickler-Generation),
+it uses a combination of reflection, active patterns and F# object expressions to minimize the
+amount of reflection required by the user in such applications.
 
-TypeShape is not a metaprogramming library and does not emit IL at runtime;
-It only relies on basic reflection APIs.
+TypeShape permits definition of programs that act on specific algebrae of types.
+The library uses reflection to derive the algebraic structure of a given
+`System.Type` instance and then applies a variation on the visitor pattern
+to fully access specific type information.
 
-### Installing
-
-To incorporate TypeShape in your project place the following line in your
-`paket.dependencies` file:
-```
-github eiriktsarpalis/TypeShape src/TypeShape/TypeShape.fs
-```
-and in `paket.references`:
-```
-File: TypeShape.fs TypeShape
-```
-You can hide the TypeShape API from your project 
-by enabling the `TYPESHAPE_HIDE` build conditional.
+TypeShape is not a metaprogramming library and does not emit code at runtime.
 
 ### Example: Implementing a value printer
 
@@ -111,6 +101,18 @@ Similarly, we could also add support for arbitrary F# unions of two union cases:
 TypeShape can be extended to incorporate new active patterns supporting arbitrary shapes.
 Here's an [example](https://github.com/eiriktsarpalis/TypeShape/blob/c1a9e80da58b7242d0f10d2875e1ed7075016571/src/TypeShape/ISerializableExtensions.fs) 
 illustrating how TypeShape can be extended to support ISerializable shapes.
+
+### Installing
+
+To incorporate TypeShape in your project place the following line in your
+`paket.dependencies` file:
+```
+github eiriktsarpalis/TypeShape src/TypeShape/TypeShape.fs
+```
+and in `paket.references`:
+```
+File: TypeShape.fs TypeShape
+```
 
 ### Projects using TypeShape
 

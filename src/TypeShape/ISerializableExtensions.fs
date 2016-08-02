@@ -1,7 +1,7 @@
-﻿#if TYPESHAPE_HIDE
-module internal TypeShape_ISerializableExtensions
-#else
+﻿#if TYPESHAPE_EXPOSE
 module TypeShape_ISerializableExtensions
+#else
+module internal TypeShape_ISerializableExtensions
 #endif
 
 open TypeShape

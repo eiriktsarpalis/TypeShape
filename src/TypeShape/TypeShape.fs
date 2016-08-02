@@ -1,7 +1,7 @@
-﻿#if TYPESHAPE_HIDE
-module internal TypeShape
-#else
+﻿#if TYPESHAPE_EXPOSE
 module TypeShape
+#else
+module internal TypeShape
 #endif
 
 #nowarn "4224"
