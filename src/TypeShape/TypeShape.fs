@@ -1204,35 +1204,35 @@ type Type with
 module Shape =
 
     let private SomeU = Some() // avoid allocating this all the time
-    let inline private test0<'T> (s : TypeShape) =
+    let inline private test<'T> (s : TypeShape) =
         match s with
         | :? TypeShape<'T> -> SomeU
         | _ -> None
 
-    let (|Bool|_|) s = test0<bool> s
-    let (|Byte|_|) s = test0<byte> s
-    let (|SByte|_|) s = test0<sbyte> s
-    let (|Int16|_|) s = test0<int16> s
-    let (|Int32|_|) s = test0<int32> s
-    let (|Int64|_|) s = test0<int64> s
-    let (|IntPtr|_|) s = test0<nativeint> s
-    let (|UInt16|_|) s = test0<uint16> s
-    let (|UInt32|_|) s = test0<uint32> s
-    let (|UInt64|_|) s = test0<uint64> s
-    let (|UIntPtr|_|) s = test0<unativeint> s
-    let (|Single|_|) s = test0<single> s
-    let (|Double|_|) s = test0<double> s
-    let (|Char|_|) s = test0<char> s
+    let (|Bool|_|) s = test<bool> s
+    let (|Byte|_|) s = test<byte> s
+    let (|SByte|_|) s = test<sbyte> s
+    let (|Int16|_|) s = test<int16> s
+    let (|Int32|_|) s = test<int32> s
+    let (|Int64|_|) s = test<int64> s
+    let (|IntPtr|_|) s = test<nativeint> s
+    let (|UInt16|_|) s = test<uint16> s
+    let (|UInt32|_|) s = test<uint32> s
+    let (|UInt64|_|) s = test<uint64> s
+    let (|UIntPtr|_|) s = test<unativeint> s
+    let (|Single|_|) s = test<single> s
+    let (|Double|_|) s = test<double> s
+    let (|Char|_|) s = test<char> s
 
-    let (|String|_|) s = test0<string> s
-    let (|Guid|_|) s = test0<Guid> s
-    let (|Decimal|_|) s = test0<decimal> s
-    let (|TimeSpan|_|) s = test0<TimeSpan> s
-    let (|DateTime|_|) s = test0<DateTime> s
-    let (|DateTimeOffset|_|) s = test0<DateTimeOffset> s
-    let (|Unit|_|) s = test0<unit> s
-    let (|FSharpUnit|_|) s = test0<unit> s
-    let (|ByteArray|_|) s = test0<byte []> s
+    let (|String|_|) s = test<string> s
+    let (|Guid|_|) s = test<Guid> s
+    let (|Decimal|_|) s = test<decimal> s
+    let (|TimeSpan|_|) s = test<TimeSpan> s
+    let (|DateTime|_|) s = test<DateTime> s
+    let (|DateTimeOffset|_|) s = test<DateTimeOffset> s
+    let (|Unit|_|) s = test<unit> s
+    let (|FSharpUnit|_|) s = test<unit> s
+    let (|ByteArray|_|) s = test<byte []> s
     
     let (|Nullable|_|) (s : TypeShape) =
         match s.ShapeInfo with
