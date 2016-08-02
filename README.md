@@ -99,7 +99,7 @@ Similarly, we could also add support for arbitrary F# unions of two union cases:
 ### Extensibility
 
 TypeShape can be extended to incorporate new active patterns supporting arbitrary shapes.
-Here's an [example](https://github.com/eiriktsarpalis/TypeShape/blob/c1a9e80da58b7242d0f10d2875e1ed7075016571/src/TypeShape/ISerializableExtensions.fs) 
+Here's an [example](https://github.com/eiriktsarpalis/TypeShape/blob/5dabaf0577d8387c5213a496099598bbd89650b8/src/TypeShape/ISerializableExtensions.fs) 
 illustrating how TypeShape can be extended to support ISerializable shapes.
 
 ### Additional examples
