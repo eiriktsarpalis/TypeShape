@@ -102,6 +102,11 @@ TypeShape can be extended to incorporate new active patterns supporting arbitrar
 Here's an [example](https://github.com/eiriktsarpalis/TypeShape/blob/c1a9e80da58b7242d0f10d2875e1ed7075016571/src/TypeShape/ISerializableExtensions.fs) 
 illustrating how TypeShape can be extended to support ISerializable shapes.
 
+### Projects using TypeShape
+
+* [FsPickler](https://github.com/mbraceproject/FsPickler/blob/7d86cbd20ff37899ef58d5430f74376e119b7065/src/FsPickler/PicklerGeneration/PicklerGenerator.fs#L38)
+* [FSharp.AWS.DynamoDB](https://github.com/fsprojects/FSharp.AWS.DynamoDB/blob/b5cde91fae2630562188bdff6e16cda0208c330b/src/FSharp.AWS.DynamoDB/Picklers/PicklerResolver.fs#L23)
+
 ### Installing
 
 To incorporate TypeShape in your project place the following line in your
@@ -113,11 +118,6 @@ and in `paket.references`:
 ```
 File: TypeShape.fs TypeShape
 ```
-
-### Projects using TypeShape
-
-* [FsPickler](https://github.com/mbraceproject/FsPickler/blob/7d86cbd20ff37899ef58d5430f74376e119b7065/src/FsPickler/PicklerGeneration/PicklerGenerator.fs#L38)
-* [FSharp.AWS.DynamoDB](https://github.com/fsprojects/FSharp.AWS.DynamoDB/blob/b5cde91fae2630562188bdff6e16cda0208c330b/src/FSharp.AWS.DynamoDB/Picklers/PicklerResolver.fs#L23)
 
 ### Build Status
 
