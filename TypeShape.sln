@@ -24,6 +24,7 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape.Tests", "tests\Ty
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{42131FE1-A70A-46AA-9760-C9180B08B951}"
 	ProjectSection(SolutionItems) = preProject
+		samples\parser.fsx = samples\parser.fsx
 		samples\printer.fsx = samples\printer.fsx
 	EndProjectSection
 EndProject

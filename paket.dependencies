@@ -8,6 +8,7 @@ nuget xunit.runner.console
 nuget xunit.runner.visualstudio version_in_path: true
 nuget Unquote
 nuget FsCheck
+nuget FParsec
 
 group Build
   source https://nuget.org/api/v2
