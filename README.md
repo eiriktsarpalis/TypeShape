@@ -20,7 +20,7 @@ open TypeShape
 
 let rec mkPrinter<'T> () : 'T -> string = mkPrinterUntyped typeof<'T> :?> _
 and private mkPrinterUntyped (t : Type) : obj =
-    match TypeShape.Resolve t with
+    match TypeShape.Create t with
     | Shape.Unit -> box(fun () -> "()")
     | Shape.Bool -> box(sprintf "%b")
     | Shape.Int32 -> box(sprintf "%d")

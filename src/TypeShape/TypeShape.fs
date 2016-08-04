@@ -14,6 +14,8 @@ open Microsoft.FSharp.Reflection
 //////////////////////////////////////////////////
 ///////////// Section: TypeShape core definitions
 
+/// Provides a simple breakdown of basic kinds of types.
+/// Used for easier extraction of type shapes in the active pattern implementations.
 [<NoEquality; NoComparison>]
 type TypeShapeInfo =
     | Basic of Type
@@ -31,13 +33,24 @@ type TypeShape =
     abstract Type : Type
     abstract ShapeInfo : TypeShapeInfo
     abstract Accept : ITypeShapeVisitor<'R> -> 'R
-    override s.ToString() = sprintf "Shape [%O]" (s.GetType())
+    override s.ToString() = sprintf "TypeShape [%O]" s.Type
 
 [<Sealed>]
-type TypeShape<'T> private (info : TypeShapeInfo) =
+type TypeShape<'T> () =
     inherit TypeShape()
+    static let shapeInfo =
+        let t = typeof<'T>
+        if t.IsEnum then
+            Enum(t, t.GetEnumUnderlyingType())
+        elif t.IsArray then
+            Array(t.GetElementType(), t.GetArrayRank())
+        elif t.IsGenericType then 
+            Generic(t.GetGenericTypeDefinition(), t.GetGenericArguments())
+        else
+            Basic t
+        
     override __.Type = typeof<'T>
-    override __.ShapeInfo = info
+    override __.ShapeInfo = shapeInfo
     override __.Accept v = v.Visit<'T> ()
 
 //////////////////////////////////////
@@ -1119,24 +1132,12 @@ module private TypeShapeImpl =
     let private canon = Type.GetType "System.__Canon"
 
     let resolveTypeShape(typ : Type) =
-        if typ = null then raise <| ArgumentNullException()
+        if typ = null then raise <| UnsupportedShape typ
         if typ.IsGenericTypeDefinition then raise <| UnsupportedShape typ
         elif typ.IsGenericParameter then raise <| UnsupportedShape typ
         elif typ = canon then raise <| UnsupportedShape typ
         elif typ.IsByRef || typ.IsPointer then raise <| UnsupportedShape typ
-        else
-        
-        let shapeInfo =
-            if typ.IsEnum then
-                Enum(typ, typ.GetEnumUnderlyingType())
-            elif typ.IsArray then
-                Array(typ.GetElementType(), typ.GetArrayRank())
-            elif typ.IsGenericType then 
-                Generic(typ.GetGenericTypeDefinition(), typ.GetGenericArguments())
-            else
-                Basic(typ)
-
-        activateGeneric typedefof<TypeShape<_>> [|typ|] [|shapeInfo|] :?> TypeShape
+        else activateGeneric typedefof<TypeShape<_>> [|typ|] [||] :?> TypeShape
 
     let extractRecordInfo (recordType : Type) =
         let ctor = FSharpValue.PreComputeRecordConstructorInfo(recordType, allMembers)
@@ -1176,27 +1177,28 @@ module private TypeShapeImpl =
 
 type TypeShape with
     /// <summary>
-    ///     Computes the type shape for given type
+    ///     Creates a type shape instance for given type
     /// </summary>
-    /// <param name="t">System.Type to be resolved.</param>
-    static member Resolve(typ : Type) = resolveTypeShape typ
+    /// <param name="typ">System.Type to be resolved.</param>
+    static member Create(typ : Type) = resolveTypeShape typ
     /// <summary>
-    ///     Computes the type shape for given type
+    ///     Creates a type shape instance for given type
     /// </summary>
-    static member Resolve<'T>() = resolveTypeShape typeof<'T> :?> TypeShape<'T>
+    static member Create<'T>() = new TypeShape<'T>()
 
-/// Computes the type shape for given type
-let shapeof<'T> = TypeShape.Resolve<'T>()
+/// Creates a type shape instance for given type
+let shapeof<'T> = TypeShape.Create<'T>()
 
 type Activator with
     /// Generic edition of the activator method which support type parameters and private types
-    static member CreateInstanceGeneric<'Template>(?typeArgs : Type[], ?args:obj[]) =
+    static member CreateInstanceGeneric<'Template>(?typeArgs : Type[], ?args:obj[]) : obj =
         let typeArgs = defaultArg typeArgs [||]
         let args = defaultArg args [||]
         activateGeneric typeof<'Template> typeArgs args
 
 type Type with
-    member iface.IsInterfaceAssignableFrom(ty : Type) =
+    /// Correctly resolves if type is assignable to interface
+    member iface.IsInterfaceAssignableFrom(ty : Type) : bool =
         isInterfaceAssignableFrom iface ty
 
 /// TypeShape active recognizers

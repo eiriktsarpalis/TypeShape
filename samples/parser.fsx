@@ -16,7 +16,7 @@ let rec mkParser<'T> () : string -> 'T =
 and private mkFParser<'T> () : Parser<'T,unit> = mkParserUntyped typeof<'T> :?> _
 and private mkParserUntyped (t : Type) : obj =
     let wrap (p : Parser<'T,unit>) = box(spaces >>. p .>> spaces)
-    match TypeShape.Resolve t with
+    match TypeShape.Create t with
     | Shape.Unit -> wrap(pstring "(" >>. spaces .>> pstring ")")
     | Shape.Bool -> wrap(stringReturn "true" true <|> stringReturn "false" false)
     | Shape.Byte -> wrap(puint8)
