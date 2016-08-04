@@ -21,6 +21,23 @@ let testPrim<'T>() =
     let accepter = { new ITypeShapeVisitor<bool> with member __.Visit<'a>() = typeof<'T> = typeof<'a> }
     test <@ shape.Accept accepter @>
 
+
+[<Fact>]
+let ``Should fail on invalid type inputs`` () =
+    raises<ArgumentNullException> <@ TypeShape.Create null @>
+    raises<UnsupportedShape> <@ TypeShape.Create typedefof<int option> @>
+    raises<UnsupportedShape> <@ TypeShape.Create (typedefof<int option>.GetGenericArguments().[0]) @>
+    raises<UnsupportedShape> <@ TypeShape.Create (typeof<int>.MakeByRefType()) @>
+    raises<UnsupportedShape> <@ TypeShape.Create (typeof<int>.MakePointerType()) @>
+    raises<UnsupportedShape> <@ TypeShape.Create (Type.GetType("System.__Canon")) @>
+
+[<Fact>]
+let ``Should correctly resolve untyped shapes`` () =
+    test <@ TypeShape.Create typeof<int> :? TypeShape<int> @>
+    test <@ TypeShape.Create typeof<string []> :? TypeShape<string []> @>
+    test <@ TypeShape.Create typeof<int * string> :? TypeShape<int * string> @>
+    test <@ TypeShape.Create typeof<BindingFlags> :? TypeShape<BindingFlags> @>
+
 [<Fact>]
 let ``Shape primitive`` () =
     testPrim<bool>() ; testPrim<byte>() ; testPrim<sbyte>()
