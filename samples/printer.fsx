@@ -5,19 +5,20 @@ open TypeShape
 
 let rec mkPrinter<'T> () : 'T -> string = mkPrinterUntyped typeof<'T> :?> _
 and private mkPrinterUntyped (t : Type) : obj =
+    let wrap(p : 'T -> string) = box p
     match TypeShape.Create t with
-    | Shape.Unit -> box(fun () -> "()")
-    | Shape.Bool -> box(sprintf "%b")
-    | Shape.Byte -> box(fun (b:byte) -> sprintf "%duy" b)
-    | Shape.Int32 -> box(sprintf "%d")
-    | Shape.Int64 -> box(fun (b:int64) -> sprintf "%dL" b)
-    | Shape.String -> box(sprintf "\"%s\"")
+    | Shape.Unit -> wrap(fun () -> "()")
+    | Shape.Bool -> wrap(sprintf "%b")
+    | Shape.Byte -> wrap(fun (b:byte) -> sprintf "%duy" b)
+    | Shape.Int32 -> wrap(sprintf "%d")
+    | Shape.Int64 -> wrap(fun (b:int64) -> sprintf "%dL" b)
+    | Shape.String -> wrap(sprintf "\"%s\"")
     | Shape.FSharpOption s ->
         s.Accept {
             new IFSharpOptionVisitor<obj> with
                 member __.Visit<'T> () =
                     let tp = mkPrinter<'T>()
-                    box(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
+                    wrap(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
         }
 
     | Shape.FSharpList s ->
@@ -25,7 +26,7 @@ and private mkPrinterUntyped (t : Type) : obj =
             new IFSharpListVisitor<obj> with
                 member __.Visit<'T> () =
                     let tp = mkPrinter<'T>()
-                    box(fun ts -> ts |> List.map tp |> String.concat "; " |> sprintf "[%s]")
+                    wrap(fun ts -> ts |> List.map tp |> String.concat "; " |> sprintf "[%s]")
         }
 
     | Shape.Array s ->
@@ -33,7 +34,15 @@ and private mkPrinterUntyped (t : Type) : obj =
             new IArrayVisitor<obj> with
                 member __.Visit<'T> () =
                     let tp = mkPrinter<'T> ()
-                    box(fun ts -> ts |> Array.map tp |> String.concat "; " |> sprintf "[|%s|]")
+                    wrap(fun ts -> ts |> Array.map tp |> String.concat "; " |> sprintf "[|%s|]")
+        }
+
+    | Shape.FSharpSet s ->
+        s.Accept {
+            new IFSharpSetVisitor<obj> with
+                member __.Visit<'T when 'T : comparison> () =
+                    let tp = mkPrinter<'T>()
+                    wrap(fun (s:Set<'T>) -> s |> Seq.map tp |> String.concat "; " |> sprintf "set [%s]")
         }
 
     | Shape.Tuple2 s ->
@@ -42,7 +51,7 @@ and private mkPrinterUntyped (t : Type) : obj =
                 member __.Visit<'T, 'S> () =
                     let tp = mkPrinter<'T>()
                     let sp = mkPrinter<'S>()
-                    box(fun (t : 'T, s : 'S) -> sprintf "(%s, %s)" (tp t) (sp s))
+                    wrap(fun (t : 'T, s : 'S) -> sprintf "(%s, %s)" (tp t) (sp s))
         }
 
     | Shape.Tuple3 s ->
@@ -52,7 +61,7 @@ and private mkPrinterUntyped (t : Type) : obj =
                     let t1p = mkPrinter<'T1>()
                     let t2p = mkPrinter<'T2>()
                     let t3p = mkPrinter<'T3>()
-                    box(fun (t1 : 'T1, t2 : 'T2, t3 : 'T3) -> sprintf "(%s, %s, %s)" (t1p t1) (t2p t2) (t3p t3))
+                    wrap(fun (t1 : 'T1, t2 : 'T2, t3 : 'T3) -> sprintf "(%s, %s, %s)" (t1p t1) (t2p t2) (t3p t3))
         }
 
     | Shape.FSharpRecord1 s ->
@@ -61,7 +70,7 @@ and private mkPrinterUntyped (t : Type) : obj =
                 member __.Visit (s : IShapeFSharpRecord<'Record, 'Field1>) =
                     let f1p = mkPrinter<'Field1>()
                     let n1 = s.Properties.[0].Name
-                    box(fun (r:'Record) -> sprintf "{ %s = %s }" n1 (s.Project1 r |> f1p))
+                    wrap(fun (r:'Record) -> sprintf "{ %s = %s }" n1 (s.Project1 r |> f1p))
         }
 
     | Shape.FSharpRecord2 s ->
@@ -70,7 +79,7 @@ and private mkPrinterUntyped (t : Type) : obj =
                 member __.Visit<'Record,'Field1,'Field2> (s : IShapeFSharpRecord<'Record,'Field1,'Field2>) =
                     let f1p,f2p = mkPrinter<'Field1>(), mkPrinter<'Field2>()
                     let n1,n2 = s.Properties.[0].Name, s.Properties.[1].Name
-                    box(fun (r:'Record) -> sprintf "{ %s = %s ; %s = %s }" n1 (s.Project1 r |> f1p) n2 (s.Project2 r |> f2p))
+                    wrap(fun (r:'Record) -> sprintf "{ %s = %s ; %s = %s }" n1 (s.Project1 r |> f1p) n2 (s.Project2 r |> f2p))
         }
 
     | Shape.FSharpUnion1 s ->
@@ -79,7 +88,7 @@ and private mkPrinterUntyped (t : Type) : obj =
                 member __.Visit (s : IShapeFSharpUnion<'Union,'Case1>) =
                     let c1p = mkPrinter<'Case1>()
                     let n1 = s.UnionCaseInfo.[0].Name
-                    box(fun (u:'Union) -> sprintf "%s %s" n1 (s.Project u |> c1p))
+                    wrap(fun (u:'Union) -> sprintf "%s %s" n1 (s.Project u |> c1p))
         }
 
     | Shape.FSharpUnion2 s ->
@@ -88,7 +97,7 @@ and private mkPrinterUntyped (t : Type) : obj =
                 member __.Visit<'Union,'Case1,'Case2> (s : IShapeFSharpUnion<'Union,'Case1,'Case2>) =
                     let c1p, c2p = mkPrinter<'Case1>(), mkPrinter<'Case2>()
                     let n1,n2 = s.UnionCaseInfo.[0].Name, s.UnionCaseInfo.[1].Name
-                    box(fun (u:'Union) ->
+                    wrap(fun (u:'Union) ->
                         match s.Project u with
                         | Choice1Of2 c1 -> sprintf "%s %s" n1 (c1p c1)
                         | Choice2Of2 c2 -> sprintf "%s %s" n2 (c2p c2))

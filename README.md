@@ -33,6 +33,15 @@ and private mkPrinterUntyped (t : Type) : obj =
                     box(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
         }
 
+    | Shape.Tuple2 s ->
+        s.Accept {
+            new ITuple2Visitor<obj> with
+                member __.Visit<'T, 'S> () =
+                    let tp = mkPrinter<'T>()
+                    let sp = mkPrinter<'S>()
+                    box(fun (t : 'T, s : 'S) -> sprintf "(%s, %s)" (tp t) (sp s))
+        }
+
     | Shape.FSharpList s ->
         s.Accept {
             new IFSharpListVisitor<obj> with
@@ -41,13 +50,12 @@ and private mkPrinterUntyped (t : Type) : obj =
                     box(fun ts -> ts |> List.map tp |> String.concat "; " |> sprintf "[%s]")
         }
 
-    | Shape.Tuple2 s ->
+    | Shape.FSharpSet s ->
         s.Accept {
-            new ITuple2Visitor<obj> with
-                member __.Visit<'T, 'S> () =
+            new IFSharpSetVisitor<obj> with
+                member __.Visit<'T when 'T : comparison> () =
                     let tp = mkPrinter<'T>()
-                    let sp = mkPrinter<'S>()
-                    box(fun (t : 'T, s : 'S) -> sprintf "(%s, %s)" (tp t) (sp s))
+                    box(fun (s:Set<'T>) -> s |> Seq.map tp |> String.concat "; " |> sprintf "set [%s]")
         }
 
     | _ -> failwithf "unsupported type '%O'" t
