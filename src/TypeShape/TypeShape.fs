@@ -1132,7 +1132,7 @@ module private TypeShapeImpl =
     let private canon = Type.GetType "System.__Canon"
 
     let resolveTypeShape(typ : Type) =
-        if typ = null then raise <| UnsupportedShape typ
+        if typ = null then raise <| ArgumentNullException("TypeShape: System.Type cannot be null.")
         if typ.IsGenericTypeDefinition then raise <| UnsupportedShape typ
         elif typ.IsGenericParameter then raise <| UnsupportedShape typ
         elif typ = canon then raise <| UnsupportedShape typ
