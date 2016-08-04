@@ -1130,6 +1130,7 @@ module private TypeShapeImpl =
             | bt -> isInterfaceAssignableFrom iface bt
 
     let private canon = Type.GetType "System.__Canon"
+    let private genShapeTy = typedefof<TypeShape<_>>
 
     let resolveTypeShape(typ : Type) =
         if typ = null then raise <| ArgumentNullException("TypeShape: System.Type cannot be null.")
@@ -1137,7 +1138,9 @@ module private TypeShapeImpl =
         elif typ.IsGenericParameter then raise <| UnsupportedShape typ
         elif typ = canon then raise <| UnsupportedShape typ
         elif typ.IsByRef || typ.IsPointer then raise <| UnsupportedShape typ
-        else activateGeneric typedefof<TypeShape<_>> [|typ|] [||] :?> TypeShape
+        else 
+            let gt = genShapeTy.MakeGenericType [|typ|]
+            Activator.CreateInstance gt :?> TypeShape
 
     let extractRecordInfo (recordType : Type) =
         let ctor = FSharpValue.PreComputeRecordConstructorInfo(recordType, allMembers)

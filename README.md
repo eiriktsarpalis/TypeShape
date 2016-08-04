@@ -108,6 +108,7 @@ See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/maste
 
 * [Printer.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/samples/printer.fsx) Pretty printer generator for common F# types.
 * [Parser.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/samples/parser.fsx) Parser generator for common F# types using FParsec.
+* [Equality-Comparer.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/samples/equality-comparer.fsx) Equality comparer generator for common F# types.
 
 ### Projects using TypeShape
 
