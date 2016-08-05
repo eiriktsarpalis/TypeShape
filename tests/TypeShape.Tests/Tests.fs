@@ -29,7 +29,9 @@ let ``Should fail on invalid type inputs`` () =
     raises<UnsupportedShape> <@ TypeShape.Create (typedefof<int option>.GetGenericArguments().[0]) @>
     raises<UnsupportedShape> <@ TypeShape.Create (typeof<int>.MakeByRefType()) @>
     raises<UnsupportedShape> <@ TypeShape.Create (typeof<int>.MakePointerType()) @>
-    raises<UnsupportedShape> <@ TypeShape.Create (Type.GetType("System.__Canon")) @>
+    match Type.GetType("System.__Canon") with
+    | null -> ()
+    | canon -> raises<UnsupportedShape> <@ TypeShape.Create canon @>
 
 [<Fact>]
 let ``Should correctly resolve untyped shapes`` () =
