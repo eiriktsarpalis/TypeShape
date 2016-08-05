@@ -2,7 +2,7 @@
 open System
 open TypeShape
 
-// adapted from http://research.microsoft.com/en-us/um/people/simonpj/papers/hmap/gmap3.pdf
+// inspired by but different from http://research.microsoft.com/en-us/um/people/simonpj/papers/hmap/gmap3.pdf
 
 let rec gmapQ<'T,'S,'U> (f : 'T -> 'S) : 'U -> 'S list = gmapQUntyped f typeof<'U> :?> _
 and private gmapQUntyped (f : 'T -> 'S) (t : Type) : obj =
