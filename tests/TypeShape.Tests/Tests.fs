@@ -21,7 +21,6 @@ let testPrim<'T>() =
     let accepter = { new ITypeShapeVisitor<bool> with member __.Visit<'a>() = typeof<'T> = typeof<'a> }
     test <@ shape.Accept accepter @>
 
-
 [<Fact>]
 let ``Should fail on invalid type inputs`` () =
     raises<ArgumentNullException> <@ TypeShape.Create null @>
@@ -49,6 +48,20 @@ let ``Shape primitive`` () =
 [<Fact>]
 let ``Shape BCL primitives`` () =
     testPrim<DateTime>() ; testPrim<DateTimeOffset>()
+
+type TypeWithDefaultCtor(x : int) =
+    new () = new TypeWithDefaultCtor(42)
+    member __.Value = x
+
+[<Fact>]
+let ``Shape Type with default ctor`` () =
+    let accepter = 
+        { new IDefaultConstructorVisitor<bool> with
+            member __.Visit<'T when 'T : (new : unit -> 'T)> () = 
+                let t = new 'T() :> obj :?> TypeWithDefaultCtor 
+                t.Value = 42 }
+
+    test <@ match shapeof<TypeWithDefaultCtor> with Shape.DefaultConstructor s -> s.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Binding Flags`` () =

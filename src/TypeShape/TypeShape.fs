@@ -80,6 +80,19 @@ type private ShapeNullable<'T when 'T : (new : unit -> 'T) and 'T :> ValueType a
     interface IShapeNullable with
         member __.Accept v = v.Visit<'T> ()
 
+
+///////////// Default Constructor types
+
+type IDefaultConstructorVisitor<'R> =
+    abstract Visit<'T when 'T : (new : unit -> 'T)> : unit -> 'R
+
+type IShapeDefaultConstructor =
+    abstract Accept : IDefaultConstructorVisitor<'R> -> 'R
+
+type private ShapeDefaultConstructor<'T when 'T : (new : unit -> 'T)>() =
+    interface IShapeDefaultConstructor with
+        member __.Accept v = v.Visit<'T>()
+
 ///////////// Delegates
 
 type IDelegateVisitor<'R> =
@@ -1255,6 +1268,14 @@ module Shape =
             :?> IShapeEnum 
             |> Some
         | _ -> None
+
+    let (|DefaultConstructor|_|) (shape : TypeShape) =
+        match shape.Type.GetConstructor(BindingFlags.Public ||| BindingFlags.Instance, null, [||], [||]) with
+        | null -> None
+        | _ -> 
+            Activator.CreateInstanceGeneric<ShapeDefaultConstructor<_>>([|shape.Type|]) 
+            :?> IShapeDefaultConstructor
+            |> Some
 
     let (|KeyValuePair|_|) (s : TypeShape) =
         match s.ShapeInfo with
