@@ -41,7 +41,7 @@ type TypeShape<'T> () =
     static let shapeInfo =
         let t = typeof<'T>
         if t.IsEnum then
-            Enum(t, t.GetEnumUnderlyingType())
+            Enum(t, Enum.GetUnderlyingType t)
         elif t.IsArray then
             Array(t.GetElementType(), t.GetArrayRank())
         elif t.IsGenericType then 
