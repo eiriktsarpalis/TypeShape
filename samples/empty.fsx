@@ -97,9 +97,10 @@ type Record<'T> =
         Id : string
         Value : 'T ref
         UUID : Guid
+        MoneyMoney : decimal
         Values : (int * string) list
         Metrics : Map<string, float>
         Set : Set<string>
     }
 
-empty<Record<int * string option>>
+{ empty<Record<int * string option>> with Id = "myId" }
