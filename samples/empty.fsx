@@ -25,7 +25,7 @@ and private mkEmptyFuncUntyped (t : Type) : obj =
     | Shape.Decimal -> wrap(fun () -> 0M)
     | Shape.Single -> wrap(fun () -> 0.f)
     | Shape.Double -> wrap(fun () -> 0.)
-    | Shape.Guid -> wrap(fun () -> Guid.NewGuid())
+    | Shape.Guid -> wrap(fun () -> Guid.Empty)
     | Shape.Char -> wrap(fun () -> Unchecked.defaultof<char>)
     | Shape.String -> wrap(fun () -> "")
     | Shape.TimeSpan -> wrap(fun () -> TimeSpan.Zero)
