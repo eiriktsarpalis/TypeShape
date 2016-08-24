@@ -103,4 +103,4 @@ type Record<'T> =
         Set : Set<string>
     }
 
-{ empty<Record<int * string option>> with Id = "myId" }
+{ empty<Record<int * string option>> with Id = "myId" ; MoneyMoney = 3.14M }
