@@ -95,7 +95,7 @@ and empty<'T> = mkEmptyFunc<'T> () ()
 type Record<'T> =
     {
         Id : string
-        Value : 'T
+        Value : 'T ref
         UUID : Guid
         Values : (int * string) list
         Metrics : Map<string, float>
