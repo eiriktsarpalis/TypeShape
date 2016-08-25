@@ -36,6 +36,15 @@ and private aux<'T> () : 'T -> string =
                     wrap(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
         }
 
+    | Shape.Tuple2 s ->
+        s.Accept {
+            new ITuple2Visitor<'T -> string> with
+                member __.Visit<'t1, 't2> () =
+                    let tp = mkPrinter<'t1>()
+                    let sp = mkPrinter<'t2>()
+                    wrap(fun (t : 't1, s : 't2) -> sprintf "(%s, %s)" (tp t) (sp s))
+        }
+
     | Shape.FSharpList s ->
         s.Accept {
             new IFSharpListVisitor<'T -> string> with
@@ -60,64 +69,6 @@ and private aux<'T> () : 'T -> string =
                     wrap(fun (s:Set<'a>) -> s |> Seq.map tp |> String.concat "; " |> sprintf "set [%s]")
         }
 
-    | Shape.Tuple2 s ->
-        s.Accept {
-            new ITuple2Visitor<'T -> string> with
-                member __.Visit<'t1, 't2> () =
-                    let tp = mkPrinter<'t1>()
-                    let sp = mkPrinter<'t2>()
-                    wrap(fun (t : 't1, s : 't2) -> sprintf "(%s, %s)" (tp t) (sp s))
-        }
-
-    | Shape.Tuple3 s ->
-        s.Accept {
-            new ITuple3Visitor<'T -> string> with
-                member __.Visit<'t1, 't2, 't3> () =
-                    let t1p = mkPrinter<'t1>()
-                    let t2p = mkPrinter<'t2>()
-                    let t3p = mkPrinter<'t3>()
-                    wrap(fun (t1 : 't1, t2 : 't2, t3 : 't3) -> sprintf "(%s, %s, %s)" (t1p t1) (t2p t2) (t3p t3))
-        }
-
-    | Shape.FSharpRecord1 s ->
-        s.Accept {
-            new IFSharpRecord1Visitor<'T -> string> with
-                member __.Visit (s : IShapeFSharpRecord<'Record, 'Field1>) =
-                    let f1p = mkPrinter<'Field1>()
-                    let n1 = s.Properties.[0].Name
-                    wrap(fun (r:'Record) -> sprintf "{ %s = %s }" n1 (s.Project1 r |> f1p))
-        }
-
-    | Shape.FSharpRecord2 s ->
-        s.Accept {
-            new IFSharpRecord2Visitor<'T -> string> with
-                member __.Visit<'Record,'Field1,'Field2> (s : IShapeFSharpRecord<'Record,'Field1,'Field2>) =
-                    let f1p,f2p = mkPrinter<'Field1>(), mkPrinter<'Field2>()
-                    let n1,n2 = s.Properties.[0].Name, s.Properties.[1].Name
-                    wrap(fun (r:'Record) -> sprintf "{ %s = %s ; %s = %s }" n1 (s.Project1 r |> f1p) n2 (s.Project2 r |> f2p))
-        }
-
-    | Shape.FSharpUnion1 s ->
-        s.Accept {
-            new IFSharpUnion1Visitor<'T -> string> with
-                member __.Visit (s : IShapeFSharpUnion<'Union,'Case1>) =
-                    let c1p = mkPrinter<'Case1>()
-                    let n1 = s.UnionCaseInfo.[0].Name
-                    wrap(fun (u:'Union) -> sprintf "%s %s" n1 (s.Project u |> c1p))
-        }
-
-    | Shape.FSharpUnion2 s ->
-        s.Accept {
-            new IFSharpUnion2Visitor<'T -> string> with
-                member __.Visit<'Union,'Case1,'Case2> (s : IShapeFSharpUnion<'Union,'Case1,'Case2>) =
-                    let c1p, c2p = mkPrinter<'Case1>(), mkPrinter<'Case2>()
-                    let n1,n2 = s.UnionCaseInfo.[0].Name, s.UnionCaseInfo.[1].Name
-                    wrap(fun (u:'Union) ->
-                        match s.Project u with
-                        | Choice1Of2 c1 -> sprintf "%s %s" n1 (c1p c1)
-                        | Choice2Of2 c2 -> sprintf "%s %s" n2 (c2p c2))
-        }
-
     | _ -> failwithf "unsupported type '%O'" typeof<'T>
 
 let p = mkPrinter<(int list * string option) * (bool * unit)> ()
@@ -126,12 +77,17 @@ p (([1 .. 5], None), (false, ())) // "(([1; 2; 3; 4; 5], None), (false, ()))"
 Let's see how the value printer compares to sprintf:
 ```fsharp
 #time "on"
-let value = (([1 .. 5], Some "42"), (false, ()))
 
-// Real: 00:00:00.561, CPU: 00:00:00.562, GC gen0: 32, gen1: 0, gen2: 0
-for i = 1 to 1000 do ignore <| sprintf "%A" value
-// Real: 00:00:00.010, CPU: 00:00:00.000, GC gen0: 1, gen1: 0, gen2: 0
-for i = 1 to 1000 do ignore <| p value
+type TestType = (int list * string option * string) * (bool * unit)
+let value : TestType = (([1 .. 5], None, "42"), (false, ()))
+
+let p1 = sprintf "%A" : TestType -> string
+let p2 = mkPrinter<TestType>()
+
+// Real: 00:00:00.442, CPU: 00:00:00.437, GC gen0: 31, gen1: 0, gen2: 0
+for i = 1 to 1000 do ignore <| p1 value
+// Real: 00:00:00.006, CPU: 00:00:00.000, GC gen0: 2, gen1: 1, gen2: 0
+for i = 1 to 1000 do ignore <| p2 value
 ```
 
 ### Supporting F# records and unions
@@ -142,22 +98,22 @@ support for arbitrary F# records containing two fields:
 ```fsharp
     | Shape.FSharpRecord2 s ->
         s.Accept {
-            new IFSharpRecord2Visitor<obj> with
+            new IFSharpRecord2Visitor<'T -> string> with
                 member __.Visit (s : IShapeFSharpRecord<'Record,'Field1,'Field2>) =
                     let f1p, f2p = mkPrinter<'Field1>(), mkPrinter<'Field2>()
                     let n1, n2 = s.Properties.[0].Name, s.Properties.[1].Name
-                    box(fun (r:'Record) -> sprintf "{ %s = %s ; %s = %s }" n1 (s.Project1 r |> f1p) n2 (s.Project2 r |> f2p))
+                    wrap(fun (r:'Record) -> sprintf "{ %s = %s ; %s = %s }" n1 (s.Project1 r |> f1p) n2 (s.Project2 r |> f2p))
         }
 ```
 Similarly, we could also add support for arbitrary F# unions of two union cases:
 ```fsharp
     | Shape.FSharpUnion2 s ->
         s.Accept {
-            new IFSharpUnion2Visitor<obj> with
+            new IFSharpUnion2Visitor<'T -> string> with
                 member __.Visit (s : IShapeFSharpUnion<'Union,'Case1,'Case2>) =
                     let c1p, c2p = mkPrinter<'Case1>(), mkPrinter<'Case2>()
                     let n1,n2 = s.UnionCaseInfo.[0].Name, s.UnionCaseInfo.[1].Name
-                    box(fun (u:'Union) ->
+                    wrap(fun (u:'Union) ->
                         match s.Project u with
                         | Choice1Of2 c1 -> sprintf "%s %s" n1 (c1p c1)
                         | Choice2Of2 c2 -> sprintf "%s %s" n2 (c2p c2))

@@ -21,6 +21,25 @@ and private aux<'T> () : 'T -> string =
                     wrap(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
         }
 
+    | Shape.Tuple2 s ->
+        s.Accept {
+            new ITuple2Visitor<'T -> string> with
+                member __.Visit<'t1, 't2> () =
+                    let tp = mkPrinter<'t1>()
+                    let sp = mkPrinter<'t2>()
+                    wrap(fun (t : 't1, s : 't2) -> sprintf "(%s, %s)" (tp t) (sp s))
+        }
+
+    | Shape.Tuple3 s ->
+        s.Accept {
+            new ITuple3Visitor<'T -> string> with
+                member __.Visit<'t1, 't2, 't3> () =
+                    let t1p = mkPrinter<'t1>()
+                    let t2p = mkPrinter<'t2>()
+                    let t3p = mkPrinter<'t3>()
+                    wrap(fun (t1 : 't1, t2 : 't2, t3 : 't3) -> sprintf "(%s, %s, %s)" (t1p t1) (t2p t2) (t3p t3))
+        }
+
     | Shape.FSharpList s ->
         s.Accept {
             new IFSharpListVisitor<'T -> string> with
@@ -43,25 +62,6 @@ and private aux<'T> () : 'T -> string =
                 member __.Visit<'a when 'a : comparison> () =
                     let tp = mkPrinter<'a>()
                     wrap(fun (s:Set<'a>) -> s |> Seq.map tp |> String.concat "; " |> sprintf "set [%s]")
-        }
-
-    | Shape.Tuple2 s ->
-        s.Accept {
-            new ITuple2Visitor<'T -> string> with
-                member __.Visit<'t1, 't2> () =
-                    let tp = mkPrinter<'t1>()
-                    let sp = mkPrinter<'t2>()
-                    wrap(fun (t : 't1, s : 't2) -> sprintf "(%s, %s)" (tp t) (sp s))
-        }
-
-    | Shape.Tuple3 s ->
-        s.Accept {
-            new ITuple3Visitor<'T -> string> with
-                member __.Visit<'t1, 't2, 't3> () =
-                    let t1p = mkPrinter<'t1>()
-                    let t2p = mkPrinter<'t2>()
-                    let t3p = mkPrinter<'t3>()
-                    wrap(fun (t1 : 't1, t2 : 't2, t3 : 't3) -> sprintf "(%s, %s, %s)" (t1p t1) (t2p t2) (t3p t3))
         }
 
     | Shape.FSharpRecord1 s ->
@@ -112,3 +112,23 @@ type Bar = A of int * string | B of int
 
 let p = mkPrinter<(int list * string option) * (bool * unit) * (Foo * Bar list)> ()
 p (([1 .. 5], None), (false, ()), ({A = 42 ; B = "42"}, [A(2,"42") ; B 12]))
+
+//
+// Some benchmarks
+//
+
+#time "on"
+
+type TestType = (int list * string option * string) * (bool * unit)
+let value : TestType = (([1 .. 5], None, "42"), (false, ()))
+
+let p1 = sprintf "%A" : TestType -> string
+let p2 = mkPrinter<TestType>()
+
+p1 value
+p2 value
+
+// Real: 00:00:00.442, CPU: 00:00:00.437, GC gen0: 31, gen1: 0, gen2: 0
+for i = 1 to 1000 do ignore <| p1 value
+// Real: 00:00:00.006, CPU: 00:00:00.000, GC gen0: 2, gen1: 1, gen2: 0
+for i = 1 to 1000 do ignore <| p2 value
