@@ -145,7 +145,7 @@ See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/maste
 To incorporate TypeShape in your project place the following line in your
 `paket.dependencies` file:
 ```
-github eiriktsarpalis/TypeShape src/TypeShape/TypeShape.fs
+github eiriktsarpalis/TypeShape:1.0 src/TypeShape/TypeShape.fs
 ```
 and in `paket.references`:
 ```
