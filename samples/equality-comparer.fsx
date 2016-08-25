@@ -4,17 +4,15 @@ open System
 open System.Collections.Generic
 open TypeShape
 
-let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> = 
-    mkEqualityComparerUntyped typeof<'T> :?> IEqualityComparer<'T>
-
-and private mkEqualityComparerUntyped (t : Type) : obj =
+let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> = aux<'T>()
+and private aux<'T>() : IEqualityComparer<'T> =
     let inline combine (h1 : int) (h2 : int) = ((h1 <<< 5) + h1) ||| h2
-    let inline wrap (hash : 'T -> int) (cmp : 'T -> 'T -> bool) =
-        { new IEqualityComparer<'T> with
+    let inline wrap (hash : 'a -> int) (cmp : 'a -> 'a -> bool) =
+        { new IEqualityComparer<'a> with
             member __.Equals(t,t') = cmp t t'
-            member __.GetHashCode t = hash t } :> obj
+            member __.GetHashCode t = hash t } |> unbox<IEqualityComparer<'T>>
 
-    match TypeShape.Create t with
+    match TypeShape.Create<'T>() with
     | Shape.Unit -> wrap (fun () -> 0) (fun () () -> true)
     | Shape.Bool -> wrap (function false -> 0 | true -> 1) (=)
     | Shape.Byte -> wrap (fun (b:byte) -> int b) (=)
@@ -23,9 +21,9 @@ and private mkEqualityComparerUntyped (t : Type) : obj =
     | Shape.String -> wrap (fun (s:string) -> s.GetHashCode()) (=)
     | Shape.FSharpOption s ->
         s.Accept {
-            new IFSharpOptionVisitor<obj> with
-                member __.Visit<'T> () =
-                    let tc = mkEqualityComparer<'T>()
+            new IFSharpOptionVisitor<IEqualityComparer<'T>> with
+                member __.Visit<'a> () =
+                    let tc = mkEqualityComparer<'a>()
                     wrap (function None -> 0 | Some t -> tc.GetHashCode t)
                         (fun xo yo -> 
                             match xo with
@@ -35,15 +33,15 @@ and private mkEqualityComparerUntyped (t : Type) : obj =
 
     | Shape.FSharpList s ->
         s.Accept {
-            new IFSharpListVisitor<obj> with
-                member __.Visit<'T> () =
-                    let tc = mkEqualityComparer<'T>()
-                    let rec hash c (xs : 'T list) =
+            new IFSharpListVisitor<IEqualityComparer<'T>> with
+                member __.Visit<'a> () =
+                    let tc = mkEqualityComparer<'a>()
+                    let rec hash c (xs : 'a list) =
                         match xs with
                         | [] -> c
                         | x :: xs' -> hash (combine c (tc.GetHashCode x)) xs'
                         
-                    let rec equals (xs : 'T list) (ys : 'T list) =
+                    let rec equals (xs : 'a list) (ys : 'a list) =
                         match xs with
                         | [] -> match ys with [] -> true | _ -> false
                         | x :: xs' -> 
@@ -56,15 +54,15 @@ and private mkEqualityComparerUntyped (t : Type) : obj =
 
     | Shape.Array s ->
         s.Accept {
-            new IArrayVisitor<obj> with
-                member __.Visit<'T> () =
-                    let tc = mkEqualityComparer<'T>()
-                    let hash (xs : 'T []) =
+            new IArrayVisitor<IEqualityComparer<'T>> with
+                member __.Visit<'a> () =
+                    let tc = mkEqualityComparer<'a>()
+                    let hash (xs : 'a []) =
                         let mutable h = 0
                         for x in xs do h <- combine h (tc.GetHashCode x)
                         h
                         
-                    let equals (xs : 'T []) (ys : 'T []) =
+                    let equals (xs : 'a []) (ys : 'a []) =
                         if obj.ReferenceEquals(xs,null) then obj.ReferenceEquals(ys,null)
                         elif xs.Length <> ys.Length then false
                         else
@@ -80,25 +78,25 @@ and private mkEqualityComparerUntyped (t : Type) : obj =
 
     | Shape.Tuple2 s ->
         s.Accept {
-            new ITuple2Visitor<obj> with
-                member __.Visit<'T, 'S> () =
-                    let tc = mkEqualityComparer<'T>()
-                    let sc = mkEqualityComparer<'S>()
-                    let hash (t : 'T, s : 'S) = combine (tc.GetHashCode t) (sc.GetHashCode s)
-                    let equals (t : 'T, s : 'S) (t' : 'T, s' : 'S) = tc.Equals(t,t') && sc.Equals(s, s')
+            new ITuple2Visitor<IEqualityComparer<'T>> with
+                member __.Visit<'t1, 't2> () =
+                    let tc = mkEqualityComparer<'t1>()
+                    let sc = mkEqualityComparer<'t2>()
+                    let hash (t : 't1, s : 't2) = combine (tc.GetHashCode t) (sc.GetHashCode s)
+                    let equals (t : 't1, s : 't2) (t' : 't1, s' : 't2) = tc.Equals(t,t') && sc.Equals(s, s')
                     wrap hash equals
         }
 
     | Shape.Tuple3 s ->
         s.Accept {
-            new ITuple3Visitor<obj> with
-                member __.Visit<'T1, 'T2, 'T3> () =
-                    let t1c = mkEqualityComparer<'T1>()
-                    let t2c = mkEqualityComparer<'T2>()
-                    let t3c = mkEqualityComparer<'T3>()
-                    let hash (t1 : 'T1, t2 : 'T2, t3 : 'T3) =
+            new ITuple3Visitor<IEqualityComparer<'T>> with
+                member __.Visit<'t1, 't2, 't3> () =
+                    let t1c = mkEqualityComparer<'t1>()
+                    let t2c = mkEqualityComparer<'t2>()
+                    let t3c = mkEqualityComparer<'t3>()
+                    let hash (t1 : 't1, t2 : 't2, t3 : 't3) =
                         combine (combine (t1c.GetHashCode t1) (t2c.GetHashCode t2)) (t3c.GetHashCode t3)
-                    let equals (t1 : 'T1, t2 : 'T2, t3 : 'T3) (t1' : 'T1, t2' : 'T2, t3' : 'T3) =
+                    let equals (t1 : 't1, t2 : 't2, t3 : 't3) (t1' : 't1, t2' : 't2, t3' : 't3) =
                         t1c.Equals(t1, t1') && t2c.Equals(t2, t2') && t3c.Equals(t3, t3')
 
                     wrap hash equals
@@ -106,7 +104,7 @@ and private mkEqualityComparerUntyped (t : Type) : obj =
 
     | Shape.FSharpRecord1 s ->
         s.Accept {
-            new IFSharpRecord1Visitor<obj> with
+            new IFSharpRecord1Visitor<IEqualityComparer<'T>> with
                 member __.Visit (s : IShapeFSharpRecord<'Record, 'Field1>) =
                     let f1c = mkEqualityComparer<'Field1>()
                     wrap (s.Project1 >> f1c.GetHashCode) 
@@ -115,7 +113,7 @@ and private mkEqualityComparerUntyped (t : Type) : obj =
 
     | Shape.FSharpRecord2 s ->
         s.Accept {
-            new IFSharpRecord2Visitor<obj> with
+            new IFSharpRecord2Visitor<IEqualityComparer<'T>> with
                 member __.Visit<'Record,'Field1,'Field2> (s : IShapeFSharpRecord<'Record,'Field1,'Field2>) =
                     let f1c,f2c = mkEqualityComparer<'Field1>(), mkEqualityComparer<'Field2>()
                     let hash (r : 'Record) = combine (f1c.GetHashCode (s.Project1 r)) (f2c.GetHashCode (s.Project2 r))
@@ -125,7 +123,7 @@ and private mkEqualityComparerUntyped (t : Type) : obj =
 
     | Shape.FSharpUnion1 s ->
         s.Accept {
-            new IFSharpUnion1Visitor<obj> with
+            new IFSharpUnion1Visitor<IEqualityComparer<'T>> with
                 member __.Visit (s : IShapeFSharpUnion<'Union,'Case1>) =
                     let c1c = mkEqualityComparer<'Case1>()
                     let hash (u : 'Union) = c1c.GetHashCode(s.Project u)
@@ -135,7 +133,7 @@ and private mkEqualityComparerUntyped (t : Type) : obj =
 
     | Shape.FSharpUnion2 s ->
         s.Accept {
-            new IFSharpUnion2Visitor<obj> with
+            new IFSharpUnion2Visitor<IEqualityComparer<'T>> with
                 member __.Visit<'Union,'Case1,'Case2> (s : IShapeFSharpUnion<'Union,'Case1,'Case2>) =
                     let c1c, c2c = mkEqualityComparer<'Case1>(), mkEqualityComparer<'Case2>()
                     let hash (u : 'Union) =
@@ -153,7 +151,7 @@ and private mkEqualityComparerUntyped (t : Type) : obj =
 
     | Shape.FSharpSet s ->
         s.Accept {
-            new IFSharpSetVisitor<obj> with
+            new IFSharpSetVisitor<IEqualityComparer<'T>> with
                 member __.Visit<'T when 'T : comparison> () =
                     let tc = mkEqualityComparer<'T> ()
                     let hash (s : Set<'T>) =
@@ -176,7 +174,7 @@ and private mkEqualityComparerUntyped (t : Type) : obj =
                     wrap hash equals
         }
 
-    | _ -> failwithf "unsupported type '%O'" t
+    | _ -> failwithf "unsupported type '%O'" typeof<'T>
 
 
 let c0 = mkEqualityComparer<int list>()

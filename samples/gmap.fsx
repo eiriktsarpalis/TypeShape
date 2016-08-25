@@ -4,14 +4,14 @@ open TypeShape
 
 // inspired by but different from http://research.microsoft.com/en-us/um/people/simonpj/papers/hmap/gmap3.pdf
 
-let rec gmapQ<'T,'S,'U> (f : 'T -> 'S) : 'U -> 'S list = gmapQUntyped f typeof<'U> :?> _
-and private gmapQUntyped (f : 'T -> 'S) (t : Type) : obj =
-    let wrap(f : 'a -> 'S list) = box f
-    match TypeShape.Create t with
+let rec gmapQ<'T,'S,'U> (f : 'T -> 'S) : 'U -> 'S list = aux<'T, 'S, 'U> f
+and private aux<'T, 'S, 'U> (f : 'T -> 'S) : 'U -> 'S list =
+    let wrap(f : 'a -> 'S list) = unbox<'U -> 'S list> f
+    match TypeShape.Create<'U>() :> TypeShape with
     | :? TypeShape<'T> -> wrap(fun (t:'T) -> [f t])
     | Shape.FSharpOption s ->
         s.Accept {
-            new IFSharpOptionVisitor<obj> with
+            new IFSharpOptionVisitor<'U -> 'S list> with
                 member __.Visit<'a>() =
                     let tm = gmapQ<'T,'S,'a> f
                     wrap(function None -> [] | Some t -> tm t)
@@ -19,7 +19,7 @@ and private gmapQUntyped (f : 'T -> 'S) (t : Type) : obj =
 
     | Shape.Tuple2 s ->
         s.Accept {
-            new ITuple2Visitor<obj> with
+            new ITuple2Visitor<'U -> 'S list> with
                 member __.Visit<'a,'b>() =
                     let am = gmapQ<'T,'S,'a> f
                     let bm = gmapQ<'T,'S,'b> f
@@ -28,7 +28,7 @@ and private gmapQUntyped (f : 'T -> 'S) (t : Type) : obj =
 
     | Shape.Tuple3 s ->
         s.Accept {
-            new ITuple3Visitor<obj> with
+            new ITuple3Visitor<'U -> 'S list> with
                 member __.Visit<'a,'b,'c>() =
                     let am = gmapQ<'T,'S,'a> f
                     let bm = gmapQ<'T,'S,'b> f
@@ -38,7 +38,7 @@ and private gmapQUntyped (f : 'T -> 'S) (t : Type) : obj =
 
     | Shape.FSharpList s ->
         s.Accept {
-            new IFSharpListVisitor<obj> with
+            new IFSharpListVisitor<'U -> 'S list> with
                 member __.Visit<'a>() =
                     let tm = gmapQ<'T,'S,'a> f
                     wrap(fun (ts : 'a list) -> ts |> List.collect tm)
@@ -46,14 +46,14 @@ and private gmapQUntyped (f : 'T -> 'S) (t : Type) : obj =
 
     | Shape.FSharpSet s ->
         s.Accept {
-            new IFSharpSetVisitor<obj> with
+            new IFSharpSetVisitor<'U -> 'S list> with
                 member __.Visit<'a when 'a : comparison> () =
                     let tm = gmapQ<'T,'S,'a> f
                     wrap(fun (ts : Set<'a>) -> ts |> Seq.collect tm |> Seq.toList)
         }
 
     | s -> 
-        s.Accept { new ITypeShapeVisitor<obj> with
+        s.Accept { new ITypeShapeVisitor<'U -> 'S list> with
             member __.Visit<'a>() = wrap(fun (_:'a) -> []) }
 
 gmapQ id<int> (Some 42, ([1 .. 10], set[5;6;7]))

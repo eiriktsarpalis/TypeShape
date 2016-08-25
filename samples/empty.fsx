@@ -9,10 +9,10 @@ open System.Reflection
 open TypeShape
 
 let rec private cache = new ConcurrentDictionary<Type, obj>()
-and private mkEmptyFunc<'T> () : unit -> 'T = cache.GetOrAdd(typeof<'T>, mkEmptyFuncUntyped) :?> _
-and private mkEmptyFuncUntyped (t : Type) : obj =
-    let wrap (f : unit -> 'a) = box f
-    match TypeShape.Create t with
+and private mkEmptyFunc<'T> () : unit -> 'T = cache.GetOrAdd(typeof<'T>, fun _ -> aux<'T> () :> obj) :?> _
+and private aux<'T> () : unit -> 'T =  
+    let wrap (f : unit -> 'a) = unbox<unit -> 'T> f
+    match TypeShape.Create<'T>() with
     | Shape.Bool -> wrap(fun () -> false)
     | Shape.Byte -> wrap(fun () -> 0uy)
     | Shape.SByte -> wrap(fun () -> 0y)
@@ -32,43 +32,42 @@ and private mkEmptyFuncUntyped (t : Type) : obj =
     | Shape.DateTime -> wrap(fun () -> DateTime.MinValue)
     | Shape.DateTimeOffset -> wrap(fun () -> DateTimeOffset.MinValue)
     | Shape.Unit -> wrap id
-    | :? TypeShape<bigint> -> wrap(fun () -> 0I)
     | Shape.Tuple2 s ->
-        s.Accept { new ITuple2Visitor<obj> with
-            member __.Visit<'T1,'T2> () =
-                let et1,et2 = mkEmptyFunc<'T1>(), mkEmptyFunc<'T2>()
+        s.Accept { new ITuple2Visitor<unit -> 'T> with
+            member __.Visit<'t1,'t2> () =
+                let et1,et2 = mkEmptyFunc<'t1>(), mkEmptyFunc<'t2>()
                 wrap(fun () -> et1 (), et2()) }
 
     | Shape.Tuple3 s ->
-        s.Accept { new ITuple3Visitor<obj> with
-            member __.Visit<'T1,'T2, 'T3> () =
-                let et1,et2,et3 = mkEmptyFunc<'T1>(), mkEmptyFunc<'T2>(), mkEmptyFunc<'T3>()
+        s.Accept { new ITuple3Visitor<unit -> 'T> with
+            member __.Visit<'t1,'t2,'t3> () =
+                let et1,et2,et3 = mkEmptyFunc<'t1>(), mkEmptyFunc<'t2>(), mkEmptyFunc<'t3>()
                 wrap(fun () -> et1 (), et2(), et3()) }
 
     | Shape.FSharpOption s ->
-        s.Accept { new IFSharpOptionVisitor<obj> with
-            member __.Visit<'T>() =
-                let et = mkEmptyFunc<'T>()
-                wrap(fun () -> Option<'T>.None) }
+        s.Accept { new IFSharpOptionVisitor<unit -> 'T> with
+            member __.Visit<'t>() =
+                let et = mkEmptyFunc<'t>()
+                wrap(fun () -> Option<'t>.None) }
 
     | Shape.FSharpList s ->
-        s.Accept { new IFSharpListVisitor<obj> with
-            member __.Visit<'T>() = wrap(fun () -> List.empty<'T>) }
+        s.Accept { new IFSharpListVisitor<unit -> 'T> with
+            member __.Visit<'t>() = wrap(fun () -> List.empty<'t>) }
 
     | Shape.Array s ->
-        s.Accept { new IArrayVisitor<obj> with
-            member __.Visit<'T>() = wrap(fun () -> Array.empty<'T>) }
+        s.Accept { new IArrayVisitor<unit -> 'T> with
+            member __.Visit<'t>() = wrap(fun () -> Array.empty<'t>) }
 
     | Shape.FSharpSet s ->
-        s.Accept { new IFSharpSetVisitor<obj> with
-            member __.Visit<'T when 'T : comparison>() = wrap(fun () -> Set.empty<'T>) }
+        s.Accept { new IFSharpSetVisitor<unit -> 'T> with
+            member __.Visit<'t when 't : comparison>() = wrap(fun () -> Set.empty<'t>) }
 
     | Shape.FSharpMap s ->
-        s.Accept { new IFSharpMapVisitor<obj> with
+        s.Accept { new IFSharpMapVisitor<unit -> 'T> with
             member __.Visit<'K, 'V when 'K : comparison>() = wrap(fun () -> Map.empty<'K,'V>) }
 
     | Shape.KeyValuePair s ->
-        s.Accept { new IKeyValuePairVisitor<obj> with
+        s.Accept { new IKeyValuePairVisitor<unit -> 'T> with
             member __.Visit<'K,'V>() = 
                 let kt,vt = mkEmptyFunc<'K>(), mkEmptyFunc<'V>()
                 wrap(fun () -> new KeyValuePair<'K,'V>(kt(),vt())) }
@@ -81,12 +80,12 @@ and private mkEmptyFuncUntyped (t : Type) : obj =
                         let et = mkEmptyFunc<'T>()
                         fun () -> et () :> obj }
 
-        ts.Accept { new ITypeShapeVisitor<obj> with
-            member __.Visit<'T>() =
+        ts.Accept { new ITypeShapeVisitor<unit -> 'T> with
+            member __.Visit<'t>() =
                 let fieldCtors = s.Properties |> Seq.map mkEmptyField |> Seq.toArray
-                wrap (fun () -> fieldCtors |> Array.map (fun f -> f ()) |> s.ConstructorInfo.Invoke :?> 'T) }
+                wrap (fun () -> fieldCtors |> Array.map (fun f -> f ()) |> s.ConstructorInfo.Invoke :?> 't) }
 
-    | _ -> failwithf "Type '%O' does not support empty types." t
+    | _ -> failwithf "Type '%O' does not support empty types." typeof<'T>
 
 and empty<'T> = mkEmptyFunc<'T> () ()
 

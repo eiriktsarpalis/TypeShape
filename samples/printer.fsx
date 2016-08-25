@@ -3,10 +3,10 @@
 open System
 open TypeShape
 
-let rec mkPrinter<'T> () : 'T -> string = mkPrinterUntyped typeof<'T> :?> _
-and private mkPrinterUntyped (t : Type) : obj =
-    let wrap(p : 'T -> string) = box p
-    match TypeShape.Create t with
+let rec mkPrinter<'T> () : 'T -> string = aux<'T>()
+and private aux<'T> () : 'T -> string =
+    let wrap(p : 'a -> string) = unbox<'T -> string> p
+    match TypeShape.Create<'T>() with
     | Shape.Unit -> wrap(fun () -> "()")
     | Shape.Bool -> wrap(sprintf "%b")
     | Shape.Byte -> wrap(fun (b:byte) -> sprintf "%duy" b)
@@ -15,58 +15,58 @@ and private mkPrinterUntyped (t : Type) : obj =
     | Shape.String -> wrap(sprintf "\"%s\"")
     | Shape.FSharpOption s ->
         s.Accept {
-            new IFSharpOptionVisitor<obj> with
-                member __.Visit<'T> () =
-                    let tp = mkPrinter<'T>()
+            new IFSharpOptionVisitor<'T -> string> with
+                member __.Visit<'a> () =
+                    let tp = mkPrinter<'a>()
                     wrap(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
         }
 
     | Shape.FSharpList s ->
         s.Accept {
-            new IFSharpListVisitor<obj> with
-                member __.Visit<'T> () =
-                    let tp = mkPrinter<'T>()
+            new IFSharpListVisitor<'T -> string> with
+                member __.Visit<'a> () =
+                    let tp = mkPrinter<'a>()
                     wrap(fun ts -> ts |> List.map tp |> String.concat "; " |> sprintf "[%s]")
         }
 
     | Shape.Array s ->
         s.Accept {
-            new IArrayVisitor<obj> with
-                member __.Visit<'T> () =
-                    let tp = mkPrinter<'T> ()
+            new IArrayVisitor<'T -> string> with
+                member __.Visit<'a> () =
+                    let tp = mkPrinter<'a> ()
                     wrap(fun ts -> ts |> Array.map tp |> String.concat "; " |> sprintf "[|%s|]")
         }
 
     | Shape.FSharpSet s ->
         s.Accept {
-            new IFSharpSetVisitor<obj> with
-                member __.Visit<'T when 'T : comparison> () =
-                    let tp = mkPrinter<'T>()
-                    wrap(fun (s:Set<'T>) -> s |> Seq.map tp |> String.concat "; " |> sprintf "set [%s]")
+            new IFSharpSetVisitor<'T -> string> with
+                member __.Visit<'a when 'a : comparison> () =
+                    let tp = mkPrinter<'a>()
+                    wrap(fun (s:Set<'a>) -> s |> Seq.map tp |> String.concat "; " |> sprintf "set [%s]")
         }
 
     | Shape.Tuple2 s ->
         s.Accept {
-            new ITuple2Visitor<obj> with
-                member __.Visit<'T, 'S> () =
-                    let tp = mkPrinter<'T>()
-                    let sp = mkPrinter<'S>()
-                    wrap(fun (t : 'T, s : 'S) -> sprintf "(%s, %s)" (tp t) (sp s))
+            new ITuple2Visitor<'T -> string> with
+                member __.Visit<'t1, 't2> () =
+                    let tp = mkPrinter<'t1>()
+                    let sp = mkPrinter<'t2>()
+                    wrap(fun (t : 't1, s : 't2) -> sprintf "(%s, %s)" (tp t) (sp s))
         }
 
     | Shape.Tuple3 s ->
         s.Accept {
-            new ITuple3Visitor<obj> with
-                member __.Visit<'T1, 'T2, 'T3> () =
-                    let t1p = mkPrinter<'T1>()
-                    let t2p = mkPrinter<'T2>()
-                    let t3p = mkPrinter<'T3>()
-                    wrap(fun (t1 : 'T1, t2 : 'T2, t3 : 'T3) -> sprintf "(%s, %s, %s)" (t1p t1) (t2p t2) (t3p t3))
+            new ITuple3Visitor<'T -> string> with
+                member __.Visit<'t1, 't2, 't3> () =
+                    let t1p = mkPrinter<'t1>()
+                    let t2p = mkPrinter<'t2>()
+                    let t3p = mkPrinter<'t3>()
+                    wrap(fun (t1 : 't1, t2 : 't2, t3 : 't3) -> sprintf "(%s, %s, %s)" (t1p t1) (t2p t2) (t3p t3))
         }
 
     | Shape.FSharpRecord1 s ->
         s.Accept {
-            new IFSharpRecord1Visitor<obj> with
+            new IFSharpRecord1Visitor<'T -> string> with
                 member __.Visit (s : IShapeFSharpRecord<'Record, 'Field1>) =
                     let f1p = mkPrinter<'Field1>()
                     let n1 = s.Properties.[0].Name
@@ -75,7 +75,7 @@ and private mkPrinterUntyped (t : Type) : obj =
 
     | Shape.FSharpRecord2 s ->
         s.Accept {
-            new IFSharpRecord2Visitor<obj> with
+            new IFSharpRecord2Visitor<'T -> string> with
                 member __.Visit<'Record,'Field1,'Field2> (s : IShapeFSharpRecord<'Record,'Field1,'Field2>) =
                     let f1p,f2p = mkPrinter<'Field1>(), mkPrinter<'Field2>()
                     let n1,n2 = s.Properties.[0].Name, s.Properties.[1].Name
@@ -84,7 +84,7 @@ and private mkPrinterUntyped (t : Type) : obj =
 
     | Shape.FSharpUnion1 s ->
         s.Accept {
-            new IFSharpUnion1Visitor<obj> with
+            new IFSharpUnion1Visitor<'T -> string> with
                 member __.Visit (s : IShapeFSharpUnion<'Union,'Case1>) =
                     let c1p = mkPrinter<'Case1>()
                     let n1 = s.UnionCaseInfo.[0].Name
@@ -93,7 +93,7 @@ and private mkPrinterUntyped (t : Type) : obj =
 
     | Shape.FSharpUnion2 s ->
         s.Accept {
-            new IFSharpUnion2Visitor<obj> with
+            new IFSharpUnion2Visitor<'T -> string> with
                 member __.Visit<'Union,'Case1,'Case2> (s : IShapeFSharpUnion<'Union,'Case1,'Case2>) =
                     let c1p, c2p = mkPrinter<'Case1>(), mkPrinter<'Case2>()
                     let n1,n2 = s.UnionCaseInfo.[0].Name, s.UnionCaseInfo.[1].Name
@@ -103,7 +103,7 @@ and private mkPrinterUntyped (t : Type) : obj =
                         | Choice2Of2 c2 -> sprintf "%s %s" n2 (c2p c2))
         }
 
-    | _ -> failwithf "unsupported type '%O'" t
+    | _ -> failwithf "unsupported type '%O'" typeof<'T>
 
 
 
