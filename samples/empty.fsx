@@ -26,12 +26,25 @@ and private aux<'T> () : unit -> 'T =
     | Shape.Single -> wrap(fun () -> 0.f)
     | Shape.Double -> wrap(fun () -> 0.)
     | Shape.Guid -> wrap(fun () -> Guid.Empty)
-    | Shape.Char -> wrap(fun () -> Unchecked.defaultof<char>)
+    | Shape.Char -> wrap(fun () -> '\u0000')
     | Shape.String -> wrap(fun () -> "")
     | Shape.TimeSpan -> wrap(fun () -> TimeSpan.Zero)
     | Shape.DateTime -> wrap(fun () -> DateTime.MinValue)
     | Shape.DateTimeOffset -> wrap(fun () -> DateTimeOffset.MinValue)
     | Shape.Unit -> wrap id
+    | Shape.Enum s ->
+        s.Accept { new IEnumVisitor<unit -> 'T> with
+            member __.Visit<'t, 'u when 't : enum<'u>>() =
+                let ue = mkEmptyFunc<'u>()
+                wrap(fun () -> LanguagePrimitives.EnumOfValue<'u,'t>(ue()))
+        }
+
+    | Shape.Nullable s ->
+        s.Accept { new INullableVisitor<unit -> 'T> with
+            member __.Visit<'t when 't : struct and 't :> ValueType and 't : (new : unit -> 't)>() =
+                wrap(fun () -> new Nullable<'t>())
+        }
+
     | Shape.Tuple2 s ->
         s.Accept { new ITuple2Visitor<unit -> 'T> with
             member __.Visit<'t1,'t2> () =
@@ -43,6 +56,12 @@ and private aux<'T> () : unit -> 'T =
             member __.Visit<'t1,'t2,'t3> () =
                 let et1,et2,et3 = mkEmptyFunc<'t1>(), mkEmptyFunc<'t2>(), mkEmptyFunc<'t3>()
                 wrap(fun () -> et1 (), et2(), et3()) }
+
+    | Shape.Tuple4 s ->
+        s.Accept { new ITuple4Visitor<unit -> 'T> with
+            member __.Visit<'t1,'t2,'t3,'t4> () =
+                let et1,et2,et3,et4 = mkEmptyFunc<'t1>(), mkEmptyFunc<'t2>(), mkEmptyFunc<'t3>(), mkEmptyFunc<'t4>()
+                wrap(fun () -> et1 (), et2(), et3(), et4()) }
 
     | Shape.FSharpOption s ->
         s.Accept { new IFSharpOptionVisitor<unit -> 'T> with
@@ -69,8 +88,8 @@ and private aux<'T> () : unit -> 'T =
     | Shape.KeyValuePair s ->
         s.Accept { new IKeyValuePairVisitor<unit -> 'T> with
             member __.Visit<'K,'V>() = 
-                let kt,vt = mkEmptyFunc<'K>(), mkEmptyFunc<'V>()
-                wrap(fun () -> new KeyValuePair<'K,'V>(kt(),vt())) }
+                let ke,ve = mkEmptyFunc<'K>(), mkEmptyFunc<'V>()
+                wrap(fun () -> new KeyValuePair<'K,'V>(ke(),ve())) }
 
     | Shape.FSharpRecord s as ts ->
         let mkEmptyField (p : PropertyInfo) =
@@ -85,7 +104,13 @@ and private aux<'T> () : unit -> 'T =
                 let fieldCtors = s.Properties |> Seq.map mkEmptyField |> Seq.toArray
                 wrap (fun () -> fieldCtors |> Array.map (fun f -> f ()) |> s.ConstructorInfo.Invoke :?> 't) }
 
-    | _ -> failwithf "Type '%O' does not support empty types." typeof<'T>
+    | Shape.DefaultConstructor s ->
+        s.Accept { new IDefaultConstructorVisitor<unit -> 'T> with
+            member __.Visit<'t when 't : (new : unit -> 't)>() =
+                wrap(fun () -> new 't() |> unbox<'T>)
+        }
+
+    | _ -> failwithf "Type '%O' does not support empty values." typeof<'T>
 
 and empty<'T> = mkEmptyFunc<'T> () ()
 
