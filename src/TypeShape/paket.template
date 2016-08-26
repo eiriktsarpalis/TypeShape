@@ -1,0 +1,18 @@
+﻿type project
+id TypeShape
+description
+    Practical Generic Programming for F#
+version
+    1.0
+authors
+    Eirik Tsarpalis
+copyright
+    Copyright 2016
+releasenotes
+    RELEASE NOTES
+summary
+    Practical Generic Programming for F#
+licenseurl https://github.com/eiriktsarpalis/TypeShape/blob/master/License.md
+projecturl https://github.com/eiriktsarpalis/TypeShape
+tags
+    fsharp, f#, polytypic

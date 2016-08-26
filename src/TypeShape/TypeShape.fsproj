@@ -63,6 +63,7 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="TypeShape.fs" />
     <Compile Include="ISerializableExtensions.fs" />
+    <None Include="paket.template" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">

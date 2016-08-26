@@ -334,6 +334,8 @@ Target "Release" DoNothing
   ==> "Default"
 
 "Default"
+  ==> "Nuget"
+  ==> "PublishNuget"
   ==> "ReleaseGithub"
   ==> "Release"
 
