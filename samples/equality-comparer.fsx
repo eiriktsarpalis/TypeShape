@@ -4,8 +4,7 @@ open System
 open System.Collections.Generic
 open TypeShape
 
-let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> = aux<'T>()
-and private aux<'T>() : IEqualityComparer<'T> =
+let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
     let inline combine (h1 : int) (h2 : int) = ((h1 <<< 5) + h1) ||| h2
     let inline wrap (hash : 'a -> int) (cmp : 'a -> 'a -> bool) =
         { new IEqualityComparer<'a> with

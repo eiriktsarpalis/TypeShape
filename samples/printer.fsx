@@ -3,8 +3,7 @@
 open System
 open TypeShape
 
-let rec mkPrinter<'T> () : 'T -> string = aux<'T>()
-and private aux<'T> () : 'T -> string =
+let rec mkPrinter<'T> () : 'T -> string =
     let wrap(p : 'a -> string) = unbox<'T -> string> p
     match TypeShape.Create<'T>() with
     | Shape.Unit -> wrap(fun () -> "()")

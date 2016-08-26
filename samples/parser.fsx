@@ -13,8 +13,7 @@ let rec mkParser<'T> () : string -> 'T =
         | Success(r,_,_) -> r
         | Failure(msg,_,_) -> failwithf "Parse error: %s" msg
 
-and private mkFParser<'T> () : Parser<'T,unit> = aux<'T> ()
-and private aux<'T> () : Parser<'T, unit> =
+and private mkFParser<'T> () : Parser<'T,unit> =
     let wrap (p : Parser<'a,unit>) = unbox<Parser<'T,unit>>(spaces >>. p .>> spaces)
     match TypeShape.Create<'T>() with
     | Shape.Unit -> wrap(pstring "(" >>. spaces .>> pstring ")")

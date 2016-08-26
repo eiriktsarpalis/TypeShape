@@ -4,8 +4,7 @@ open TypeShape
 
 // inspired by but different from http://research.microsoft.com/en-us/um/people/simonpj/papers/hmap/gmap3.pdf
 
-let rec gmapQ<'T,'S,'U> (f : 'T -> 'S) : 'U -> 'S list = aux<'T, 'S, 'U> f
-and private aux<'T, 'S, 'U> (f : 'T -> 'S) : 'U -> 'S list =
+let rec gmapQ<'T,'S,'U> (f : 'T -> 'S) : 'U -> 'S list =
     let wrap(f : 'a -> 'S list) = unbox<'U -> 'S list> f
     match TypeShape.Create<'U>() :> TypeShape with
     | :? TypeShape<'T> -> wrap(fun (t:'T) -> [f t])
