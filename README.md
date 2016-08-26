@@ -12,6 +12,19 @@ to fully access specific type information.
 
 TypeShape is not a metaprogramming library and does not emit code at runtime.
 
+### Installing
+
+To incorporate TypeShape in your project place the following line in your
+`paket.dependencies` file:
+```
+github eiriktsarpalis/TypeShape:1.0 src/TypeShape/TypeShape.fs
+```
+and in `paket.references`:
+```
+File: TypeShape.fs TypeShape
+```
+TypeShape is also available on [![NuGet Status](http://img.shields.io/nuget/v/TypeShape.svg?style=flat)](https://www.nuget.org/packages/TypeShape/)
+
 ### Example: Implementing a value printer
 
 ```fsharp
@@ -138,18 +151,6 @@ See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/maste
 
 * [FsPickler](https://github.com/mbraceproject/FsPickler/blob/7d86cbd20ff37899ef58d5430f74376e119b7065/src/FsPickler/PicklerGeneration/PicklerGenerator.fs#L38)
 * [FSharp.AWS.DynamoDB](https://github.com/fsprojects/FSharp.AWS.DynamoDB/blob/b5cde91fae2630562188bdff6e16cda0208c330b/src/FSharp.AWS.DynamoDB/Picklers/PicklerResolver.fs#L23)
-
-### Installing
-
-To incorporate TypeShape in your project place the following line in your
-`paket.dependencies` file:
-```
-github eiriktsarpalis/TypeShape:1.0 src/TypeShape/TypeShape.fs
-```
-and in `paket.references`:
-```
-File: TypeShape.fs TypeShape
-```
 
 ### Build Status
 
