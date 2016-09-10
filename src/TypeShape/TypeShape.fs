@@ -619,6 +619,7 @@ type private CaseInfo =
     {
         UnionCaseInfo : UnionCaseInfo
         PayloadType : Type
+        ConstructorInfo : MethodInfo
         UCtor : obj -> obj
         UProj : obj -> obj
     }
@@ -635,11 +636,13 @@ with
 type IShapeFSharpUnion =
     abstract GetTagUntyped : obj -> int
     abstract UnionCaseInfo : UnionCaseInfo list
+    abstract Constructors  : MethodInfo list
 
 type private ShapeFSharpUnion<'Union> (info : UnionInfo) =
     interface IShapeFSharpUnion with
         member __.GetTagUntyped o = info.TagReader o
         member __.UnionCaseInfo = info.UnionCaseInfo
+        member __.Constructors = info.Cases |> Seq.map (fun u -> u.ConstructorInfo) |> Seq.toList
 
 ///////////// 1-case union
 
@@ -661,6 +664,7 @@ type private ShapeFSharpUnion<'Union, 'Case1> (info : UnionInfo) =
         member __.UnionCaseInfo = info.UnionCaseInfo
         member __.GetTag (u : 'Union) = info.TagReader (u :> _)
         member __.GetTagUntyped o = info.TagReader o
+        member __.Constructors = info.Cases |> Seq.map (fun u -> u.ConstructorInfo) |> Seq.toList
 
         member __.Project (u : 'Union) =
             let { UProj = proj } = info.Cases.[0]
@@ -693,6 +697,7 @@ type private ShapeFSharpUnion<'Union, 'Case1, 'Case2> (info : UnionInfo) =
         member __.UnionCaseInfo = info.UnionCaseInfo
         member __.GetTag (u : 'Union) = info.TagReader (u :> _)
         member __.GetTagUntyped o = info.TagReader o
+        member __.Constructors = info.Cases |> Seq.map (fun u -> u.ConstructorInfo) |> Seq.toList
 
         member __.Project (u : 'Union) =
             let tag = info.TagReader (u :> _)
@@ -734,6 +739,7 @@ type private ShapeFSharpUnion<'Union, 'Case1, 'Case2, 'Case3> (info : UnionInfo)
         member __.UnionCaseInfo = info.UnionCaseInfo
         member __.GetTag (u : 'Union) = info.TagReader (u :> _)
         member __.GetTagUntyped o = info.TagReader o
+        member __.Constructors = info.Cases |> Seq.map (fun u -> u.ConstructorInfo) |> Seq.toList
 
         member __.Project (u : 'Union) =
             let tag = info.TagReader (u :> _)
@@ -782,6 +788,7 @@ type private ShapeFSharpUnion<'Union, 'Case1, 'Case2, 'Case3, 'Case4> (info : Un
         member __.UnionCaseInfo = info.UnionCaseInfo
         member __.GetTag (u : 'Union) = info.TagReader (u :> _)
         member __.GetTagUntyped o = info.TagReader o
+        member __.Constructors = info.Cases |> Seq.map (fun u -> u.ConstructorInfo) |> Seq.toList
 
         member __.Project (u : 'Union) =
             let tag = info.TagReader (u :> _)
@@ -836,6 +843,7 @@ type private ShapeFSharpUnion<'Union, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5> (i
         member __.UnionCaseInfo = info.UnionCaseInfo
         member __.GetTag (u : 'Union) = info.TagReader (u :> _)
         member __.GetTagUntyped o = info.TagReader o
+        member __.Constructors = info.Cases |> Seq.map (fun u -> u.ConstructorInfo) |> Seq.toList
 
         member __.Project (u : 'Union) =
             let tag = info.TagReader (u :> _)
@@ -896,6 +904,7 @@ type private ShapeFSharpUnion<'Union, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'C
         member __.UnionCaseInfo = info.UnionCaseInfo
         member __.GetTag (u : 'Union) = info.TagReader (u :> _)
         member __.GetTagUntyped o = info.TagReader o
+        member __.Constructors = info.Cases |> Seq.map (fun u -> u.ConstructorInfo) |> Seq.toList
 
         member __.Project (u : 'Union) =
             let tag = info.TagReader (u :> _)
@@ -963,6 +972,7 @@ type private ShapeFSharpUnion<'Union, 'Case1, 'Case2, 'Case3, 'Case4, 'Case5, 'C
         member __.UnionCaseInfo = info.UnionCaseInfo
         member __.GetTag (u : 'Union) = info.TagReader (u :> _)
         member __.GetTagUntyped o = info.TagReader o
+        member __.Constructors = info.Cases |> Seq.map (fun u -> u.ConstructorInfo) |> Seq.toList
 
         member __.Project (u : 'Union) =
             let tag = info.TagReader (u :> _)
@@ -1164,14 +1174,15 @@ module private TypeShapeImpl =
         let mkCaseInfo (uci : UnionCaseInfo) =
             let fields = uci.GetFields()
             let uctor = FSharpValue.PreComputeUnionConstructor(uci, allMembers)
+            let ctorInfo = FSharpValue.PreComputeUnionConstructorInfo(uci, allMembers)
             match fields with
             | [||] -> 
-                { UnionCaseInfo = uci ; PayloadType = typeof<unit> ;
+                { UnionCaseInfo = uci ; PayloadType = typeof<unit> ; ConstructorInfo = ctorInfo ;
                     UCtor = (fun _ -> uctor [||]) ;
                     UProj = (fun _ -> () :> _) }
 
             | [|field|] -> 
-                { UnionCaseInfo = uci ; PayloadType = field.PropertyType ;
+                { UnionCaseInfo = uci ; PayloadType = field.PropertyType ; ConstructorInfo = ctorInfo ;
                     UCtor = (fun v -> uctor [|v|]) ;
                     UProj = (fun u -> field.GetValue(u, null)) }
             | _ ->
@@ -1179,7 +1190,7 @@ module private TypeShapeImpl =
                 let uReader = FSharpValue.PreComputeUnionReader(uci, allMembers)
                 let tupleCtor = FSharpValue.PreComputeTupleConstructor tupleType
                 let tupleReader = FSharpValue.PreComputeTupleReader tupleType
-                { UnionCaseInfo = uci ; PayloadType = tupleType ;
+                { UnionCaseInfo = uci ; PayloadType = tupleType ; ConstructorInfo = ctorInfo ;
                     UCtor = tupleReader >> uctor ;
                     UProj = uReader >> tupleCtor }
 

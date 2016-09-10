@@ -29,6 +29,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{4213
 		samples\gmap.fsx = samples\gmap.fsx
 		samples\parser.fsx = samples\parser.fsx
 		samples\printer.fsx = samples\printer.fsx
+		samples\random.fsx = samples\random.fsx
 	EndProjectSection
 EndProject
 Global
