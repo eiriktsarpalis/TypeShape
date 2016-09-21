@@ -13,7 +13,7 @@ open TypeShape
 type IPredicate =
     abstract Invoke<'T> : value:'T -> bool
 
-/// Type Algebra implementation
+/// Type Algebra we will be testing our code against
 type TypeAlg =
     | Unit
     | Bool
@@ -28,8 +28,8 @@ type TypeAlg =
     | Tuple3 of TypeAlg * TypeAlg * TypeAlg
 
 /// Type Algebra pretty-printer
-let rec toString (atype : TypeAlg) =
-    match atype with
+let rec toString (tAlg : TypeAlg) =
+    match tAlg with
     | Unit -> "unit"
     | Bool -> "bool"
     | Int32 -> "int"
@@ -43,8 +43,8 @@ let rec toString (atype : TypeAlg) =
     | Tuple3 (t1,t2,t3) -> sprintf "(%s * %s * %s)" (toString t1) (toString t2) (toString t3)
 
 /// Converts a TypeAlg representation to its corresponding System.Type
-let rec toSysType (atype : TypeAlg) : Type =
-    match atype with
+let rec toSysType (tAlg : TypeAlg) : Type =
+    match tAlg with
     | Unit -> typeof<unit>
     | Bool -> typeof<bool>
     | Int32 -> typeof<int>
@@ -67,13 +67,13 @@ let rec toSysType (atype : TypeAlg) : Type =
 let check (maxTypes : int) (maxTestsPerType : int) (predicate : IPredicate) =
     let tconf = { Config.QuickThrowOnFailure with MaxTest = maxTypes }
     let vconf = { Config.QuickThrowOnFailure with MaxTest = maxTestsPerType }
-    let runOnType (atype : TypeAlg) =
-        let stype = toSysType atype
-        let shape = TypeShape.Create stype
+    let runOnType (tAlg : TypeAlg) =
+        let sysType = toSysType tAlg
+        let shape = TypeShape.Create sysType
         shape.Accept {
             new ITypeShapeVisitor<bool> with
                 member __.Visit<'T>() =
-                    printfn "Testing type: %s" (toString atype)
+                    printfn "Testing type: %s" (toString tAlg)
                     Check.One(vconf, fun (t:'T) -> predicate.Invoke t)
                     true
         }
