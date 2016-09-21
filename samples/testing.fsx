@@ -2,9 +2,12 @@
 #r "../bin/FsCheck.dll"
 
 open System
-open FSharp.Reflection
 open FsCheck
 open TypeShape
+
+// Provides facility for testing generic programs:
+// uses FsCheck to auto-generate types from a fixed algebra,
+// then uses TypeShape to run nested checks for values of each type.
 
 /// Abstraction for testing generic programs
 type IPredicate =
@@ -15,41 +18,44 @@ type TypeAlg =
     | Unit
     | Bool
     | Int32
-    | Double
+    | Decimal
     | String
     | Option of TypeAlg
     | Ref of TypeAlg
     | List of TypeAlg
     | Array of TypeAlg
-    | Tuple of TypeAlg []
+    | Tuple2 of TypeAlg * TypeAlg
+    | Tuple3 of TypeAlg * TypeAlg * TypeAlg
 
 /// Type Algebra pretty-printer
 let rec toString (atype : TypeAlg) =
     match atype with
-    | Unit | Tuple [||] -> "unit"
+    | Unit -> "unit"
     | Bool -> "bool"
     | Int32 -> "int"
-    | Double -> "float"
+    | Decimal -> "decimal"
     | String -> "string"
     | Option t -> sprintf "%s option" (toString t)
     | Ref t -> sprintf "%s ref" (toString t)
     | List t -> sprintf "%s list" (toString t)
     | Array t -> sprintf "%s []" (toString t)
-    | Tuple ts -> ts |> Seq.map toString |> String.concat " * " |> sprintf "(%s)"
+    | Tuple2 (t1,t2) -> sprintf "(%s * %s)" (toString t1) (toString t2)
+    | Tuple3 (t1,t2,t3) -> sprintf "(%s * %s * %s)" (toString t1) (toString t2) (toString t3)
 
 /// Converts a TypeAlg representation to its corresponding System.Type
 let rec toSysType (atype : TypeAlg) : Type =
     match atype with
-    | Unit | Tuple [||] -> typeof<unit>
+    | Unit -> typeof<unit>
     | Bool -> typeof<bool>
     | Int32 -> typeof<int>
-    | Double -> typeof<double>
+    | Decimal -> typeof<decimal>
     | String -> typeof<string>
-    | Option ta -> typedefof<_ option>.MakeGenericType [| toSysType ta |]
+    | Option ta -> typedefof<_ option>.MakeGenericType [|toSysType ta|]
     | Ref ta -> typedefof<_ ref>.MakeGenericType [|toSysType ta|]
-    | List ta -> typedefof<_ list>.MakeGenericType [| toSysType ta |]
+    | List ta -> typedefof<_ list>.MakeGenericType [|toSysType ta|]
     | Array ta -> (toSysType ta).MakeArrayType()
-    | Tuple ts -> FSharpType.MakeTupleType(ts |> Array.map toSysType)
+    | Tuple2 (t1,t2) -> typedefof<_ * _>.MakeGenericType [|toSysType t1; toSysType t2|]
+    | Tuple3 (t1,t2,t3) -> typedefof<_ * _ * _>.MakeGenericType [|toSysType t1; toSysType t2; toSysType t3|]
 
 
 /// <summary>
@@ -75,4 +81,13 @@ let check (maxTypes : int) (maxTestsPerType : int) (predicate : IPredicate) =
     Check.One(tconf, runOnType)
 
 // test the setup
-check 10 1 { new IPredicate with member __.Invoke t = printfn "%A" t ; true }
+
+#load "equality-comparer.fsx"
+open ``Equality-comparer``
+
+// check if our equality comparer satisfies reflexivivity
+check 10 100 
+    { new IPredicate with 
+        member __.Invoke (t : 'T) =
+            let cmp = comparer<'T>
+            cmp.Equals(t,t) }

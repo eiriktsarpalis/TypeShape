@@ -1,4 +1,4 @@
-#load "../src/TypeShape/TypeShape.fs"
+#r "../bin/TypeShape.dll"
 open System
 open TypeShape
 

@@ -1,6 +1,7 @@
-#load "../src/TypeShape/TypeShape.fs"
+#r "../bin/TypeShape.dll"
 
 open System
+open System.Collections.Concurrent
 open System.Collections.Generic
 open TypeShape
 
@@ -17,6 +18,8 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
     | Shape.Byte -> wrap (fun (b:byte) -> int b) (=)
     | Shape.Int32 -> wrap id (=)
     | Shape.Int64 -> wrap (fun (i:int64) -> int i) (=)
+    | Shape.Double -> wrap (fun (f:float) -> hash f) (=)
+    | Shape.Decimal -> wrap (fun (f:decimal) -> hash f) (=)
     | Shape.String -> wrap (fun (s:string) -> s.GetHashCode()) (=)
     | Shape.FSharpOption s ->
         s.Accept {
@@ -176,9 +179,13 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
     | _ -> failwithf "unsupported type '%O'" typeof<'T>
 
 
-let c0 = mkEqualityComparer<int list>()
+let private cache = new ConcurrentDictionary<Type,obj>()
+let comparer<'T> = cache.GetOrAdd(typeof<'T>, fun _ -> mkEqualityComparer<'T>() :> obj) :?> IEqualityComparer<'T>
+
+
+let c0 = comparer<int list>
 
 let value = [1 .. 1000000]
 c0.GetHashCode value
 c0.Equals(value,value)
-value.GetHashCode() // stack overflow error
+// value.GetHashCode() // stack overflow error
