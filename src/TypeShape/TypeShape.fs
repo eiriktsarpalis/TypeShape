@@ -93,6 +93,42 @@ type private ShapeDefaultConstructor<'T when 'T : (new : unit -> 'T)>() =
     interface IShapeDefaultConstructor with
         member __.Accept v = v.Visit<'T>()
 
+///////////// Equality Types
+    
+type IEqualityVisitor<'R> =
+    abstract Visit<'T when 'T : equality> : unit -> 'R
+
+type IShapeEquality =
+    abstract Accept : IEqualityVisitor<'R> -> 'R
+
+type private ShapeEquality<'T when 'T : equality>() =
+    interface IShapeEquality with
+        member __.Accept v = v.Visit<'T>()
+
+///////////// Struct Types
+
+type IStructVisitor<'R> =
+    abstract Visit<'T when 'T : struct> : unit -> 'R
+
+type IShapeStruct =
+    abstract Accept : IStructVisitor<'R> -> 'R
+
+type private ShapeStruct<'T when 'T : struct>() =
+    interface IShapeStruct with
+        member __.Accept v = v.Visit<'T>()
+
+///////////// Reference Types
+
+type INotStructVisitor<'R> =
+    abstract Visit<'T when 'T : not struct and 'T : null> : unit -> 'R
+
+type IShapeNotStruct =
+    abstract Accept : INotStructVisitor<'R> -> 'R
+
+type private ShapeNotStruct<'T when 'T : not struct and 'T : null>() =
+    interface IShapeNotStruct with
+        member __.Accept v = v.Visit<'T>()
+
 ///////////// Delegates
 
 type IDelegateVisitor<'R> =
@@ -1279,6 +1315,21 @@ module Shape =
             :?> IShapeEnum 
             |> Some
         | _ -> None
+
+    let (|Equality|_|) (s : TypeShape) =
+        try
+            Activator.CreateInstanceGeneric<ShapeEquality<_>> [|s.Type|]
+            :?> IShapeEquality
+            |> Some
+        with _ -> None
+
+    let (|Struct|NotStruct|) (s : TypeShape) =
+        if s.Type.IsValueType then
+            let instance = Activator.CreateInstanceGeneric<ShapeStruct<_>> [|s.Type|] :?> IShapeStruct
+            Struct instance
+        else
+            let instance = Activator.CreateInstanceGeneric<ShapeNotStruct<_>> [|s.Type|] :?> IShapeNotStruct
+            NotStruct instance
 
     let (|DefaultConstructor|_|) (shape : TypeShape) =
         match shape.Type.GetConstructor(BindingFlags.Public ||| BindingFlags.Instance, null, [||], [||]) with
