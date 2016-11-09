@@ -1338,6 +1338,9 @@ module Shape =
         | _ -> None
 
     let (|Equality|_|) (s : TypeShape) =
+        // Since equality & comparison constraints are not contained
+        // in reflection metadata, we need to separately determine 
+        // whether they are satisfied
         // c.f. Section 5.2.10 of the F# Spec
         let rec isEqualityConstraint (stack:Type list) (t:Type) =
             if stack |> List.exists ((=) t) then true // recursive paths resolve to true always
@@ -1379,6 +1382,9 @@ module Shape =
             None
 
     let (|Comparison|_|) (s : TypeShape) =
+        // Since equality & comparison constraints are not contained
+        // in reflection metadata, we need to separately determine 
+        // whether they are satisfied
         // c.f. Section 5.2.10 of the F# Spec
         let rec isComparisonConstraint (stack:Type list) (t:Type) =
             if t = typeof<IntPtr> || t = typeof<UIntPtr> then true
