@@ -105,6 +105,18 @@ type private ShapeEquality<'T when 'T : equality>() =
     interface IShapeEquality with
         member __.Accept v = v.Visit<'T>()
 
+///////////// Comparison Types
+    
+type IComparisonVisitor<'R> =
+    abstract Visit<'T when 'T : comparison> : unit -> 'R
+
+type IShapeComparison =
+    abstract Accept : IComparisonVisitor<'R> -> 'R
+
+type private ShapeComparison<'T when 'T : comparison>() =
+    interface IShapeComparison with
+        member __.Accept v = v.Visit<'T>()
+
 ///////////// Struct Types
 
 type IStructVisitor<'R> =
@@ -1163,7 +1175,16 @@ module private TypeShapeImpl =
     let allMembers =
         BindingFlags.NonPublic ||| BindingFlags.Public |||
             BindingFlags.Instance ||| BindingFlags.Static |||
-                BindingFlags.FlattenHierarchy
+                BindingFlags.FlattenHierarchy 
+
+    type MemberInfo with
+        member inline m.ContainsAttr<'Attr when 'Attr :> Attribute> (inheritAttr) =
+            m.GetCustomAttributes(inheritAttr)
+            |> Array.exists (function :? 'Attr -> true | _ -> false)
+
+        member inline m.TryGetAttribute<'Attr when 'Attr :> Attribute> (inheritAttr) =
+            m.GetCustomAttributes(inheritAttr)
+            |> Array.tryPick (function :? 'Attr as attr -> Some attr | _ -> None)
 
     let activateGeneric (templateTy:Type) (typeArgs : Type[]) (args:obj[]) =
         let templateTy =
@@ -1317,11 +1338,88 @@ module Shape =
         | _ -> None
 
     let (|Equality|_|) (s : TypeShape) =
-        try
+        // c.f. Section 5.2.10 of the F# Spec
+        let rec isEqualityConstraint (stack:Type list) (t:Type) =
+            if stack |> List.exists ((=) t) then true // recursive paths resolve to true always
+            elif FSharpType.IsUnion(t, allMembers) then 
+                if t.ContainsAttr<NoEqualityAttribute>(true) then false 
+                elif t.ContainsAttr<CustomEqualityAttribute>(true) then true
+                else
+                    FSharpType.GetUnionCases(t, allMembers)
+                    |> Seq.collect (fun uci -> uci.GetFields())
+                    |> Seq.map (fun p -> p.PropertyType)
+                    |> Seq.distinct
+                    |> Seq.forall (isEqualityConstraint (t :: stack))
+
+            elif t.ContainsAttr<NoEqualityAttribute>(false) then false
+            elif FSharpType.IsRecord(t, allMembers) then
+                if t.ContainsAttr<CustomEqualityAttribute>(true) then false
+                else
+                    FSharpType.GetRecordFields(t, allMembers)
+                    |> Seq.map (fun p -> p.PropertyType)
+                    |> Seq.distinct
+                    |> Seq.forall (isEqualityConstraint (t :: stack))
+
+            elif FSharpType.IsTuple t then
+                FSharpType.GetTupleElements t
+                |> Seq.distinct
+                |> Seq.forall (isEqualityConstraint (t :: stack))
+
+            elif FSharpType.IsFunction t then false
+            elif t.IsArray then
+                isEqualityConstraint (t :: stack) (t.GetElementType())
+            else
+                true
+
+        if isEqualityConstraint [] s.Type then
             Activator.CreateInstanceGeneric<ShapeEquality<_>> [|s.Type|]
             :?> IShapeEquality
             |> Some
-        with _ -> None
+        else
+            None
+
+    let (|Comparison|_|) (s : TypeShape) =
+        // c.f. Section 5.2.10 of the F# Spec
+        let rec isComparisonConstraint (stack:Type list) (t:Type) =
+            if t = typeof<IntPtr> || t = typeof<UIntPtr> then true
+            elif stack |> List.exists ((=) t) then true // recursive paths resolve to true always
+            elif FSharpType.IsUnion(t, allMembers) then 
+                if t.ContainsAttr<NoComparisonAttribute>(true) then false 
+                elif t.ContainsAttr<CustomComparisonAttribute>(true) then true
+                else
+                    FSharpType.GetUnionCases(t, allMembers)
+                    |> Seq.collect (fun uci -> uci.GetFields())
+                    |> Seq.map (fun p -> p.PropertyType)
+                    |> Seq.distinct
+                    |> Seq.forall (isComparisonConstraint (t :: stack))
+
+            elif t.ContainsAttr<NoComparisonAttribute>(false) then false
+            elif FSharpType.IsRecord(t, allMembers) then
+                if t.ContainsAttr<CustomComparisonAttribute>(true) then false
+                else
+                    FSharpType.GetRecordFields(t, allMembers)
+                    |> Seq.map (fun p -> p.PropertyType)
+                    |> Seq.distinct
+                    |> Seq.forall (isComparisonConstraint (t :: stack))
+
+            elif FSharpType.IsTuple t then
+                FSharpType.GetTupleElements t
+                |> Seq.distinct
+                |> Seq.forall (isComparisonConstraint (t :: stack))
+
+            elif t.IsArray then
+                isComparisonConstraint (t :: stack) (t.GetElementType())
+
+            elif isInterfaceAssignableFrom typeof<IComparable> t then true
+            else
+                false
+
+        if isComparisonConstraint [] s.Type then
+            Activator.CreateInstanceGeneric<ShapeComparison<_>> [|s.Type|]
+            :?> IShapeComparison
+            |> Some
+        else
+            None
 
     let (|Struct|NotStruct|) (s : TypeShape) =
         if s.Type.IsValueType then

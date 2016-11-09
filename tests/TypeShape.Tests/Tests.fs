@@ -15,6 +15,9 @@ open TypeShape_ISerializableExtensions
 
 let check<'T>(prop : 'T -> bool) = Check.QuickThrowOnFailure prop
 
+[<NoEquality; NoComparison>]
+type NoEqNoComp = NoEqNoComp
+
 let testPrim<'T>() = 
     let shape = shapeof<'T>
     test <@ shape.GetType() = typeof<TypeShape<'T>> @>
@@ -90,6 +93,62 @@ let ``Shape Nullable`` () =
             member __.Visit<'T when 'T : struct and 'T : (new : unit -> 'T) and 'T :> ValueType>() = 
                 typeof<'T> = typeof<int> }
     test <@ match shapeof<Nullable<int>> with Shape.Nullable e -> e.Accept accepter | _ -> false @>
+
+[<Fact>]
+let ``Shape Equality`` () =
+    let testType expected (t:Type) =
+        match TypeShape.Create t with
+        | Shape.Equality s ->
+            if not expected then false else
+            s.Accept { new IEqualityVisitor<bool> with
+                        member __.Visit<'T when 'T : equality> () = typeof<'T> = t }
+
+        | _ -> not expected
+
+    test <@ typeof<int> |> testType true @>
+    test <@ typeof<string> |> testType true @>
+    test <@ typeof<string * int option> |> testType true @>
+    test <@ typeof<Type list> |> testType true @>
+    test <@ typeof<string []> |> testType true @>
+    test <@ typeof<obj> |> testType true @>
+
+    test <@ typeof<NoEqNoComp> |> testType false @>
+    test <@ typeof<NoEqNoComp option> |> testType false @>
+    test <@ typeof<NoEqNoComp ref> |> testType false @>
+    test <@ typeof<NoEqNoComp []> |> testType false @>
+    test <@ typeof<NoEqNoComp list> |> testType false @>
+    test <@ typeof<NoEqNoComp * int> |> testType false @>
+    test <@ typeof<int -> int> |> testType false @>
+
+[<Fact>]
+let ``Shape Comparison`` () =
+    let testType expected (t:Type) =
+        match TypeShape.Create t with
+        | Shape.Comparison s ->
+            if not expected then false else
+            s.Accept { new IComparisonVisitor<bool> with
+                member __.Visit<'T when 'T : comparison>() = typeof<'T> = t }
+
+        | _ -> not expected
+
+    test <@ typeof<int> |> testType true @>
+    test <@ typeof<string> |> testType true @>
+    test <@ typeof<IntPtr> |> testType true @>
+    test <@ typeof<string * int option> |> testType true @>
+    test <@ typeof<string []> |> testType true @>
+    test <@ typeof<string list> |> testType true @>
+    test <@ typeof<string ref> |> testType true @>
+
+    test <@ typeof<obj> |> testType false @>
+    test <@ typeof<Type> |> testType false @>
+    test <@ typeof<Type ref list option []> |> testType false @>
+    test <@ typeof<NoEqNoComp> |> testType false @>
+    test <@ typeof<NoEqNoComp option> |> testType false @>
+    test <@ typeof<NoEqNoComp ref> |> testType false @>
+    test <@ typeof<NoEqNoComp []> |> testType false @>
+    test <@ typeof<NoEqNoComp list> |> testType false @>
+    test <@ typeof<NoEqNoComp * int> |> testType false @>
+    test <@ typeof<int -> int> |> testType false @>
 
 [<Fact>]
 let ``Shape Tuple`1`` () =

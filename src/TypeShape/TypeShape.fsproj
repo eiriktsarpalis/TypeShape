@@ -10,7 +10,7 @@
     <RootNamespace>TypeShape</RootNamespace>
     <AssemblyName>TypeShape</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
+    <TargetFSharpCoreVersion>4.3.0.0</TargetFSharpCoreVersion>
     <Name>TypeShape</Name>
     <TargetFrameworkProfile />
   </PropertyGroup>
