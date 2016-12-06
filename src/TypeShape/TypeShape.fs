@@ -802,6 +802,10 @@ and ShapeConstructor<'CtorType, 'CtorArgs> private (ctorInfo : ConstructorInfo, 
         let args = valueReader args
         ctorInfo.Invoke args :?> 'CtorType
 
+    member __.InvokeExpr(args : Expr<'CtorArgs>) : Expr<'CtorType> =
+        let exprArgs = [for i in 0 .. arity - 1 -> Expr.TupleGet(args, i)]
+        Expr.Cast<'CtorType>(Expr.NewObject(ctorInfo, exprArgs))
+
     interface IShapeConstructor<'CtorType> with
         member __.IsPublic = ctorInfo.IsPublic
         member __.Arity = arity
