@@ -26,9 +26,11 @@ type TypeShapeInfo =
     | Array of element:Type * rank:int
     | Generic of definition:Type * args:Type []
 
+/// Used to extract the type variable contained in a specific shape
 type ITypeShapeVisitor<'R> =
     abstract Visit<'T> : unit -> 'R
 
+/// Encapsulates a type variable that can be accessed using type shape visitors
 [<AbstractClass>]
 type TypeShape =
     [<CompilerMessage("TypeShape constructor should not be consumed.", 4224)>]
@@ -38,6 +40,7 @@ type TypeShape =
     abstract Accept : ITypeShapeVisitor<'R> -> 'R
     override s.ToString() = sprintf "TypeShape [%O]" s.Type
 
+/// Encapsulates a type variable that can be accessed using type shape visitors
 [<Sealed>]
 type TypeShape<'T> () =
     inherit TypeShape()
@@ -57,7 +60,7 @@ type TypeShape<'T> () =
     override __.Accept v = v.Visit<'T> ()
 
 exception UnsupportedShape of Type:Type
- with
+    with
     override __.Message = sprintf "Unsupported TypeShape '%O'" __.Type
 
 [<AutoOpen>]
@@ -771,6 +774,41 @@ and ShapeWriteMember<'Record, 'MemberType> private (label : string, memberInfo :
 and IWriteMemberVisitor<'TRecord, 'R> =
     abstract Visit<'Field> : ShapeWriteMember<'TRecord, 'Field> -> 'R
 
+//-------------------------------
+// Constructor Shapes
+
+type IShapeConstructor =
+    abstract IsPublic : bool
+    abstract Arity : int
+    /// ConstructorInfo instance
+    abstract ConstructorInfo : ConstructorInfo
+    // A tuple type encoding all arguments passed to the constuctor
+    abstract ArgumentsType : Type
+
+and IShapeConstructor<'CtorType> =
+    inherit IShapeConstructor
+    abstract Accept : IShapeConstructorVisitor<'CtorType, 'R> -> 'R
+
+and IShapeConstructorVisitor<'CtorType, 'R> =
+    abstract Visit<'CtorArgs> : ShapeConstructor<'CtorType, 'CtorArgs> -> 'R
+
+and ShapeConstructor<'CtorType, 'CtorArgs> private (ctorInfo : ConstructorInfo, arity : int) =
+    let valueReader = 
+        if arity = 0 then fun _ -> [||]
+        else
+            FSharpValue.PreComputeTupleReader typeof<'CtorArgs>
+
+    member __.Invoke(args : 'CtorArgs) =
+        let args = valueReader args
+        ctorInfo.Invoke args :?> 'CtorType
+
+    interface IShapeConstructor<'CtorType> with
+        member __.IsPublic = ctorInfo.IsPublic
+        member __.Arity = arity
+        member __.ConstructorInfo = ctorInfo
+        member __.ArgumentsType = typeof<'CtorArgs>
+        member __.Accept v = v.Visit __
+
 [<AutoOpen>]
 module private MemberUtils2 =
     let mkMemberUntyped<'Record> (label : string) (memberInfo : MemberInfo) (path : MemberInfo[]) =
@@ -793,6 +831,16 @@ module private MemberUtils2 =
         match mkMemberUntyped<'Record> label memberInfo path with
         | :? IShapeWriteMember<'Record> as wm -> wm
         | _ -> invalidOp <| sprintf "TypeShape internal error: Member '%O' is not writable" memberInfo
+
+    let mkCtorUntyped<'Record> (ctorInfo : ConstructorInfo) =
+        let argTypes = ctorInfo.GetParameters() |> Array.map (fun p -> p.ParameterType)
+        let arity = argTypes.Length
+        let argumentType =
+            if arity = 0 then typeof<unit>
+            else FSharpType.MakeTupleType argTypes
+
+        Activator.CreateInstanceGeneric<ShapeConstructor<_,_>>([|typeof<'Record>; argumentType|], [|box ctorInfo, box arity|])
+        :?> IShapeConstructor<'Record>
 
 // Generic Tuple Shape
 
@@ -1002,12 +1050,17 @@ and ICSharpRecordVisitor<'R> =
 
 type IShapePoco =
     abstract IsStruct : bool
+    abstract Constructors : IShapeConstructor[]
     abstract Fields : IShapeMember[]
     abstract Properties : IShapeMember[]
     abstract Accept : IPocoVisitor<'R> -> 'R
 
 and ShapePoco<'Poco> private () =
     let isStruct = typeof<'Poco>.IsValueType
+    let ctors =
+        typeof<'Poco>.GetConstructors(allInstanceMembers)
+        |> Array.map (fun c -> mkCtorUntyped<'Poco> c)
+
     let fields = 
         typeof<'Poco>.GetFields(allInstanceMembers)
         |> Array.map (fun f -> mkWriteMemberUntyped<'Poco> f.Name f [|f|])
@@ -1017,13 +1070,17 @@ and ShapePoco<'Poco> private () =
         |> Array.map (fun p -> mkMemberUntyped<'Poco> p.Name p [|p|])
 
     member __.IsStruct = isStruct
-    member inline __.CreateUninitialized() = FormatterServices.GetUninitializedObject(typeof<'Poco>) :?> 'Poco
+    member inline __.CreateUninitialized() = 
+        FormatterServices.GetUninitializedObject(typeof<'Poco>) :?> 'Poco
+
+    member __.Constructors = ctors
     member __.Fields = fields
     member __.Properties = properties
 
     interface IShapePoco with
+        member __.Constructors = ctors |> Array.map (fun c -> c :> _)
         member __.Fields = fields |> Array.map (fun f -> f :> _)
-        member __.Properties = properties |> Array.map (fun f -> f :> _)
+        member __.Properties = properties |> Array.map (fun p -> p :> _)
         member __.IsStruct = isStruct
         member __.Accept v = v.Visit __
 
@@ -1036,7 +1093,7 @@ and IPocoVisitor<'R> =
 [<RequireQualifiedAccess>]
 module Shape =
 
-    let private SomeU = Some() // avoid allocating this all the time
+    let private SomeU = Some() // avoid allocating all the time
     let inline private test<'T> (s : TypeShape) =
         match s with
         | :? TypeShape<'T> -> SomeU
@@ -1079,7 +1136,7 @@ module Shape =
     let (|Enum|_|) (s : TypeShape) = 
         match s.ShapeInfo with
         | Enum(e,u) ->
-            Activator.CreateInstanceGeneric<ShapeEnum<BindingFlags, int>>([|e;u|])
+            Activator.CreateInstanceGeneric<ShapeEnum<BindingFlags, int>> [|e;u|]
             :?> IShapeEnum 
             |> Some
         | _ -> None
