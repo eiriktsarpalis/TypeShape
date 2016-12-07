@@ -624,13 +624,13 @@ module private MemberUtils =
     let inline getValue (obj:obj) (m:MemberInfo) =
         match m with
         | :? FieldInfo as f -> f.GetValue(obj)
-        | :? PropertyInfo as p -> p.GetValue(obj)
+        | :? PropertyInfo as p -> p.GetValue(obj, null)
         | _ -> invalidMember m
 
     let inline setValue (obj:obj) (m:MemberInfo) (value:obj) =
         match m with
         | :? FieldInfo as f -> f.SetValue(obj, value)
-        | :? PropertyInfo as p -> p.SetValue(obj, value)
+        | :? PropertyInfo as p -> p.SetValue(obj, value, null)
         | _ -> invalidMember m
 
     let inline project<'Record, 'Member> (path : MemberInfo[]) (value:'Record) =
@@ -880,7 +880,7 @@ module private MemberUtils2 =
             if arity = 0 then typeof<unit>
             else FSharpType.MakeTupleType argTypes
 
-        Activator.CreateInstanceGeneric<ShapeConstructor<_,_>>([|typeof<'Record>; argumentType|], [|box ctorInfo, box arity|])
+        Activator.CreateInstanceGeneric<ShapeConstructor<_,_>>([|typeof<'Record>; argumentType|], [|box ctorInfo; box arity|])
         :?> IShapeConstructor<'Record>
 
 //--------------------
@@ -1110,7 +1110,7 @@ type IShapeCSharpRecord =
 and ShapeCSharpRecord<'Record when 'Record : (new : unit -> 'Record)> private () =
     let properties =
         typeof<'Record>.GetProperties(allInstanceMembers)
-        |> Seq.filter (fun p -> p.CanRead && p.CanRead && p.GetIndexParameters().Length = 0)
+        |> Seq.filter (fun p -> p.CanRead && p.CanWrite && p.GetIndexParameters().Length = 0)
         |> Seq.map (fun p -> mkWriteMemberUntyped<'Record> p.Name p [|p|])
         |> Seq.toArray
 
@@ -1208,6 +1208,10 @@ module Shape =
     let (|Single|_|) s = test<single> s
     let (|Double|_|) s = test<double> s
     let (|Char|_|) s = test<char> s
+
+#if !TYPESHAPE_DISABLE_BIGINT
+    let (|BigInt|_|) s = test<bigint> s
+#endif
 
     let (|String|_|) s = test<string> s
     let (|Guid|_|) s = test<Guid> s

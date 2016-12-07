@@ -1,8 +1,10 @@
-module TypeShape.Tests
+module TypeShape.Tests.Tests
 
 open System
 open System.Collections.Generic
 open System.Reflection
+
+open FSharp.Reflection
 
 open Xunit
 open Swensen.Unquote.Assertions
@@ -240,6 +242,58 @@ let ``Shape Tuple`8`` () =
     test <@ match shapeof<int * string * bool * byte * sbyte * int16 * int64 * int> with Shape.Tuple8 e -> e.Accept accepter | _ -> false @>
 
 [<Fact>]
+let ``Shape Generic Tuple`` () =
+    let checkShape tupleType =
+        match TypeShape.Create tupleType with
+        | Shape.Tuple shape ->
+            shape.Accept { new ITupleVisitor<bool> with
+                member __.Visit (tuple : ShapeTuple<'Tuple>) =
+                    typeof<'Tuple> = tupleType &&
+                    tuple.Elements.Length = FSharpType.GetTupleElements(tupleType).Length }
+
+        | _ -> failwithf "Shape %O not recognized as a tuple" tupleType
+
+    test <@ checkShape typeof<Tuple<string>> @>
+    test <@ checkShape typeof<int * string> @> 
+    test <@ checkShape typeof<int * decimal * byte[] * bigint> @>
+    test <@ checkShape typeof<int * int * int * int * int * int * int * int * int * int * int * int> @>
+
+    let cloner = mkCloner<int * decimal * (string * int list) * bool * string option * uint64 * string * byte[]>()
+    check(fun c -> cloner c = c)
+
+type CSharpRecord() =
+    static let mutable counter = 0
+    let count = System.Threading.Interlocked.Increment &counter
+    member val Foo = "" with get,set
+    member val Bar = false with get,set
+    member val Baz = 0 with get,set
+    member val TimeSpan = TimeSpan.Zero with get,set
+
+    member __.GetterOnly = count
+
+[<Fact>]
+let ``Shape C# Record`` () =
+    match TypeShape.Create<CSharpRecord>() with
+    | Shape.CSharpRecord r -> 
+        r.Accept { new ICSharpRecordVisitor<bool> with
+            member __.Visit (shape : ShapeCSharpRecord<'R>) =
+                test <@ typeof<'R> = typeof<CSharpRecord> @>
+                test <@ shape.Properties.Length = 4 @>
+                true }
+    | _ -> failwithf "Type %O not recognized as C# record" typeof<CSharpRecord>
+    |> ignore
+
+    let cloner = mkCloner<CSharpRecord>()
+    let source = new CSharpRecord(Foo = "Foo", Bar = true, Baz = 42, TimeSpan = TimeSpan.MaxValue)
+    let target = cloner source
+    test <@ obj.ReferenceEquals(source, target) |> not @>
+    test <@ source.Foo = target.Foo @>
+    test <@ source.Bar = target.Bar @>
+    test <@ source.Baz = target.Baz @>
+    test <@ source.TimeSpan = target.TimeSpan @>
+    test <@ source.GetterOnly <> target.GetterOnly @>
+
+[<Fact>]
 let ``Shape FSharpFunc`` () =
     let accepter =
         { new IFSharpFuncVisitor<bool> with
@@ -365,25 +419,6 @@ let ``Shape F# Map`` () =
     test <@ match shapeof<Map<string, int>> with Shape.FSharpMap s -> s.Accept accepter | _ -> false @>
 
 
-let cloneRecord(r : 'TRecord) =
-    match shapeof<'TRecord> with
-    | Shape.FSharpRecord s ->
-        s.Accept { new IFSharpRecordVisitor<'TRecord> with
-            member __.Visit<'r> (sfr : ShapeFSharpRecord<'r>) =
-                let r' = sfr.CreateUninitialized()
-                for f in sfr.Fields do
-                    ignore <| f.Accept { new IWriteMemberVisitor<'r, bool> with
-                        member __.Visit<'f> (f : ShapeWriteMember<'r, 'f>) =
-                            let fv = f.Project (unbox r)
-                            ignore <| f.Inject r' fv
-                            true
-                    }
-
-                unbox<'TRecord> r'
-        }
-
-    | _ -> failwith "type is not a record"
-
 type Record7 = 
     { 
         A1 : int ; A2 : string ; A3 : bool ; A4 : byte ; A5 : byte[] ; A6 : decimal ; A7 : int16 
@@ -397,7 +432,8 @@ let ``Shape Record 7`` () =
         | _ -> raise <| new InvalidCastException()
 
     test <@ shape.Fields.Length = 7 @>
-    check(fun (r:Record7) -> cloneRecord r = r)
+    let cloner = Clone.mkCloner<Record7>()
+    check(fun (r:Record7) -> cloner r = r)
 
 [<Fact>]
 let ``Shape F# ref`` () =
@@ -454,27 +490,6 @@ let ``Shape F# choice 7`` () =
                 typeof<'T5> = typeof<sbyte> && typeof<'T6> = typeof<decimal> && typeof<'T7> = typeof<float> }
     test <@ match shapeof<Choice<int,string,bool,byte[],sbyte,decimal,float>> with Shape.FSharpChoice7 c -> c.Accept accepter | _ -> false @>
 
-let cloneUnion(u : 'TUnion) =
-    match shapeof<'TUnion> with
-    | Shape.FSharpUnion s ->
-        s.Accept { new IFSharpUnionVisitor<'TUnion> with
-            member __.Visit<'u> (sfu : ShapeFSharpUnion<'u>) =
-                let tag = sfu.GetTag(unbox<'u> u)
-                let case = sfu.UnionCases.[tag]
-                let u' = case.CreateUninitialized()
-                for f in case.Fields do
-                    ignore <| f.Accept { new IWriteMemberVisitor<'u, bool> with
-                        member __.Visit<'f> (f : ShapeWriteMember<'u, 'f>) =
-                            let fv = f.Project (unbox u)
-                            ignore <| f.Inject u' fv
-                            true
-                    }
-
-                unbox<'TUnion> u'
-        }
-    | _ -> failwith "type is not a union"
-
-
 type Union7 = 
     | C1U7 of int * _tag:string
     | C2U7
@@ -488,10 +503,18 @@ type Union7 =
 let ``Shape Union 7`` () =
     let shape = 
         match shapeof<Union7> with 
-        | Shape.FSharpUnion (:? ShapeFSharpUnion<Union7> as u) -> u
+        | Shape.FSharpUnion s -> 
+            s.Accept { new IFSharpUnionVisitor<bool> with
+                member __.Visit (shape : ShapeFSharpUnion<'U>) =
+                    test <@ typeof<'U> = typeof<Union7> @>
+                    test <@ shape.UnionCases.Length = 7 @>
+                    true
+            }
+
         | _ -> raise <| InvalidCastException()
 
-    Check.QuickThrowOnFailure(fun (u:Union7) -> test <@ cloneUnion u = u @>)
+    let cloner = mkCloner<Union7>()
+    Check.QuickThrowOnFailure(fun (u:Union7) -> test <@ cloner u = u @>)
 
 
 [<Fact>]
