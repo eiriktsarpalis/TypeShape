@@ -293,6 +293,33 @@ let ``Shape C# Record`` () =
     test <@ source.TimeSpan = target.TimeSpan @>
     test <@ source.GetterOnly <> target.GetterOnly @>
 
+type SimplePoco(x : string, y : int) =
+    static let staticField = 42
+    member __.X = x
+    member __.Y = y
+
+[<Fact>]
+let ``Shape Poco`` () =
+    match TypeShape.Create<SimplePoco>() with
+    | Shape.Poco s ->
+        s.Accept { new IPocoVisitor<bool> with
+            member __.Visit (shape : ShapePoco<'P>) =
+                test <@ typeof<'P> = typeof<SimplePoco> @>
+                test <@ shape.Fields.Length = 2 @>
+                test <@ shape.Properties.Length = 2 @>
+                test <@ shape.Constructors.Length = 1 @>
+                true }
+        |> ignore
+
+    | _ -> failwithf "Type %O not recognized as POCO" typeof<SimplePoco>
+
+    let cloner = mkCloner<SimplePoco>()
+    let source = new SimplePoco("foo", 42)
+    let target = cloner source
+    test <@ obj.ReferenceEquals(source, target) |> not @>
+    test <@ source.X = target.X @>
+    test <@ source.Y = target.Y @>
+
 [<Fact>]
 let ``Shape FSharpFunc`` () =
     let accepter =
