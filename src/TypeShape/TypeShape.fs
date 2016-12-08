@@ -823,9 +823,10 @@ and IShapeConstructor<'DeclaringType> =
 /// Identifies a constructor implementation shape
 and ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : ConstructorInfo, arity : int) =
     let valueReader = 
-        if arity = 0 then fun _ -> [||]
-        else
-            FSharpValue.PreComputeTupleReader typeof<'CtorArgs>
+        match arity with
+        | 0 -> fun _ -> [||]
+        | 1 -> fun x -> [|x|]
+        |_ -> FSharpValue.PreComputeTupleReader typeof<'CtorArgs>
 
     /// Creates an instance of declaring type with supplied constructor args
     member __.Invoke(args : 'CtorArgs) =
@@ -834,7 +835,11 @@ and ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : ConstructorI
 
     /// Creates an instance of declaring type with supplied constructor args
     member __.InvokeExpr(args : Expr<'CtorArgs>) : Expr<'DeclaringType> =
-        let exprArgs = [for i in 0 .. arity - 1 -> Expr.TupleGet(args, i)]
+        let exprArgs = 
+            match arity with
+            | 1 -> [args :> Expr]
+            | _ -> [for i in 0 .. arity - 1 -> Expr.TupleGet(args, i)]
+
         Expr.Cast<'DeclaringType>(Expr.NewObject(ctorInfo, exprArgs))
 
     interface IShapeConstructor<'DeclaringType> with
@@ -877,8 +882,10 @@ module private MemberUtils2 =
         let argTypes = ctorInfo.GetParameters() |> Array.map (fun p -> p.ParameterType)
         let arity = argTypes.Length
         let argumentType =
-            if arity = 0 then typeof<unit>
-            else FSharpType.MakeTupleType argTypes
+            match arity with
+            | 0 -> typeof<unit>
+            | 1 -> argTypes.[0]
+            | _ -> FSharpType.MakeTupleType argTypes
 
         Activator.CreateInstanceGeneric<ShapeConstructor<_,_>>([|typeof<'Record>; argumentType|], [|box ctorInfo; box arity|])
         :?> IShapeConstructor<'Record>
