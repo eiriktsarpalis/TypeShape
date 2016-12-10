@@ -7,8 +7,8 @@ amount of reflection required by the user in such applications.
 
 TypeShape permits definition of programs that act on specific algebrae of types.
 The library uses reflection to derive the algebraic structure of a given
-`System.Type` instance and then applies a variation on the visitor pattern
-to fully access specific type information.
+`System.Type` instance and then applies a variant of the visitor pattern
+to provide relevant type information per shape.
 
 TypeShape is not a metaprogramming library and does not emit code at runtime.
 
@@ -104,8 +104,8 @@ for i = 1 to 1000 do ignore <| p2 value
 
 ### Supporting F# records and unions
 
-TypeShape can be used to define generic programs which target F# records and unions.
-For instance, we could extent the printer implementation defined above to include
+TypeShape can be used to define generic programs that target F# records and unions.
+For instance, we could extend the printer implementation defined above to include
 support for arbitrary F# records containing two fields:
 ```fsharp
     | Shape.FSharpRecord2 s ->
