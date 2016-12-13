@@ -272,11 +272,11 @@ type CSharpRecord() =
     member __.GetterOnly = count
 
 [<Fact>]
-let ``Shape C# Record`` () =
+let ``Shape CliMutable`` () =
     match TypeShape.Create<CSharpRecord>() with
-    | Shape.CSharpRecord r -> 
-        r.Accept { new ICSharpRecordVisitor<bool> with
-            member __.Visit (shape : ShapeCSharpRecord<'R>) =
+    | Shape.CliMutable r -> 
+        r.Accept { new ICliMutableVisitor<bool> with
+            member __.Visit (shape : ShapeCliMutable<'R>) =
                 test <@ typeof<'R> = typeof<CSharpRecord> @>
                 test <@ shape.Properties.Length = 4 @>
                 true }

@@ -1105,16 +1105,16 @@ and IFSharpUnionVisitor<'R> =
 //------------------------
 // C# Records
 
-/// Denotes a type that behaves like a C# record:
+/// Denotes a type that behaves like a mutable C# record:
 /// Carries a parameterless constructor and settable properties
-type IShapeCSharpRecord =
+type IShapeCliMutable =
     /// Gettable and Settable properties for C# Record
     abstract Properties : IShapeMember[]
-    abstract Accept : ICSharpRecordVisitor<'R> -> 'R
+    abstract Accept : ICliMutableVisitor<'R> -> 'R
 
 /// Denotes a type that behaves like a C# record:
 /// Carries a parameterless constructor and settable properties
-and ShapeCSharpRecord<'Record when 'Record : (new : unit -> 'Record)> private () =
+and ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) =
     let properties =
         typeof<'Record>.GetProperties(allInstanceMembers)
         |> Seq.filter (fun p -> p.CanRead && p.CanWrite && p.GetIndexParameters().Length = 0)
@@ -1122,16 +1122,16 @@ and ShapeCSharpRecord<'Record when 'Record : (new : unit -> 'Record)> private ()
         |> Seq.toArray
 
     /// Creates an uninitialized instance for given C# record
-    member inline __.CreateUninitialized() = new 'Record()
+    member __.CreateUninitialized() = defaultCtor.Invoke [||] :?> 'Record
     /// Property shapes for C# record
     member __.Properties = properties
 
-    interface IShapeCSharpRecord with
+    interface IShapeCliMutable with
         member __.Properties = properties |> Array.map (fun p -> p :> _)
         member __.Accept v = v.Visit __
 
-and ICSharpRecordVisitor<'R> =
-    abstract Visit : ShapeCSharpRecord<'Record> -> 'R
+and ICliMutableVisitor<'R> =
+    abstract Visit : ShapeCliMutable<'Record> -> 'R
 
 //--------------------------
 // Shape POCO
@@ -1669,12 +1669,12 @@ module Shape =
 
     /// Recognizes shapes that look like C# record classes
     /// They are classes with parameterless constructors and settable properties
-    let (|CSharpRecord|_|) (s : TypeShape) =
+    let (|CliMutable|_|) (s : TypeShape) =
         match s.Type.GetConstructor(BindingFlags.Public ||| BindingFlags.Instance, null, [||], [||]) with
         | null -> None
-        | _ -> 
-            Activator.CreateInstanceGeneric<ShapeCSharpRecord<_>>([|s.Type|], [||])
-            :?> IShapeCSharpRecord
+        | ctor -> 
+            Activator.CreateInstanceGeneric<ShapeCliMutable<_>>([|s.Type|], [|ctor|])
+            :?> IShapeCliMutable
             |> Some
 
     /// Recognizes POCO shapes, .NET types that are either classes or structs

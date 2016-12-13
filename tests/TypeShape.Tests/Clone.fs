@@ -88,13 +88,13 @@ let rec mkCloner<'T> () : 'T -> 'T =
 
                         target) }
 
-    | Shape.CSharpRecord s ->
+    | Shape.CliMutable s ->
         s.Accept {
-            new ICSharpRecordVisitor<'T -> 'T> with
-                member __.Visit<'R when 'R : (new : unit -> 'R)> (shape : ShapeCSharpRecord<'R>) =
+            new ICliMutableVisitor<'T -> 'T> with
+                member __.Visit<'R> (shape : ShapeCliMutable<'R>) =
                     let memberCloners = shape.Properties |> Array.map mkMemberCloner
                     wrap(fun (source:'R) ->
-                        let mutable target = new 'R()
+                        let mutable target = shape.CreateUninitialized()
                         for mc in memberCloners do
                             target <- mc source target
                         
