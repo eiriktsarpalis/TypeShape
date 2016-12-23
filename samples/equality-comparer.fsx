@@ -12,6 +12,24 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
             member __.Equals(t,t') = cmp t t'
             member __.GetHashCode t = hash t } |> unbox<IEqualityComparer<'T>>
 
+    let mkMembersComparer (members : #IShapeMember<'DeclaringType> []) =
+        let mkMemberComparer (shape : IShapeMember<'DeclaringType>) =
+            shape.Accept { new IMemberVisitor<'DeclaringType, IEqualityComparer<'DeclaringType>> with
+                member __.Visit (shape : ShapeMember<'DeclaringType, 'FieldType>) =
+                    let fc = mkEqualityComparer<'FieldType>()
+                    { new IEqualityComparer<'DeclaringType> with
+                        member __.Equals(d1, d2) = fc.Equals (shape.Project d1, shape.Project d2)
+                        member __.GetHashCode d = fc.GetHashCode (shape.Project d) }
+            }
+
+        let memberComps = members |> Array.map mkMemberComparer
+        { new IEqualityComparer<'DeclaringType> with
+            member __.Equals(d1, d2) = memberComps |> Array.forall (fun ec -> ec.Equals(d1,d2))
+            member __.GetHashCode d =
+                let mutable hash = 0
+                for ec in memberComps do hash <- combine hash (ec.GetHashCode d)
+                hash }
+
     match TypeShape.Create<'T>() with
     | Shape.Unit -> wrap (fun () -> 0) (fun () () -> true)
     | Shape.Bool -> wrap (function false -> 0 | true -> 1) (=)
@@ -54,10 +72,10 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
                     wrap (hash 0) equals
         }
 
-    | Shape.Array s ->
+    | Shape.Array s when s.Rank = 1 ->
         s.Accept {
             new IArrayVisitor<IEqualityComparer<'T>> with
-                member __.Visit<'a> () =
+                member __.Visit<'a> _ =
                     let tc = mkEqualityComparer<'a>()
                     let hash (xs : 'a []) =
                         let mutable h = 0
@@ -78,77 +96,34 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
                     wrap hash equals    
         }
 
-    | Shape.Tuple2 s ->
+    | Shape.Tuple s ->
         s.Accept {
-            new ITuple2Visitor<IEqualityComparer<'T>> with
-                member __.Visit<'t1, 't2> () =
-                    let tc = mkEqualityComparer<'t1>()
-                    let sc = mkEqualityComparer<'t2>()
-                    let hash (t : 't1, s : 't2) = combine (tc.GetHashCode t) (sc.GetHashCode s)
-                    let equals (t : 't1, s : 't2) (t' : 't1, s' : 't2) = tc.Equals(t,t') && sc.Equals(s, s')
-                    wrap hash equals
+            new ITupleVisitor<IEqualityComparer<'T>> with
+                member __.Visit (shape : ShapeTuple<'Tuple>) =
+                    mkMembersComparer shape.Elements |> unbox
         }
 
-    | Shape.Tuple3 s ->
+    | Shape.FSharpRecord s ->
         s.Accept {
-            new ITuple3Visitor<IEqualityComparer<'T>> with
-                member __.Visit<'t1, 't2, 't3> () =
-                    let t1c = mkEqualityComparer<'t1>()
-                    let t2c = mkEqualityComparer<'t2>()
-                    let t3c = mkEqualityComparer<'t3>()
-                    let hash (t1 : 't1, t2 : 't2, t3 : 't3) =
-                        combine (combine (t1c.GetHashCode t1) (t2c.GetHashCode t2)) (t3c.GetHashCode t3)
-                    let equals (t1 : 't1, t2 : 't2, t3 : 't3) (t1' : 't1, t2' : 't2, t3' : 't3) =
-                        t1c.Equals(t1, t1') && t2c.Equals(t2, t2') && t3c.Equals(t3, t3')
-
-                    wrap hash equals
+            new IFSharpRecordVisitor<IEqualityComparer<'T>> with
+                member __.Visit (shape : ShapeFSharpRecord<'Record>) =
+                    mkMembersComparer shape.Fields |> unbox
         }
 
-    | Shape.FSharpRecord1 s ->
+    | Shape.FSharpUnion s ->
         s.Accept {
-            new IFSharpRecord1Visitor<IEqualityComparer<'T>> with
-                member __.Visit (s : IShapeFSharpRecord<'Record, 'Field1>) =
-                    let f1c = mkEqualityComparer<'Field1>()
-                    wrap (s.Project1 >> f1c.GetHashCode) 
-                        (fun (r : 'Record) (r' : 'Record) -> f1c.Equals (s.Project1 r, s.Project1 r'))
-        }
+            new IFSharpUnionVisitor<IEqualityComparer<'T>> with
+                member __.Visit (shape : ShapeFSharpUnion<'Union>) =
+                    let unionCaseComparers = shape.UnionCases |> Array.map (fun uc -> mkMembersComparer uc.Fields)
+                    { new IEqualityComparer<'Union> with
+                        member __.Equals (u1,u2) =
+                            match shape.GetTag u1, shape.GetTag u2 with
+                            | t1, t2 when t1 <> t2 -> false
+                            | tag, _ -> unionCaseComparers.[tag].Equals(u1,u2)
 
-    | Shape.FSharpRecord2 s ->
-        s.Accept {
-            new IFSharpRecord2Visitor<IEqualityComparer<'T>> with
-                member __.Visit<'Record,'Field1,'Field2> (s : IShapeFSharpRecord<'Record,'Field1,'Field2>) =
-                    let f1c,f2c = mkEqualityComparer<'Field1>(), mkEqualityComparer<'Field2>()
-                    let hash (r : 'Record) = combine (f1c.GetHashCode (s.Project1 r)) (f2c.GetHashCode (s.Project2 r))
-                    let equals (r : 'Record) (r' : 'Record) = f1c.Equals(s.Project1 r, s.Project1 r') && f2c.Equals(s.Project2 r, s.Project2 r')
-                    wrap hash equals
-        }
-
-    | Shape.FSharpUnion1 s ->
-        s.Accept {
-            new IFSharpUnion1Visitor<IEqualityComparer<'T>> with
-                member __.Visit (s : IShapeFSharpUnion<'Union,'Case1>) =
-                    let c1c = mkEqualityComparer<'Case1>()
-                    let hash (u : 'Union) = c1c.GetHashCode(s.Project u)
-                    let equals (u : 'Union) (u' : 'Union) = c1c.Equals(s.Project u, s.Project u')
-                    wrap hash equals
-        }
-
-    | Shape.FSharpUnion2 s ->
-        s.Accept {
-            new IFSharpUnion2Visitor<IEqualityComparer<'T>> with
-                member __.Visit<'Union,'Case1,'Case2> (s : IShapeFSharpUnion<'Union,'Case1,'Case2>) =
-                    let c1c, c2c = mkEqualityComparer<'Case1>(), mkEqualityComparer<'Case2>()
-                    let hash (u : 'Union) =
-                        match s.Project u with
-                        | Choice1Of2 c1 -> combine 0 (c1c.GetHashCode c1)
-                        | Choice2Of2 c2 -> combine 1 (c2c.GetHashCode c2)
-
-                    let equals (u : 'Union) (u' : 'Union) =
-                        match s.Project u with
-                        | Choice1Of2 c1 -> match s.Project u' with Choice1Of2 c1' -> c1c.Equals(c1,c1') | _ -> false
-                        | Choice2Of2 c2 -> match s.Project u' with Choice2Of2 c2' -> c2c.Equals(c2,c2') | _ -> false
-
-                    wrap hash equals
+                        member __.GetHashCode u = 
+                            let tag = shape.GetTag u
+                            combine tag (unionCaseComparers.[tag].GetHashCode u) } |> unbox
         }
 
     | Shape.FSharpSet s ->
