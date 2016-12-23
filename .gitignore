@@ -192,4 +192,4 @@ docs/content/release-notes.md
 docs/tools/FSharp.Formatting.svclog
 
 # xunit
-xunit.html
+xunit*.html
