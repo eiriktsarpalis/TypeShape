@@ -413,10 +413,15 @@ type IArrayVisitor<'R> =
     abstract Visit<'T> : rank:int -> 'R
 
 type IShapeArray =
+    /// Gets the rank of the array type shape
+    abstract Rank : int
     abstract Accept : IArrayVisitor<'R> -> 'R
 
 type private ShapeArray<'T>(rank : int) =
+    /// Gets the rank of the array type shape
+    member __.Rank = rank
     interface IShapeArray with
+        member __.Rank = rank
         member __.Accept v = v.Visit<'T> rank
 
 // System.Collections.List

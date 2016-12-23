@@ -258,7 +258,7 @@ let ``Shape Generic Tuple`` () =
     test <@ checkShape typeof<int * decimal * byte[] * bigint> @>
     test <@ checkShape typeof<int * int * int * int * int * int * int * int * int * int * int * int> @>
 
-    let cloner = mkCloner<int * decimal * (string * int list) * bool * string option * uint64 * string * byte[]>()
+    let cloner = mkCloner<int * decimal * (string * int list) * bool * string option * uint64 * string * byte[] * string * byte[] * decimal>()
     check(fun c -> cloner c = c)
 
 type CSharpRecord() =

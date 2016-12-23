@@ -28,11 +28,10 @@ let rec mkCloner<'T> () : 'T -> 'T =
     | Shape.Unit
     | Shape.Decimal -> id
     | Shape.String -> wrap(function null -> null | x -> String.Copy(x))
-    | Shape.Array s ->
+    | Shape.Array s when s.Rank = 1 ->
         s.Accept {
             new IArrayVisitor<'T -> 'T> with
-                member __.Visit<'t> rank =
-                    if rank <> 1 then failwith "Higher-rank arrays not supported"
+                member __.Visit<'t> _ =
                     if typeof<'t>.IsPrimitive then
                         wrap(fun (ts:'t[]) -> ts.Clone() :?> 't[])
                     else
