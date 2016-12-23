@@ -651,15 +651,6 @@ module private MemberUtils =
 
         obj :?> 'Member
 
-    let projectExpr<'Record, 'Member> (path : MemberInfo[]) (expr : Expr<'Record>) =
-        let rec aux expr (m:MemberInfo) =
-            match m with
-            | :? FieldInfo as fI -> Expr.FieldGet(expr, fI)
-            | :? PropertyInfo as pI -> Expr.PropertyGet(expr, pI)
-            | _ -> invalidMember m
-
-        Expr.Cast<'Member>(Array.fold aux (expr :> _) path) 
-
     let inline inject<'Record, 'Member> (isStructMember : bool) (path : MemberInfo[]) 
                                         (r : 'Record) (value : 'Member) =
         let mutable obj = box r
@@ -684,6 +675,17 @@ module private MemberUtils =
             setValue obj path.[n - 1] value
             r
 
+#if TYPESHAPE_NO_EXPR
+#else
+    let projectExpr<'Record, 'Member> (path : MemberInfo[]) (expr : Expr<'Record>) =
+        let rec aux expr (m:MemberInfo) =
+            match m with
+            | :? FieldInfo as fI -> Expr.FieldGet(expr, fI)
+            | :? PropertyInfo as pI -> Expr.PropertyGet(expr, pI)
+            | _ -> invalidMember m
+
+        Expr.Cast<'Member>(Array.fold aux (expr :> _) path) 
+
     let injectExpr (path : MemberInfo[]) 
                     (r : Expr<'TRecord>) 
                     (value : Expr<'MemberType>) =
@@ -701,6 +703,7 @@ module private MemberUtils =
                 | m -> invalidMember m
                 
         Expr.Cast<unit>(aux 0 r)
+#endif
 
 #if TYPESHAPE_EMIT
     open System.Reflection.Emit
@@ -871,10 +874,13 @@ and ShapeMember<'DeclaringType, 'MemberType> private (label : string, memberInfo
 #else
         project path instance
 #endif
-        
+       
+#if TYPESHAPE_NO_EXPR
+#else
     /// Projects an instance to member of given value
     member __.ProjectExpr (instance : Expr<'DeclaringType>) =
         projectExpr<'DeclaringType, 'MemberType> path instance
+#endif
 
     interface IShapeMember<'DeclaringType> with
         member s.Label = label
@@ -922,10 +928,6 @@ and ShapeWriteMember<'DeclaringType, 'MemberType> private (label : string, membe
 #else
         project path instance
 #endif
-        
-    /// Projects an instance to member of given value
-    member __.ProjectExpr (instance : Expr<'DeclaringType>) =
-        projectExpr<'DeclaringType, 'MemberType> path instance
 
     /// Injects a value to member of given instance
     member __.Inject (instance : 'DeclaringType) (field : 'MemberType) : 'DeclaringType =
@@ -935,9 +937,16 @@ and ShapeWriteMember<'DeclaringType, 'MemberType> private (label : string, membe
         inject isStructMember path instance field
 #endif
 
+#if TYPESHAPE_NO_EXPR
+#else
+    /// Projects an instance to member of given value
+    member __.ProjectExpr (instance : Expr<'DeclaringType>) =
+        projectExpr<'DeclaringType, 'MemberType> path instance
+
     /// Injects a value to member of given instance
     member __.InjectExpr (instance : Expr<'DeclaringType>) (field : Expr<'MemberType>) =
         injectExpr path instance field
+#endif
 
     interface IShapeMember<'DeclaringType> with
         member s.Label = label
@@ -985,6 +994,8 @@ and ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : ConstructorI
         let args = valueReader args
         ctorInfo.Invoke args :?> 'DeclaringType
 
+#if TYPESHAPE_NO_EXPR
+#else
     /// Creates an instance of declaring type with supplied constructor args
     member __.InvokeExpr(args : Expr<'CtorArgs>) : Expr<'DeclaringType> =
         let exprArgs = 
@@ -993,6 +1004,7 @@ and ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : ConstructorI
             | _ -> [for i in 0 .. arity - 1 -> Expr.TupleGet(args, i)]
 
         Expr.Cast<'DeclaringType>(Expr.NewObject(ctorInfo, exprArgs))
+#endif
 
     interface IShapeConstructor<'DeclaringType> with
         member __.IsPublic = ctorInfo.IsPublic
@@ -1128,9 +1140,12 @@ and ShapeTuple<'Tuple> private () =
 
         obj :?> 'Tuple
 
+#if TYPESHAPE_NO_EXPR
+#else
     member __.CreateUninitializedExpr() : Expr<'Tuple> =
         let values = tupleElems |> Seq.map (fun e -> Expr.DefaultValue e.MemberType) |> Seq.toList
         Expr.Cast<'Tuple>(Expr.NewTuple(values))
+#endif
 
     interface IShapeTuple with
         member __.Elements = tupleElems |> Array.map (fun e -> e :> _)
@@ -1172,9 +1187,12 @@ and ShapeFSharpRecord<'Record> private () =
         ctorInfo.Invoke ctorParams :?> 'Record
 #endif
 
+#if TYPESHAPE_NO_EXPR
+#else
     member __.CreateUninitializedExpr() : Expr<'Record> =
         let values = props |> Seq.map (fun p -> Expr.DefaultValue p.PropertyType)
         Expr.Cast<'Record>(Expr.NewObject(ctorInfo, Seq.toList values))
+#endif
 
     interface IShapeFSharpRecord with
         member __.Fields = recordFields |> Array.map unbox
@@ -1230,9 +1248,12 @@ type ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
         ctorInfo.Invoke(null, ctorParams) :?> 'Union
 #endif
 
+#if TYPESHAPE_NO_EXPR
+#else
     member __.CreateUninitializedExpr() : Expr<'Union> =
         let fieldsExpr = properties |> Seq.map (fun p -> Expr.DefaultValue p.PropertyType)
         Expr.Cast<'Union>(Expr.Call(ctorInfo, Seq.toList fieldsExpr))
+#endif
 
     interface IShapeFSharpUnionCase with
         member __.CaseInfo = uci
@@ -1284,6 +1305,8 @@ and ShapeFSharpUnion<'U> private () =
         if notFound then raise <| KeyNotFoundException(sprintf "Union case: %A" caseName)
         i
 
+#if TYPESHAPE_NO_EXPR
+#else
     member __.GetTagExpr (union : Expr<'U>) : Expr<int> =
         let expr =
             match tagReaderInfo with
@@ -1293,6 +1316,7 @@ and ShapeFSharpUnion<'U> private () =
             | _ -> invalidOp <| sprintf "Unexpected tag reader info %O" tagReaderInfo
         
         Expr.Cast<int> expr
+#endif
         
         
     interface IShapeFSharpUnion with
@@ -1333,9 +1357,12 @@ and ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) =
         defaultCtor.Invoke [||] :?> 'Record
 #endif
 
+#if TYPESHAPE_NO_EXPR
+#else
     /// Creates an uninitialized instance for given C# record
     member __.CreateUninitializedExpr() = 
         Expr.Cast<'Record>(Expr.NewObject(defaultCtor, []))
+#endif
 
     /// Property shapes for C# record
     member __.Properties = properties
@@ -1390,9 +1417,12 @@ and ShapePoco<'Poco> private () =
     member inline __.CreateUninitialized() : 'Poco = 
         FormatterServices.GetUninitializedObject(typeof<'Poco>) :?> 'Poco
 
+#if TYPESHAPE_NO_EXPR
+#else
     /// Creates an uninitialized instance for POCO
     member inline __.CreateUninitializedExpr() : Expr<'Poco> =
         <@ FormatterServices.GetUninitializedObject(typeof<'Poco>) :?> 'Poco @>
+#endif
 
     interface IShapePoco with
         member __.Constructors = ctors |> Array.map (fun c -> c :> _)
