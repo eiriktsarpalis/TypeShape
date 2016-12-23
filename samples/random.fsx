@@ -13,6 +13,12 @@ type Random with
 
 let rec mkGenerator<'T> () : Gen<'T> =
     let wrap (t : Gen<'a>) = unbox<Gen<'T>> t
+    let mkRandomMember (shape : IShapeWriteMember<'DeclaringType>) =
+        shape.Accept { new IWriteMemberVisitor<'DeclaringType, Random -> 'DeclaringType -> 'DeclaringType> with
+            member __.Visit (shape : ShapeWriteMember<'DeclaringType, 'Field>) =
+                let rf = mkGenerator<'Field>()
+                fun r dt -> shape.Inject dt (rf r) }
+
     match TypeShape.Create<'T>() with
     | Shape.Unit -> wrap ignore
     | Shape.Byte -> wrap(fun r -> r.Next() |> byte)
@@ -56,10 +62,10 @@ let rec mkGenerator<'T> () : Gen<'T> =
                     wrap(fun r -> t1G r, t2G r, t3G r)
         }
 
-    | Shape.Array s ->
+    | Shape.Array s when s.Rank = 1 ->
         s.Accept {
             new IArrayVisitor<Gen<'T>> with
-                member __.Visit<'t> () =
+                member __.Visit<'t> _ =
                     let tG = mkGenerator<'t>()
                     wrap(fun r -> 
                         let length = r.Next(100)
@@ -92,35 +98,24 @@ let rec mkGenerator<'T> () : Gen<'T> =
                     wrap(fun r -> kvG r |> Map.ofArray)
         }
 
-    | Shape.FSharpRecord s as ts ->
-        let mkRandField (p : PropertyInfo) =
-            TypeShape.Create(p.PropertyType).Accept 
-                { new ITypeShapeVisitor<Gen<obj>> with
-                    member __.Visit<'T>() =
-                        let gt = mkGenerator<'T>()
-                        fun r -> gt r :> obj }
+    | Shape.FSharpRecord s ->
+        s.Accept { new IFSharpRecordVisitor<Gen<'T>> with
+            member __.Visit (shape : ShapeFSharpRecord<'Record>) =
+                let fieldGen = shape.Fields |> Array.map mkRandomMember
+                wrap(fun r ->
+                    let mutable init = shape.CreateUninitialized()
+                    for f in fieldGen do init <- f r init
+                    init) }
 
-        ts.Accept { new ITypeShapeVisitor<Gen<'T>> with
-            member __.Visit<'t>() =
-                let fieldCtors = s.Properties |> Seq.map mkRandField |> Seq.toArray
-                wrap (fun r -> fieldCtors |> Array.map (fun f -> f r) |> s.ConstructorInfo.Invoke :?> 't) }
-
-    | Shape.FSharpUnion s as ts ->
-        let mkRandField (p : PropertyInfo) =
-            TypeShape.Create(p.PropertyType).Accept 
-                { new ITypeShapeVisitor<Gen<obj>> with
-                    member __.Visit<'T>() =
-                        let gt = mkGenerator<'T>()
-                        fun r -> gt r :> obj }
-
-        ts.Accept { new ITypeShapeVisitor<Gen<'T>> with
-            member __.Visit<'t>() =
-                let ctors = s.Constructors |> Seq.toArray
-                let uc = s.UnionCaseInfo |> Seq.map (fun u -> u.GetFields() |> Array.map mkRandField) |> Seq.toArray
-                wrap (fun r -> 
-                    let tag = r.Next(uc.Length)
-                    let fields = uc.[tag] |> Array.map (fun uc -> uc r)
-                    ctors.[tag].Invoke(null, fields) :?> 't) }
+    | Shape.FSharpUnion s ->
+        s.Accept { new IFSharpUnionVisitor<Gen<'T>> with
+            member __.Visit (shape : ShapeFSharpUnion<'Union>) =
+                let caseFieldGen = shape.UnionCases |> Array.map (fun uc -> uc.Fields |> Array.map mkRandomMember)
+                wrap(fun r ->
+                    let tag = r.Next shape.UnionCases.Length
+                    let mutable u = shape.UnionCases.[tag].CreateUninitialized()
+                    for f in caseFieldGen.[tag] do u <- f r u 
+                    u) }
 
     | _ -> failwithf "Type %O does not support random value generation." typeof<'T>
 
