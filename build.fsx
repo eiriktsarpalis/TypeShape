@@ -49,7 +49,7 @@ let tags = "fsharp, reflection"
 let solutionFile  = "TypeShape.sln"
 
 // Pattern specifying assemblies to be tested using NUnit
-let testAssemblies = "bin/TypeShape.Tests.dll"
+let testAssembly = "TypeShape.Tests.dll"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted
@@ -126,17 +126,33 @@ Target "Build" (fun _ ->
     |> ignore
 )
 
+Target "Build.NoEmit" (fun _ ->
+    !! solutionFile
+    |> MSBuild "" "Rebuild" [("Configuration", "Release-NoEmit")]
+    |> ignore
+)
+
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner & kill test runner when complete
 
 Target "RunTests" (fun _ ->
-    [testAssemblies]
+    ["bin" @@ testAssembly]
     |> xUnit2 (fun (p : XUnit2Params) -> 
         { p with
             TimeOut = TimeSpan.FromMinutes 20.
             Parallel = ParallelMode.Collections
 
             HtmlOutputPath = Some "xunit.html"})
+)
+
+Target "RunTests.NoEmit" (fun _ ->
+    ["bin/noemit" @@ testAssembly]
+    |> xUnit2 (fun (p : XUnit2Params) -> 
+        { p with
+            TimeOut = TimeSpan.FromMinutes 20.
+            Parallel = ParallelMode.Collections
+
+            HtmlOutputPath = Some "xunit-noemit.html"})
 )
 
 #if MONO
@@ -165,6 +181,7 @@ Target "NuGet" (fun _ ->
         { p with
             OutputPath = "bin"
             Version = release.NugetVersion
+            BuildPlatform = "AnyCpu"
             ReleaseNotes = toLines release.Notes})
 )
 
@@ -334,6 +351,8 @@ Target "Release" DoNothing
   ==> "Default"
 
 "Default"
+  ==> "Build.NoEmit"
+  ==> "RunTests.NoEmit"
   ==> "Nuget"
   ==> "PublishNuget"
   ==> "ReleaseGithub"

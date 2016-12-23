@@ -697,34 +697,34 @@ module private MemberUtils =
                 
         Expr.Cast<unit>(aux 0 r)
 
+#if TYPESHAPE_EMIT
     open System.Reflection.Emit
     open System.Collections.Concurrent
 
     type private Marker = class end
-
-    let private compileDynamicMethod<'D when 'D :> Delegate> 
-                (name : string) (argTypes : Type []) (returnType : Type)
-                (ilBuilder : ILGenerator -> unit) =
-
-        let dynamicMethod =
-            new DynamicMethod(name, MethodAttributes.Static ||| MethodAttributes.Public, 
-                                CallingConventions.Standard, returnType, argTypes, typeof<Marker>, 
-                                skipVisibility = true)
-
-        let ilGen = dynamicMethod.GetILGenerator()
-        do ilBuilder ilGen
-        dynamicMethod.CreateDelegate(typeof<'D>) :?> 'D
-
     let private compileCache = new ConcurrentDictionary<MemberInfo * string, Lazy<Delegate>>()
-    let private compileDynamicMethodCached<'D when 'D :> Delegate> 
+
+    /// Lazily emits a dynamic method using supplied parameters
+    let emitDynamicMethod<'Delegate when 'Delegate :> Delegate> 
                 (memberInfo : MemberInfo) (id : string) (argTypes : Type []) (returnType : Type)
                 (ilBuilder : ILGenerator -> unit) =
 
-        let wrapper = compileCache.GetOrAdd((memberInfo, id), fun _ -> lazy(compileDynamicMethod<'D> id argTypes returnType ilBuilder :> Delegate))
-        lazy(wrapper.Value :?> 'D)
+        let compile () =
+            let name = sprintf "%O-%O-%s" memberInfo.DeclaringType memberInfo id
+            let dynamicMethod =
+                new DynamicMethod(name, MethodAttributes.Static ||| MethodAttributes.Public, 
+                                    CallingConventions.Standard, returnType, argTypes, typeof<Marker>, 
+                                    skipVisibility = true)
 
-    let mkProjection<'DeclaringType, 'Property> (memberInfo : MemberInfo) (path : MemberInfo []) =
-        let id = sprintf "%O-%O-projection" memberInfo.DeclaringType memberInfo
+            let ilGen = dynamicMethod.GetILGenerator()
+            do ilBuilder ilGen
+            dynamicMethod.CreateDelegate typeof<'Delegate>
+
+        let wrapper = compileCache.GetOrAdd((memberInfo, id), fun _ -> lazy(compile ()))
+        lazy(wrapper.Value :?> 'Delegate)
+
+    /// Emits a dynamic method that projects supplied member path
+    let emitProjection<'DeclaringType, 'Property> (memberInfo : MemberInfo) (path : MemberInfo []) =
         let builder (gen : ILGenerator) =
             gen.Emit OpCodes.Ldarg_0
             for m in path do
@@ -740,11 +740,11 @@ module private MemberUtils =
 
             gen.Emit OpCodes.Ret
 
-        compileDynamicMethodCached<Func<'DeclaringType, 'Property>>
-            memberInfo id [|typeof<'DeclaringType>|] typeof<'Property> builder
+        emitDynamicMethod<Func<'DeclaringType, 'Property>>
+            memberInfo "projection" [|typeof<'DeclaringType>|] typeof<'Property> builder
 
-    let mkInjection<'DeclaringType, 'Property> (memberInfo : MemberInfo) (path : MemberInfo []) =
-        let id = sprintf "%O-%O-injection" memberInfo.DeclaringType memberInfo
+    // Emits a dynamic method that injects a value to supplied member path
+    let emitInjection<'DeclaringType, 'Property> (memberInfo : MemberInfo) (path : MemberInfo []) =
         let builder (gen : ILGenerator) =
             gen.Emit OpCodes.Ldarg_0
             for i = 0 to path.Length - 2 do
@@ -774,11 +774,11 @@ module private MemberUtils =
             gen.Emit OpCodes.Ldarg_0
             gen.Emit OpCodes.Ret
 
-        compileDynamicMethodCached<Func<'DeclaringType, 'Property, 'DeclaringType>>
-            memberInfo id [|typeof<'DeclaringType>; typeof<'Property>|] typeof<'DeclaringType> builder
+        emitDynamicMethod<Func<'DeclaringType, 'Property, 'DeclaringType>>
+            memberInfo "injection" [|typeof<'DeclaringType>; typeof<'Property>|] typeof<'DeclaringType> builder
 
-    let mkUninitializedCtor<'DeclaringType> (ctor : MethodBase) =
-        let id = sprintf "%O-%O-ctor" ctor.DeclaringType ctor
+    /// Emits a dynamic method that injects uninitialized values to supplied static method or ctor
+    let emitUninitializedCtor<'DeclaringType> (ctor : MethodBase) =
         let builder (gen : ILGenerator) =
             for p in ctor.GetParameters() do
                 match p.ParameterType with
@@ -799,10 +799,10 @@ module private MemberUtils =
 
             gen.Emit OpCodes.Ret
 
-        compileDynamicMethodCached<Func<'DeclaringType>> ctor id [||] typeof<'DeclaringType> builder
+        emitDynamicMethod<Func<'DeclaringType>> ctor "ctor" [||] typeof<'DeclaringType> builder
 
-    let mkTagReader<'U> (tagReader : MemberInfo) =
-        let id = sprintf "%O-%O-tagReader" tagReader.DeclaringType tagReader
+    /// Emits a dynamic method that gets the tag of supplied union case
+    let emitUnionTagReader<'U> (tagReader : MemberInfo) =
         let builder (gen : ILGenerator) =
             gen.Emit OpCodes.Ldarg_0
             let m =
@@ -815,7 +815,8 @@ module private MemberUtils =
             else gen.EmitCall(OpCodes.Call, m, null)
             gen.Emit OpCodes.Ret
 
-        compileDynamicMethodCached<Func<'U, int>> tagReader id [|typeof<'U>|] typeof<int> builder
+        emitDynamicMethod<Func<'U, int>> tagReader "tagReader" [|typeof<'U>|] typeof<int> builder
+#endif
                 
 
 //-------------------------
@@ -846,7 +847,9 @@ type IShapeMember<'DeclaringType> =
 and ShapeMember<'DeclaringType, 'MemberType> private (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
     let isStructMember = isStructMember path
     let isPublicMember = isPublicMember memberInfo
-    let projectFunc = mkProjection<'DeclaringType, 'MemberType> memberInfo path
+#if TYPESHAPE_EMIT
+    let projectFunc = emitProjection<'DeclaringType, 'MemberType> memberInfo path
+#endif
 
     /// Human-readable member identifier
     member __.Label = label
@@ -857,8 +860,12 @@ and ShapeMember<'DeclaringType, 'MemberType> private (label : string, memberInfo
     /// True iff member is public
     member __.IsPublic = isPublicMember
     /// Projects an instance to member of given value
-    member __.Project (instance : 'DeclaringType) = 
+    member __.Project (instance : 'DeclaringType) : 'MemberType =
+#if TYPESHAPE_EMIT
         projectFunc.Value.Invoke instance
+#else
+        project path instance
+#endif
         
     /// Projects an instance to member of given value
     member __.ProjectExpr (instance : Expr<'DeclaringType>) =
@@ -890,8 +897,10 @@ and ShapeWriteMember<'DeclaringType, 'MemberType> private (label : string, membe
                                                             readOnly : ShapeMember<'DeclaringType, 'MemberType>) =
     let isStructMember = isStructMember path
     let isPublicMember = isPublicMember memberInfo
-    let projectFunc = mkProjection<'DeclaringType, 'MemberType> memberInfo path
-    let injectFunc = mkInjection<'DeclaringType, 'MemberType> memberInfo path
+#if TYPESHAPE_EMIT
+    let projectFunc = emitProjection<'DeclaringType, 'MemberType> memberInfo path
+    let injectFunc = emitInjection<'DeclaringType, 'MemberType> memberInfo path
+#endif
 
     /// Human-readable member identifier
     member __.Label = label
@@ -902,8 +911,12 @@ and ShapeWriteMember<'DeclaringType, 'MemberType> private (label : string, membe
     /// True iff member is public
     member __.IsPublic = isPublicMember
     /// Projects an instance to member of given value
-    member __.Project (instance : 'DeclaringType) = 
+    member __.Project (instance : 'DeclaringType) : 'MemberType =
+#if TYPESHAPE_EMIT
         projectFunc.Value.Invoke instance
+#else
+        project path instance
+#endif
         
     /// Projects an instance to member of given value
     member __.ProjectExpr (instance : Expr<'DeclaringType>) =
@@ -911,7 +924,11 @@ and ShapeWriteMember<'DeclaringType, 'MemberType> private (label : string, membe
 
     /// Injects a value to member of given instance
     member __.Inject (instance : 'DeclaringType) (field : 'MemberType) : 'DeclaringType =
+#if TYPESHAPE_EMIT
         injectFunc.Value.Invoke(instance, field)
+#else
+        inject isStructMember path instance field
+#endif
 
     /// Injects a value to member of given instance
     member __.InjectExpr (instance : Expr<'DeclaringType>) (field : Expr<'MemberType>) =
@@ -1127,12 +1144,15 @@ type IShapeFSharpRecord =
 and ShapeFSharpRecord<'Record> private () =
     let ctorInfo = FSharpValue.PreComputeRecordConstructorInfo(typeof<'Record>, allMembers)
     let props = FSharpType.GetRecordFields(typeof<'Record>, allMembers)
-//    let ctorParams = props |> Array.map (fun p -> defaultOfUntyped p.PropertyType)
     let fields = typeof<'Record>.GetFields(allInstanceMembers)
     let mkRecordField (prop : PropertyInfo) (field : FieldInfo) =
         mkWriteMemberUntyped<'Record> prop.Name prop [|field :> MemberInfo|]
 
-    let ctorf = mkUninitializedCtor<'Record> ctorInfo
+#if TYPESHAPE_EMIT
+    let ctorf = emitUninitializedCtor<'Record> ctorInfo
+#else
+    let ctorParams = props |> Array.map (fun p -> defaultOfUntyped p.PropertyType)
+#endif
 
     let recordFields = Array.map2 mkRecordField props fields
 
@@ -1140,9 +1160,12 @@ and ShapeFSharpRecord<'Record> private () =
     member __.Fields = recordFields
 
     /// Creates an uninitialized instance for given record
-    member __.CreateUninitialized() = 
+    member __.CreateUninitialized() : 'Record =
+#if TYPESHAPE_EMIT
         ctorf.Value.Invoke()
-//        ctorInfo.Invoke(ctorParams) :?> 'Record
+#else
+        ctorInfo.Invoke ctorParams :?> 'Record
+#endif
 
     member __.CreateUninitializedExpr() : Expr<'Record> =
         let values = props |> Seq.map (fun p -> Expr.DefaultValue p.PropertyType)
@@ -1166,12 +1189,14 @@ type IShapeFSharpUnionCase =
     abstract Fields : IShapeMember[]
 
 /// Denotes an F# union case shape
-type ShapeFSharpUnionCase<'U> private (uci : UnionCaseInfo) =
+type ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
     let properties = uci.GetFields()
     let ctorInfo = FSharpValue.PreComputeUnionConstructorInfo(uci, allMembers)
-    let ctorf = mkUninitializedCtor<'U> ctorInfo
-
-//    let ctorParams = properties |> Array.map (fun p -> defaultOfUntyped p.PropertyType)
+#if TYPESHAPE_EMIT
+    let ctorf = emitUninitializedCtor<'Union> ctorInfo
+#else
+    let ctorParams = properties |> Array.map (fun p -> defaultOfUntyped p.PropertyType)
+#endif
 
     let caseFields =
         match properties with
@@ -1183,7 +1208,7 @@ type ShapeFSharpUnionCase<'U> private (uci : UnionCaseInfo) =
                 |> Array.filter (fun f -> f.Name <> "_tag")
 
             let mkField (fieldInfo : FieldInfo) (propertyInfo : PropertyInfo) =
-                mkWriteMemberUntyped<'U> propertyInfo.Name propertyInfo [|fieldInfo|]
+                mkWriteMemberUntyped<'Union> propertyInfo.Name propertyInfo [|fieldInfo|]
 
             Array.map2 mkField fields properties
 
@@ -1193,13 +1218,16 @@ type ShapeFSharpUnionCase<'U> private (uci : UnionCaseInfo) =
     member __.Fields = caseFields
 
     /// Creates an uninitialized instance for specific union case
-    member __.CreateUninitialized() : 'U =
+    member __.CreateUninitialized() : 'Union =
+#if TYPESHAPE_EMIT
         ctorf.Value.Invoke()
-//        ctorInfo.Invoke(null, ctorParams) :?> 'U
+#else
+        ctorInfo.Invoke(null, ctorParams) :?> 'Union
+#endif
 
-    member __.CreateUninitializedExpr() : Expr<'U> =
+    member __.CreateUninitializedExpr() : Expr<'Union> =
         let fieldsExpr = properties |> Seq.map (fun p -> Expr.DefaultValue p.PropertyType)
-        Expr.Cast<'U>(Expr.Call(ctorInfo, Seq.toList fieldsExpr))
+        Expr.Cast<'Union>(Expr.Call(ctorInfo, Seq.toList fieldsExpr))
 
     interface IShapeFSharpUnionCase with
         member __.CaseInfo = uci
@@ -1219,16 +1247,25 @@ and ShapeFSharpUnion<'U> private () =
             Activator.CreateInstanceGeneric<ShapeFSharpUnionCase<'U>>([||],[|uci|]) 
             :?> ShapeFSharpUnionCase<'U>)
 
-//    let tagReader = FSharpValue.PreComputeUnionTagReader(typeof<'U>, allMembers)
     let tagReaderInfo = FSharpValue.PreComputeUnionTagMemberInfo(typeof<'U>, allMembers)
-    let tagReader = mkTagReader<'U> tagReaderInfo
+#if TYPESHAPE_EMIT
+    let tagReader = emitUnionTagReader<'U> tagReaderInfo
+#else
+    let tagReader = FSharpValue.PreComputeUnionTagReader(typeof<'U>, allMembers)
+#endif
 
     let caseNames = ucis |> Array.map (fun u -> u.CaseInfo.Name)
 
     /// Case shapes for given union type
     member __.UnionCases = ucis
     /// Gets the underlying tag id for given union instance
-    member __.GetTag (union : 'U) : int = tagReader.Value.Invoke union //tagReader union
+    member __.GetTag (union : 'U) : int = 
+#if TYPESHAPE_EMIT
+        tagReader.Value.Invoke union
+#else
+        tagReader union
+#endif
+
     /// Gets the underlying tag id for given union case name
     member __.GetTag (caseName : string) : int =
         let caseNames = caseNames
@@ -1279,10 +1316,18 @@ and ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) =
         |> Seq.map (fun p -> mkWriteMemberUntyped<'Record> p.Name p [|p|])
         |> Seq.toArray
 
-    let ctor = mkUninitializedCtor<'Record> defaultCtor
+#if TYPESHAPE_EMIT
+    let ctor = emitUninitializedCtor<'Record> defaultCtor
+#endif
 
     /// Creates an uninitialized instance for given C# record
-    member __.CreateUninitialized() = ctor.Value.Invoke()
+    member __.CreateUninitialized() : 'Record = 
+#if TYPESHAPE_EMIT
+        ctor.Value.Invoke()
+#else
+        defaultCtor.Invoke [||] :?> 'Record
+#endif
+
     /// Creates an uninitialized instance for given C# record
     member __.CreateUninitializedExpr() = 
         Expr.Cast<'Record>(Expr.NewObject(defaultCtor, []))
@@ -1340,6 +1385,7 @@ and ShapePoco<'Poco> private () =
     member inline __.CreateUninitialized() : 'Poco = 
         FormatterServices.GetUninitializedObject(typeof<'Poco>) :?> 'Poco
 
+    /// Creates an uninitialized instance for POCO
     member inline __.CreateUninitializedExpr() : Expr<'Poco> =
         <@ FormatterServices.GetUninitializedObject(typeof<'Poco>) :?> 'Poco @>
 

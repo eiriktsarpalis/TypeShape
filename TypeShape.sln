@@ -36,17 +36,27 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug-NoEmit|Any CPU = Debug-NoEmit|Any CPU
 		Release|Any CPU = Release|Any CPU
+		Release-NoEmit|Any CPU = Release-NoEmit|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{8609D2FB-063F-45FE-94E2-FF251792C495}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{8609D2FB-063F-45FE-94E2-FF251792C495}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8609D2FB-063F-45FE-94E2-FF251792C495}.Debug-NoEmit|Any CPU.ActiveCfg = Debug-NoEmit|Any CPU
+		{8609D2FB-063F-45FE-94E2-FF251792C495}.Debug-NoEmit|Any CPU.Build.0 = Debug-NoEmit|Any CPU
 		{8609D2FB-063F-45FE-94E2-FF251792C495}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8609D2FB-063F-45FE-94E2-FF251792C495}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8609D2FB-063F-45FE-94E2-FF251792C495}.Release-NoEmit|Any CPU.ActiveCfg = Release-NoEmit|Any CPU
+		{8609D2FB-063F-45FE-94E2-FF251792C495}.Release-NoEmit|Any CPU.Build.0 = Release-NoEmit|Any CPU
 		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Debug-NoEmit|Any CPU.ActiveCfg = Debug-NoEmit|Any CPU
+		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Debug-NoEmit|Any CPU.Build.0 = Debug-NoEmit|Any CPU
 		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Release-NoEmit|Any CPU.ActiveCfg = Release-NoEmit|Any CPU
+		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Release-NoEmit|Any CPU.Build.0 = Release-NoEmit|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
