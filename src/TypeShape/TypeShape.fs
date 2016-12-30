@@ -58,6 +58,8 @@ type TypeShape<'T> () =
     override __.Type = typeof<'T>
     override __.ShapeInfo = shapeInfo
     override __.Accept v = v.Visit<'T> ()
+    override __.Equals o = match o with :? TypeShape<'T> -> true | _ -> false
+    override __.GetHashCode() = hash typeof<'T>
 
 exception UnsupportedShape of Type:Type
     with
