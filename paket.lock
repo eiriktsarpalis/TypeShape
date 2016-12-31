@@ -3,10 +3,11 @@ FRAMEWORK: >= NET45
 NUGET
   remote: https://www.nuget.org/api/v2
     FParsec (1.0.2)
-    FsCheck (2.5)
+    FsCheck (2.6.2)
       FSharp.Core (>= 3.1.2.5)
     FSharp.Core (4.0.0.1)
-    Unquote (3.1.1)
+    FSharp.Quotations.Evaluator (1.0.7)
+    Unquote (3.1.2)
     xunit (2.1)
       xunit.assert (2.1)
       xunit.core (2.1)
@@ -27,7 +28,7 @@ NUGET
 GROUP Build
 NUGET
   remote: https://www.nuget.org/api/v2
-    FAKE (4.36)
+    FAKE (4.47.2)
     FSharp.Compiler.Service (2.0.0.6)
     FSharp.Formatting (2.14.4)
       FSharp.Compiler.Service (2.0.0.6)
@@ -40,10 +41,10 @@ NUGET
     Microsoft.Net.Http (2.2.29) - framework: net10, net11, net20, net30, net35, net40, net40-full
       Microsoft.Bcl (>= 1.1.10)
       Microsoft.Bcl.Build (>= 1.0.14)
-    Octokit (0.21.1)
+    Octokit (0.23)
       Microsoft.Net.Http  - framework: net10, net11, net20, net30, net35, net40, net40-full
     SourceLink.Fake (1.1)
 GITHUB
   remote: fsharp/FAKE
-    modules/Octokit/Octokit.fsx (8fd20ae42c996060bc8bedb821edfb50517cdd8b)
+    modules/Octokit/Octokit.fsx (be6e4b2b513b5f2cd64ec689fe7f1f45c39f4e92)
       Octokit (>= 0.20)
