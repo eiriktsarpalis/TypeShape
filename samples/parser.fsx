@@ -6,40 +6,45 @@ open System
 open FParsec
 open TypeShape
 
-type Parser<'T> = Parser<'T, unit>
+[<AutoOpen>]
+module Utils =
+    type Parser<'T> = Parser<'T, unit>
 
-let inline delay (f : unit -> 'T) : Parser<'T> =
-    fun stream -> Reply(f ())
+    let inline delay (f : unit -> 'T) : Parser<'T> =
+        fun stream -> Reply(f ())
 
-let fold (folder : 'S -> 'T -> 'S) 
-            (init : Parser<'S>) (parsers : Parser<'T> []) 
-            (sep : Parser<'Sep>) : Parser<'S> =
+    /// Parser folding combinator with separator support
+    let fold (folder : 'State -> 'T -> 'State) 
+                (init : Parser<'State>) (parsers : Parser<'T> []) 
+                (sep : Parser<'Sep>) : Parser<'State> =
 
-    fun stream ->
-        let mutable state = init stream
-        if state.Status <> Ok then state else
-        let mutable success = true
-        let mutable i = 0
-        let n = parsers.Length
-        while i < n && success do
-            if i > 0 then 
-                let r = sep stream 
-                if r.Status <> Ok then
-                    success <- false
-                    state <- Reply(r.Status, r.Error)
+        fun stream ->
+            let mutable state = init stream
+            if state.Status <> Ok then state else
+            let mutable success = true
+            let mutable i = 0
+            let n = parsers.Length
+            while i < n && success do
+                if i > 0 then 
+                    let r = sep stream 
+                    if r.Status <> Ok then
+                        success <- false
+                        state <- Reply(r.Status, r.Error)
 
-            if success then
-                let r = parsers.[i] stream
-                if r.Status <> Ok then
-                    success <- false
-                    state <- Reply(r.Status, r.Error)
-                else
-                    state <- Reply(folder state.Result r.Result)
+                if success then
+                    let r = parsers.[i] stream
+                    if r.Status <> Ok then
+                        success <- false
+                        state <- Reply(r.Status, r.Error)
+                    else
+                        state <- Reply(folder state.Result r.Result)
 
-            i <- i + 1
+                i <- i + 1
 
-        state
+            state
 
+
+/// Generates a parser for given type
 let rec mkParser<'T> () : string -> 'T = 
     let fp = mkFParser<'T>() in 
     fun inp -> 
@@ -50,6 +55,7 @@ let rec mkParser<'T> () : string -> 'T =
 and private mkFParser<'T> () : Parser<'T> =
     let spaced p = between spaces spaces p
     let token str = spaced (pstring str) >>% ()
+    let paren p = between (token "(") (token ")") p
     let wrap (p : Parser<'a>) = unbox<Parser<'T>>(spaced p)
 
     let mkMemberParser (shape : IShapeWriteMember<'DeclaringType>) =
@@ -67,7 +73,7 @@ and private mkFParser<'T> () : Parser<'T> =
         fold (fun d i -> i d) init injectors separator
 
     match TypeShape.Create<'T>() with
-    | Shape.Unit -> wrap(between (pchar '(') (pchar ')') spaces)
+    | Shape.Unit -> wrap(paren spaces)
     | Shape.Bool -> wrap(stringReturn "true" true <|> stringReturn "false" false)
     | Shape.Byte -> wrap(puint8)
     | Shape.Int32 -> wrap(pint32)
@@ -79,7 +85,8 @@ and private mkFParser<'T> () : Parser<'T> =
                 member __.Visit<'t> () =
                     let tp = mkFParser<'t>() |>> Some
                     let nP = stringReturn "None" None
-                    let sP = (token "Some" >>. between (token "(") (token ")") tp)
+                    let vp = attempt (paren tp) <|> tp
+                    let sP = token "Some" >>. vp
                     wrap(nP <|> sP)
         }
 
@@ -109,7 +116,7 @@ and private mkFParser<'T> () : Parser<'T> =
                 let init = delay shape.CreateUninitialized
                 let eps = shape.Elements |> Array.map mkMemberParser
                 let composed = combineMemberParsers init eps (token ",")
-                wrap(between (token "(") (token ")") composed) }
+                wrap(paren composed) }
 
     | Shape.FSharpRecord s ->
         s.Accept { new IFSharpRecordVisitor<Parser<'T>> with
@@ -126,11 +133,18 @@ and private mkFParser<'T> () : Parser<'T> =
         s.Accept { new IFSharpUnionVisitor<Parser<'T>> with
             member __.Visit (shape : ShapeFSharpUnion<'Union>) =
                 let mkUnionCaseParser (case : ShapeFSharpUnionCase<'Union>) =
+                    let caseName = pstring case.CaseInfo.Name
                     let init = delay case.CreateUninitialized
-                    let fps = case.Fields |> Array.map mkMemberParser
-                    let composed = combineMemberParsers init fps (token ",")
-                    let paren = between (token "(") (token ")") composed
-                    pstring case.CaseInfo.Name >>. paren
+                    match case.Fields |> Array.map mkMemberParser with
+                    | [||] -> caseName >>. init
+                    | fps ->
+                        let composed = combineMemberParsers init fps (token ",")
+                        let parenP = paren composed
+                        let valueP = 
+                            if fps.Length = 1 then attempt parenP <|> composed
+                            else parenP
+
+                        caseName >>. valueP
 
                 let unionParser =
                     shape.UnionCases 
@@ -142,6 +156,8 @@ and private mkFParser<'T> () : Parser<'T> =
     | _ -> failwithf "unsupported type '%O'" typeof<'T>
 
 
+// examples
+
 let p1 = mkParser<int * int list>()
 p1 "(42, [1;2;3])"
 
@@ -150,10 +166,12 @@ p2 """(42, Some (["1" ;  "2"]), { contents= "value" }) ) """
 
 type Foo = { A : int ; B : string }
 
-and Bar =
+type Bar =
     | Foo of Foo
     | Bar of int
+    | C
+    | D of string option
 
 let p3 = mkParser<Bar list []>()
 
-p3 """ [| [ Bar(42) ; Foo({ A = 12 ; B = "Foof" })] |] """
+p3 """ [| [ Bar 42 ; Bar(42) ; Foo({ A = 12 ; B = "Foof" }) ; C ] ; [] ; [D (Some "42")]|] """
