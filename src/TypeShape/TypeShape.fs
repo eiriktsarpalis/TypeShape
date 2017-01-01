@@ -677,8 +677,7 @@ module private MemberUtils =
             setValue obj path.[n - 1] value
             r
 
-#if TYPESHAPE_NO_EXPR
-#else
+#if TYPESHAPE_EXPR
 
     let getDefaultValueExpr (t : Type) =
         TypeShape.Create(t).Accept {
@@ -885,8 +884,7 @@ and ShapeMember<'DeclaringType, 'MemberType> private (label : string, memberInfo
         project path instance
 #endif
        
-#if TYPESHAPE_NO_EXPR
-#else
+#if TYPESHAPE_EXPR
     /// Projects an instance to member of given value
     member __.ProjectExpr (instance : Expr<'DeclaringType>) =
         projectExpr<'DeclaringType, 'MemberType> path instance
@@ -947,8 +945,7 @@ and ShapeWriteMember<'DeclaringType, 'MemberType> private (label : string, membe
         inject isStructMember path instance field
 #endif
 
-#if TYPESHAPE_NO_EXPR
-#else
+#if TYPESHAPE_EXPR
     /// Projects an instance to member of given value
     member __.ProjectExpr (instance : Expr<'DeclaringType>) =
         projectExpr<'DeclaringType, 'MemberType> path instance
@@ -1004,8 +1001,7 @@ and ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : ConstructorI
         let args = valueReader args
         ctorInfo.Invoke args :?> 'DeclaringType
 
-#if TYPESHAPE_NO_EXPR
-#else
+#if TYPESHAPE_EXPR
     /// Creates an instance of declaring type with supplied constructor args
     member __.InvokeExpr(args : Expr<'CtorArgs>) : Expr<'DeclaringType> =
         let exprArgs = 
@@ -1150,8 +1146,7 @@ and ShapeTuple<'Tuple> private () =
 
         obj :?> 'Tuple
 
-#if TYPESHAPE_NO_EXPR
-#else
+#if TYPESHAPE_EXPR
     member __.CreateUninitializedExpr() : Expr<'Tuple> =
         let values = tupleElems |> Seq.map (fun e -> getDefaultValueExpr e.MemberType) |> Seq.toList
         Expr.Cast<'Tuple>(Expr.NewTuple(values))
@@ -1197,8 +1192,7 @@ and ShapeFSharpRecord<'Record> private () =
         ctorInfo.Invoke ctorParams :?> 'Record
 #endif
 
-#if TYPESHAPE_NO_EXPR
-#else
+#if TYPESHAPE_EXPR
     member __.CreateUninitializedExpr() : Expr<'Record> =
         let values = props |> Seq.map (fun p -> getDefaultValueExpr p.PropertyType)
         Expr.Cast<'Record>(Expr.NewObject(ctorInfo, Seq.toList values))
@@ -1258,8 +1252,7 @@ type ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
         ctorInfo.Invoke(null, ctorParams) :?> 'Union
 #endif
 
-#if TYPESHAPE_NO_EXPR
-#else
+#if TYPESHAPE_EXPR
     member __.CreateUninitializedExpr() : Expr<'Union> =
         let fieldsExpr = properties |> Seq.map (fun p -> getDefaultValueExpr p.PropertyType)
         Expr.Cast<'Union>(Expr.Call(ctorInfo, Seq.toList fieldsExpr))
@@ -1315,8 +1308,7 @@ and ShapeFSharpUnion<'U> private () =
         if notFound then raise <| KeyNotFoundException(sprintf "Union case: %A" caseName)
         i
 
-#if TYPESHAPE_NO_EXPR
-#else
+#if TYPESHAPE_EXPR
     member __.GetTagExpr (union : Expr<'U>) : Expr<int> =
         let expr =
             match tagReaderInfo with
@@ -1367,8 +1359,7 @@ and ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) =
         defaultCtor.Invoke [||] :?> 'Record
 #endif
 
-#if TYPESHAPE_NO_EXPR
-#else
+#if TYPESHAPE_EXPR
     /// Creates an uninitialized instance for given C# record
     member __.CreateUninitializedExpr() = 
         Expr.Cast<'Record>(Expr.NewObject(defaultCtor, []))
@@ -1427,8 +1418,7 @@ and ShapePoco<'Poco> private () =
     member inline __.CreateUninitialized() : 'Poco = 
         FormatterServices.GetUninitializedObject(typeof<'Poco>) :?> 'Poco
 
-#if TYPESHAPE_NO_EXPR
-#else
+#if TYPESHAPE_EXPR
     /// Creates an uninitialized instance for POCO
     member inline __.CreateUninitializedExpr() : Expr<'Poco> =
         <@ FormatterServices.GetUninitializedObject(typeof<'Poco>) :?> 'Poco @>
