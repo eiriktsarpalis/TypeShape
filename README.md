@@ -15,7 +15,7 @@ to provide relevant type information per shape.
 To incorporate TypeShape in your project place the following line in your
 `paket.dependencies` file:
 ```
-github eiriktsarpalis/TypeShape:1.0 src/TypeShape/TypeShape.fs
+github eiriktsarpalis/TypeShape:1.2 src/TypeShape/TypeShape.fs
 ```
 and in `paket.references`:
 ```
