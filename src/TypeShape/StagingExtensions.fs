@@ -83,9 +83,8 @@ module Expr =
 
         aux <@ invalidOp "invalid tag" @> (cases.Length - 1)
 
-    /// traverses an expression tree applying the optimization
-    /// `(fun x -> M[x]) y` -> `M[y]`
-    /// where `x` and `y` are variables
+    /// traverses an expression tree applying the transformation
+    /// `(fun x -> M[x]) y => M[y]` where `y` is a variable
     let unlambda (expr : Expr<'T>) =
         let rec aux e =
             match e with
