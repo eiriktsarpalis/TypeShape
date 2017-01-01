@@ -679,6 +679,13 @@ module private MemberUtils =
 
 #if TYPESHAPE_NO_EXPR
 #else
+
+    let getDefaultValueExpr (t : Type) =
+        TypeShape.Create(t).Accept {
+            new ITypeShapeVisitor<Expr> with
+                member __.Visit<'T> () = <@ Unchecked.defaultof<'T> @> :> _
+        }
+
     let projectExpr<'Record, 'Member> (path : MemberInfo[]) (expr : Expr<'Record>) =
         let rec aux expr (m:MemberInfo) =
             match m with
@@ -692,6 +699,7 @@ module private MemberUtils =
                     (r : Expr<'TRecord>) 
                     (value : Expr<'MemberType>) =
 
+        // TODO: struct tuples
         let rec aux i expr =
             if i = path.Length - 1 then
                 match path.[i] with
@@ -704,7 +712,7 @@ module private MemberUtils =
                 | :? PropertyInfo as pI -> aux (i+1) (Expr.PropertyGet(expr, pI))
                 | m -> invalidMember m
                 
-        Expr.Cast<unit>(aux 0 r)
+        <@ (% Expr.Cast<_>(aux 0 r)) ; %r @>
 #endif
 
 #if TYPESHAPE_EMIT
@@ -1145,7 +1153,7 @@ and ShapeTuple<'Tuple> private () =
 #if TYPESHAPE_NO_EXPR
 #else
     member __.CreateUninitializedExpr() : Expr<'Tuple> =
-        let values = tupleElems |> Seq.map (fun e -> Expr.DefaultValue e.MemberType) |> Seq.toList
+        let values = tupleElems |> Seq.map (fun e -> getDefaultValueExpr e.MemberType) |> Seq.toList
         Expr.Cast<'Tuple>(Expr.NewTuple(values))
 #endif
 
@@ -1192,7 +1200,7 @@ and ShapeFSharpRecord<'Record> private () =
 #if TYPESHAPE_NO_EXPR
 #else
     member __.CreateUninitializedExpr() : Expr<'Record> =
-        let values = props |> Seq.map (fun p -> Expr.DefaultValue p.PropertyType)
+        let values = props |> Seq.map (fun p -> getDefaultValueExpr p.PropertyType)
         Expr.Cast<'Record>(Expr.NewObject(ctorInfo, Seq.toList values))
 #endif
 
@@ -1253,7 +1261,7 @@ type ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
 #if TYPESHAPE_NO_EXPR
 #else
     member __.CreateUninitializedExpr() : Expr<'Union> =
-        let fieldsExpr = properties |> Seq.map (fun p -> Expr.DefaultValue p.PropertyType)
+        let fieldsExpr = properties |> Seq.map (fun p -> getDefaultValueExpr p.PropertyType)
         Expr.Cast<'Union>(Expr.Call(ctorInfo, Seq.toList fieldsExpr))
 #endif
 

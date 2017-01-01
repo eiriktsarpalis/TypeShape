@@ -6,7 +6,6 @@ NUGET
     FsCheck (2.6.2)
       FSharp.Core (>= 3.1.2.5)
     FSharp.Core (4.0.0.1)
-    FSharp.Quotations.Evaluator (1.0.7)
     Unquote (3.1.2)
     xunit (2.1)
       xunit.assert (2.1)

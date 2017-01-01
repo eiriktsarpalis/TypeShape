@@ -9,7 +9,6 @@ nuget xunit.runner.visualstudio version_in_path: true
 nuget Unquote
 nuget FsCheck
 nuget FParsec
-nuget FSharp.Quotations.Evaluator
 
 group Build
   source https://nuget.org/api/v2

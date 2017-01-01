@@ -95,6 +95,7 @@
   <Import Project="..\..\.paket\paket.targets" />
   <ItemGroup>
     <Compile Include="Clone.fs" />
+    <Compile Include="StagedClone.fs" />
     <Compile Include="Tests.fs" />
     <None Include="Script.fsx" />
     <None Include="paket.references" />

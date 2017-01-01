@@ -16,6 +16,7 @@ open System.Runtime.Serialization
 open TypeShape_ISerializableExtensions
 
 let check<'T>(prop : 'T -> bool) = Check.QuickThrowOnFailure prop
+let checkCloner (cloner : 'T -> 'T) = check(fun t -> t = cloner t)
 
 [<NoEquality; NoComparison>]
 type NoEqNoComp = NoEqNoComp
@@ -259,7 +260,9 @@ let ``Shape Generic Tuple`` () =
     test <@ checkShape typeof<int * int * int * int * int * int * int * int * int * int * int * int> @>
 
     let cloner = mkCloner<int * decimal * (string * int list) * bool * string option * uint64 * string * byte[] * string * byte[] * decimal>()
-    check(fun c -> cloner c = c)
+    checkCloner cloner
+    let scloner = mkStagedCloner<int * decimal * (string * int list) * bool * string option * uint64 * string * byte[] * string * byte[] * decimal>()
+    checkCloner scloner
 
 type CSharpRecord() =
     static let mutable counter = 0
@@ -270,6 +273,15 @@ type CSharpRecord() =
     member val TimeSpan = TimeSpan.Zero with get,set
 
     member __.GetterOnly = count
+
+    override x.Equals y =
+        match y with
+        | :? CSharpRecord as y -> 
+            x.Foo = y.Foo && x.Bar = y.Bar && 
+            x.Baz = y.Baz && x.TimeSpan = y.TimeSpan
+        | _ -> false
+
+    override x.GetHashCode() = hash(x.Foo,x.Bar,x.Baz,x.TimeSpan)
 
 [<Fact>]
 let ``Shape CliMutable`` () =
@@ -283,14 +295,18 @@ let ``Shape CliMutable`` () =
     | _ -> failwithf "Type %O not recognized as C# record" typeof<CSharpRecord>
     |> ignore
 
-    let cloner = mkCloner<CSharpRecord>()
     let source = new CSharpRecord(Foo = "Foo", Bar = true, Baz = 42, TimeSpan = TimeSpan.MaxValue)
+
+    let cloner = mkCloner<CSharpRecord>()
     let target = cloner source
     test <@ obj.ReferenceEquals(source, target) |> not @>
-    test <@ source.Foo = target.Foo @>
-    test <@ source.Bar = target.Bar @>
-    test <@ source.Baz = target.Baz @>
-    test <@ source.TimeSpan = target.TimeSpan @>
+    test <@ source = target @>
+    test <@ source.GetterOnly <> target.GetterOnly @>
+
+    let sCloner = mkCloner<CSharpRecord> ()
+    let target = sCloner source
+    test <@ obj.ReferenceEquals(source, target) |> not @>
+    test <@ source = target @>
     test <@ source.GetterOnly <> target.GetterOnly @>
 
 type SimplePoco(x : string, y : int) =
@@ -313,9 +329,16 @@ let ``Shape Poco`` () =
 
     | _ -> failwithf "Type %O not recognized as POCO" typeof<SimplePoco>
 
-    let cloner = mkCloner<SimplePoco>()
     let source = new SimplePoco("foo", 42)
+
+    let cloner = mkCloner<SimplePoco>()
     let target = cloner source
+    test <@ obj.ReferenceEquals(source, target) |> not @>
+    test <@ source.X = target.X @>
+    test <@ source.Y = target.Y @>
+
+    let scloner = mkStagedCloner<SimplePoco>()
+    let target = scloner source
     test <@ obj.ReferenceEquals(source, target) |> not @>
     test <@ source.X = target.X @>
     test <@ source.Y = target.Y @>
@@ -460,7 +483,10 @@ let ``Shape Record 7`` () =
 
     test <@ shape.Fields.Length = 7 @>
     let cloner = Clone.mkCloner<Record7>()
-    check(fun (r:Record7) -> cloner r = r)
+    checkCloner cloner
+
+    let scloner = mkStagedCloner<Record7>()
+    checkCloner scloner
 
 [<Fact>]
 let ``Shape F# ref`` () =
@@ -541,7 +567,10 @@ let ``Shape Union 7`` () =
         | _ -> raise <| InvalidCastException()
 
     let cloner = mkCloner<Union7>()
-    Check.QuickThrowOnFailure(fun (u:Union7) -> test <@ cloner u = u @>)
+    checkCloner cloner
+
+    let scloner = mkStagedCloner<Union7>()
+    checkCloner scloner
 
 
 [<Fact>]

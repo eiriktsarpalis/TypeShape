@@ -84,6 +84,7 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="TypeShape.fs" />
     <Compile Include="ISerializableExtensions.fs" />
+    <Compile Include="StagingExtensions.fs" />
     <None Include="paket.template" />
   </ItemGroup>
   <ItemGroup>
