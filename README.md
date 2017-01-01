@@ -10,8 +10,6 @@ The library uses reflection to derive the algebraic structure of a given
 `System.Type` instance and then applies a variant of the visitor pattern
 to provide relevant type information per shape.
 
-TypeShape is not a metaprogramming library and does not emit code at runtime.
-
 ### Installing
 
 To incorporate TypeShape in your project place the following line in your
@@ -102,35 +100,53 @@ for i = 1 to 1000 do ignore <| p1 value
 for i = 1 to 1000 do ignore <| p2 value
 ```
 
-### Supporting F# records and unions
+### Records, Unions and POCOs
 
-TypeShape can be used to define generic programs that target F# records and unions.
-For instance, we could extend the printer implementation defined above to include
-support for arbitrary F# records containing two fields:
+TypeShape can be used to define generic programs that target arbitrary types:
+F# records, unions or POCOs. This is achieved using the `IShapeMember` abstraction:
 ```fsharp
-    | Shape.FSharpRecord2 s ->
-        s.Accept {
-            new IFSharpRecord2Visitor<'T -> string> with
-                member __.Visit (s : IShapeFSharpRecord<'Record,'Field1,'Field2>) =
-                    let f1p, f2p = mkPrinter<'Field1>(), mkPrinter<'Field2>()
-                    let n1, n2 = s.Properties.[0].Name, s.Properties.[1].Name
-                    wrap(fun (r:'Record) -> sprintf "{ %s = %s ; %s = %s }" n1 (s.Project1 r |> f1p) n2 (s.Project2 r |> f2p))
-        }
+type IShapeMember<'DeclaringType, 'Field> =
+    inherit IShapeMember<'DeclaringType>
+    abstract Project : 'DeclaringType -> 'Field
+    abstract Inject : 'DeclaringType -> 'Field -> 'DeclaringType
 ```
-Similarly, we could also add support for arbitrary F# unions of two union cases:
+An F# record then is just a list of member shapes, a union is a list of lists of member shapes.
+Member shapes can optionally be configured to generate code at runtime for more performant `Project` and `Inject` operations.
+Member shapes come with quoted versions of the API for staged generic programming applications.
+
+To make our pretty printer support these types, we first provide a pretty printer for members:
 ```fsharp
-    | Shape.FSharpUnion2 s ->
-        s.Accept {
-            new IFSharpUnion2Visitor<'T -> string> with
-                member __.Visit (s : IShapeFSharpUnion<'Union,'Case1,'Case2>) =
-                    let c1p, c2p = mkPrinter<'Case1>(), mkPrinter<'Case2>()
-                    let n1,n2 = s.UnionCaseInfo.[0].Name, s.UnionCaseInfo.[1].Name
-                    wrap(fun (u:'Union) ->
-                        match s.Project u with
-                        | Choice1Of2 c1 -> sprintf "%s %s" n1 (c1p c1)
-                        | Choice2Of2 c2 -> sprintf "%s %s" n2 (c2p c2))
-        }
+let mkMemberPrinter (shape : IShapeMember<'DeclaringType>) =
+   shape.Accept { new IShapeMemberVisitor<'DeclaringType, 'DeclaringType -> string> with
+       member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
+           let fieldPrinter = mkPrinter<'Field>()
+           fieldPrinter << shape.Project }
 ```
+The for F# records:
+```fsharp
+    | Shape.FSharpRecord s ->
+        s.Accept { new IFSharpRecordVisitor<'T -> string> with
+            member __.Visit (s : ShapeFSharpRecord<'Record>) =
+                let fieldPrinters : ('Record -> string) [] = s.Fields |> Array.map mkMemberPrinter
+                let labels : string [] = s.Fields |> Array.map (fun f -> f.Label)
+                wrap(fun (r:'Record) -> sprintf "{ %s = %s }" labels.[0] (fieldPrinters.[0] r)) }
+```
+Similarly, we could also add support for arbitrary F# unions:
+```fsharp
+    | Shape.FSharpUnion s ->
+        s.Accept { new IFSharpUnionVisitor<'T -> string> with
+            member __.Visit (s : ShapeFSharpUnion<'Union>) =
+                let cases : ShapeFSharpUnionCase<'Union> [] = s.UnionCases // all union cases
+                let mkUnionCasePrinter (case : ShapeFSharpUnionCase<'Union>) =
+                    let fieldPrinters = case.Fields |> Array.map mkMemberPrinter
+                    (fun (u:'Union) -> sprintf "%s(%s)" case.Name (fieldPrinters |> Seq.map (fun f -> f r) |> String.concat ", "))
+
+                let casePrinters = cases |> Array.map mkUnionCasePrinter // generate printers for all union cases
+                wrap(fun (u:'Union) ->
+                    let tag : int = s.GetTag u // get the underlying tag for the union case
+                    casePrinters.[tag] u) }
+```
+Similar active patterns exist for classes with settable properties and general POCOs.
 
 ### Extensibility
 
