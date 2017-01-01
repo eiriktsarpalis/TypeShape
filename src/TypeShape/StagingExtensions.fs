@@ -84,14 +84,37 @@ module Expr =
         aux <@ invalidOp "invalid tag" @> (cases.Length - 1)
 
     /// traverses an expression tree applying the transformation
-    /// `(fun x -> M[x]) y => M[y]` where `y` is a variable
+    /// `(fun x y z .. -> M[x,y,z,..]) a b c => M[a,b,c,..]`,
+    /// where a,b,c are variables or constants
     let unlambda (expr : Expr<'T>) =
+        let (|ValidArg|_|) = function (Var _ | Value _) as e -> Some e | _ -> None
+        let (|AppLambdas|_|) (e : Expr) =
+            // traverses the "App(App(App ... " part of the expression
+            let rec gatherApps args e =
+                match e with
+                | Application(lhs, ValidArg rhs) -> gatherApps (rhs :: args) lhs
+                | _ -> args, e
+
+            // traverses the "Lambda(Lambda(Lambda ... " part of the expression
+            let rec gatherLambdas args acc e =
+                match args, e with
+                | [], _ -> Some (acc, e)
+                | hd :: tl, Lambda(v, body) -> gatherLambdas tl ((v, hd) :: acc) body
+                | _ -> None
+
+            match gatherApps [] e with
+            | [], _ -> None
+            | args, body -> 
+                match gatherLambdas args [] body with
+                | None -> None
+                | Some(vars, body) ->
+                    let sub (body:Expr) (var:Var, value:Expr) =
+                        body.Substitute(function v when v = var -> Some value | _ -> None)
+                    List.fold sub body vars |> Some
+
         let rec aux e =
             match e with
-            | Application(Lambda(v, body), Var v') -> 
-                let body' = body.Substitute(function v0 when v0 = v -> Some(Expr.Var v') | _ -> None)
-                aux body'
-
+            | AppLambdas reducedExpr -> aux reducedExpr
             | ShapeVar _ -> e
             | ShapeLambda(v,b) -> Expr.Lambda(v, aux b)
             | ShapeCombination(comb, args) -> RebuildShapeCombination(comb, List.map aux args)

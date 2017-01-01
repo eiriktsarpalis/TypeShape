@@ -16,7 +16,11 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
             member __.Visit (shape : ShapeMember<'DeclaringType, 'FieldType>) =
                 let fcmp = stageCmp<'FieldType>()
                 fun (dt : Expr<'DeclaringType>) dt' -> 
-                    fcmp (shape.ProjectExpr dt) (shape.ProjectExpr dt')
+                    <@
+                        let f = (% shape.ProjectExpr dt)
+                        let f' = (% shape.ProjectExpr dt')
+                        (% Expr.lam2 fcmp) f f'
+                    @>
         }
 
     match TypeShape.Create<'T> () with
@@ -130,7 +134,7 @@ let decompileCmp<'T> () =
 
 let cmp = mkComparer<int list * string option>()
 
-decompileCmp<string * int * int * string>()
+decompileCmp<int * int * int>()
 
 cmp ([1 .. 100], Some "42") ([1 .. 100], Some "42")
    
