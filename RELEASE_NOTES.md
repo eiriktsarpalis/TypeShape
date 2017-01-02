@@ -1,3 +1,6 @@
+### 2.1
+* Add Expr.unlet utility.
+
 ### 2.0
 * Add support for ShapeMember, ShapeConstructor, ShapeCliMutable, ShapePoco.
 * Add support for staged expressions.
