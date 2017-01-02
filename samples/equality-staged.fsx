@@ -158,3 +158,14 @@ cmp' (UC { A = 12 ; B = "test" })
      (UC { A = 12 ; B = "test2" })
 
 decompileCmp<Bar>()
+//fun t1 t2 -> 
+//    let tag1 = t1.Tag 
+//    let tag2 = t2.Tag 
+//    if tag1 <> tag2 then false else 
+//    tag1 = 0 || 
+//    if tag1 = 1 then t1._foo = t2._foo 
+//    else if tag1 = 2 then 
+//        let r1 = t1.item 
+//        let r2 = t2.item 
+//        r1.A@ = r2.A@ && r1.B@ = r2.B@ 
+//    else invalidOp "invalid tag"
