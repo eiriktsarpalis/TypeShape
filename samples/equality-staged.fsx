@@ -15,13 +15,9 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
         shape.Accept { new IMemberVisitor<'DeclaringType, CmpExpr<'DeclaringType>> with
             member __.Visit (shape : ShapeMember<'DeclaringType, 'FieldType>) =
                 let fcmp = stageCmp<'FieldType>()
-                fun (dt : Expr<'DeclaringType>) dt' -> 
-                    <@
-                        let f = (% shape.ProjectExpr dt)
-                        let f' = (% shape.ProjectExpr dt')
-                        (% Expr.lam2 fcmp) f f'
-                    @>
-        }
+                fun dt dt' ->
+                    fcmp (shape.ProjectExpr dt) 
+                         (shape.ProjectExpr dt') }
 
     match TypeShape.Create<'T> () with
     | Shape.Unit -> wrap(fun (_: Expr<unit>) _ -> <@ true @>)
@@ -45,29 +41,25 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
                             while areEqual && i < ts.Length do
                                 areEqual <- (% Expr.lam2 ec) ts.[i] ts'.[i]
                             areEqual
-                    @>)
-        }
+                    @> )}
 
     | Shape.FSharpOption s ->
         s.Accept { new IFSharpOptionVisitor<CmpExpr<'T>> with
             member __.Visit<'t> () =
                 let ec = stageCmp<'t> ()
-                wrap(fun (ts : Expr<'t option>) ts' ->
+                wrap(fun topt topt' ->
                     <@
-                        match %ts, %ts' with
+                        match %topt, %topt' with
                         | None, None -> true
                         | None, _ | _, None -> false
                         | Some t, Some t' -> (% Expr.lam2 ec) t t'
-                    @>
-                )
-
-        }
+                    @> )}
 
     | Shape.FSharpList s ->
         s.Accept { new IFSharpListVisitor<CmpExpr<'T>> with
             member __.Visit<'t> () =
                 let ec = stageCmp<'t> ()
-                wrap(fun (ts: Expr<'t list>) ts' ->
+                wrap(fun ts ts' ->
                     <@
                         let rec aux ts ts' =
                             match ts, ts' with
@@ -76,67 +68,81 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
                             | _ -> false
 
                         aux %ts %ts'
-                    @>)
-        }
+                    @> ) }
 
     | Shape.Tuple s ->
         s.Accept { new ITupleVisitor<CmpExpr<'T>> with
             member __.Visit (shape : ShapeTuple<'Tuple>) =
                 let elemCmps = shape.Elements |> Array.map stageMemberCmp
-                wrap (fun (t1 : Expr<'Tuple>) t2 ->
-                    elemCmps 
-                    |> Array.map (fun ec -> ec t1 t2)
-                    |> Expr.forall)
-        }
+                wrap (fun t1 t2 ->
+                    <@
+                        let t1 = %t1
+                        let t2 = %t2
+                        (% Expr.lam2 (fun t1 t2 ->
+                            elemCmps 
+                            |> Array.map (fun ec -> ec t1 t2)
+                            |> Expr.forall)) t1 t2 @>)}
 
     | Shape.FSharpRecord s ->
         s.Accept { new IFSharpRecordVisitor<CmpExpr<'T>> with
             member __.Visit (shape : ShapeFSharpRecord<'Record>) =
                 let fldCmps = shape.Fields |> Array.map stageMemberCmp
-                wrap (fun (r1 : Expr<'Record>) r2 ->
-                    fldCmps
-                    |> Array.map (fun ec -> ec r1 r2)
-                    |> Expr.forall) 
-        }
+                wrap (fun r1 r2 ->
+                    <@
+                        let r1 = %r1
+                        let r2 = %r2
+                        (% Expr.lam2 (fun r1 r2 ->
+                            fldCmps
+                            |> Array.map (fun ec -> ec r1 r2)
+                            |> Expr.forall)) r1 r2 @>) }
 
     | Shape.FSharpUnion s ->
         s.Accept { new IFSharpUnionVisitor<CmpExpr<'T>> with
             member __.Visit (shape : ShapeFSharpUnion<'Union>) =
                 let stageUnionCaseCmp (case : ShapeFSharpUnionCase<'Union>) =
                     let fldCmps = case.Fields |> Array.map stageMemberCmp
-                    fun (u1 : Expr<'Union>) u2 ->
+                    fun u1 u2 ->
                         fldCmps
                         |> Array.map (fun ec -> ec u1 u2)
                         |> Expr.forall
 
                 let unionCaseCmps = shape.UnionCases |> Array.map stageUnionCaseCmp
 
-                wrap(fun (u1 : Expr<'Union>) u2 ->
+                wrap(fun u1 u2 ->
                     let caseCmps = unionCaseCmps |> Array.map (fun cmp -> cmp u1 u2)
                     <@
-                        let t1 = (% shape.GetTagExpr u1)
-                        let t2 = (% shape.GetTagExpr u2)
-                        if t1 <> t2 then false else
-                        (% Expr.lam (fun tag -> Expr.switch tag caseCmps)) t1
-                    @>)
-        }
+                        let u1 = %u1
+                        let u2 = %u2
+                        let tag1 = (% Expr.lam shape.GetTagExpr) u1
+                        let tag2 = (% Expr.lam shape.GetTagExpr) u2
+                        if tag1 <> tag2 then false else
+                        (% Expr.lam (fun tag -> Expr.switch tag caseCmps)) tag1
+                    @> ) }
 
     | _ -> failwithf "Unsupported shape %O" typeof<'T>
 
-let mkComparer<'T> () =
-    let expr = stageCmp<'T>() |> Expr.lam2 |> Expr.unlambda
-    eval expr
+let mkComparerExpr<'T>() = 
+    stageCmp<'T>() 
+    |> Expr.lam2 
+    |> Expr.unlambda 
+    |> Expr.unlet
 
-let decompileCmp<'T> () =
-    stageCmp<'T>() |> Expr.lam2 |> Expr.unlambda |> decompile
+let mkComparer<'T> () = mkComparerExpr<'T>() |> eval
+
+let decompileCmp<'T> () = mkComparerExpr<'T>() |> decompile
 
 // examples
 
 let cmp = mkComparer<int list * string option>()
 
-decompileCmp<int * int * int>()
-
 cmp ([1 .. 100], Some "42") ([1 .. 100], Some "42")
+
+decompileCmp<int * (int * int)>()
+//  "fun t1 t2 -> 
+//      t1.m_Item1 = t2.m_Item1 && 
+//      let t1 = t1.m_Item2 
+//      let t2 = t2.m_Item2 
+//      t1.m_Item1 = t2.m_Item1 && t1.m_Item2 = t2.m_Item2"
    
 type Foo = { A : int ; B : string }
 

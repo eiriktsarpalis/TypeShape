@@ -100,11 +100,8 @@ let rec stageCloner<'T> () : CloneExpr<'T> =
 
     | _ -> failwithf "Unsupported type %O" typeof<'T>
 
+let mkCloneExpr<'T> () = stageCloner<'T>() |> Expr.lam |> Expr.unlambda
 
-let mkStagedCloner<'T> () =
-    let expr = stageCloner<'T>() |> Expr.lam |> Expr.unlambda
-    eval expr
+let mkStagedCloner<'T> () = mkCloneExpr<'T>() |> eval
 
-let decompileCloner<'T> () =
-    let expr = stageCloner<'T>() |> Expr.lam |> Expr.unlambda
-    decompile expr
+let decompileCloner<'T> () = mkCloneExpr<'T>() |> decompile

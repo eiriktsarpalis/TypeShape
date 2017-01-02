@@ -120,3 +120,17 @@ module Expr =
             | ShapeCombination(comb, args) -> RebuildShapeCombination(comb, List.map aux args)
 
         cast<'T> (aux expr)
+
+    /// Performs the transformation
+    /// `let x = y in M[x]` => `M[y]` where y is a constant or variable.
+    let unlet (expr : Expr<'T>) : Expr<'T> =
+        let rec aux e =
+            match e with
+            | Let(x, (Var _ | Value _ as e), body) when not x.IsMutable ->
+                body.Substitute(function v when v = x -> Some e | _ -> None)
+                |> aux
+            | ShapeVar _ -> e
+            | ShapeLambda(v, body) -> Expr.Lambda(v, aux body)
+            | ShapeCombination(comb, args) -> RebuildShapeCombination(comb, List.map aux args)
+
+        aux expr |> cast<'T>
