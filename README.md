@@ -175,4 +175,4 @@ See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/maste
 Head (branch `master`), Build & Unit tests
 
 * Windows/.NET [![Build status](https://ci.appveyor.com/api/projects/status/6t6vovc2xrj8nqh9?svg=true)](https://ci.appveyor.com/project/nessos/typeshape)
-* Mac OS X/Mono 4.2 [![Build Status](https://travis-ci.org/eiriktsarpalis/TypeShape.png?branch=master)](https://travis-ci.org/eiriktsarpalis/TypeShape/branches)
+* Mac OS X/Mono 4.2 [![Build Status](https://api.travis-ci.org/eiriktsarpalis/TypeShape.svg?branch=master)](https://travis-ci.org/eiriktsarpalis/TypeShape/branches)
