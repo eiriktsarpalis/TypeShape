@@ -353,6 +353,7 @@ Target "Release" DoNothing
 "Default"
   ==> "Build.NoEmit"
   ==> "RunTests.NoEmit"
+  ==> "SourceLink"
   ==> "Nuget"
   ==> "PublishNuget"
   ==> "ReleaseGithub"

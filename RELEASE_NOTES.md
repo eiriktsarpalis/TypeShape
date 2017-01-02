@@ -1,3 +1,7 @@
+### 2.0
+* Add support for ShapeMember, ShapeConstructor, ShapeCliMutable, ShapePoco.
+* Add support for staged expressions.
+
 ### 1.2
 * Fix Equality shape implementation.
 * Add Comparison shape.
