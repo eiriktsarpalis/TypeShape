@@ -21,9 +21,9 @@ let rec stageCloner<'T> () : CloneExpr<'T> =
                     let fieldCloner = stageCloner<'FieldType>()
                     fun src tgt ->
                         <@
-                            let field = (% shape.ProjectExpr src)
-                            let field' = (% Expr.lam fieldCloner) field
-                            (% Expr.lam (shape.InjectExpr tgt)) field'
+                            let sourceField = (% shape.ProjectExpr src)
+                            let clonedField = (% Expr.lam fieldCloner) sourceField
+                            (% Expr.lam (shape.InjectExpr tgt)) clonedField
                         @>
         }
 
@@ -59,7 +59,7 @@ let rec stageCloner<'T> () : CloneExpr<'T> =
                 wrap(fun (source : Expr<'Tuple>) ->
                     shape.Elements 
                     |> Array.map (fun sf -> stageMemberCloner sf source)
-                    |> Expr.update (shape.CreateUninitializedExpr())) }
+                    |> Expr.update ("target", shape.CreateUninitializedExpr())) }
 
     | Shape.FSharpRecord s ->
         s.Accept { new IFSharpRecordVisitor<CloneExpr<'T>> with
@@ -67,16 +67,16 @@ let rec stageCloner<'T> () : CloneExpr<'T> =
                 wrap(fun (source : Expr<'R>) ->
                     shape.Fields
                     |> Array.map (fun sf -> stageMemberCloner sf source)
-                    |> Expr.update (shape.CreateUninitializedExpr())) }
+                    |> Expr.update ("target", shape.CreateUninitializedExpr())) }
 
     | Shape.FSharpUnion s ->
         s.Accept { new IFSharpUnionVisitor<CloneExpr<'T>> with
             member __.Visit (shape : ShapeFSharpUnion<'U>) =
-                wrap(fun (source: Expr<'U>) ->
+                wrap(fun (source : Expr<'U>) ->
                     let mkUnionCaseCloner (case : ShapeFSharpUnionCase<'U>) =
                         case.Fields
                         |> Array.map (fun sf -> stageMemberCloner sf source)
-                        |> Expr.update (case.CreateUninitializedExpr())
+                        |> Expr.update ("target", case.CreateUninitializedExpr())
 
                     let tag = shape.GetTagExpr source
                     let unionCaseCloners = shape.UnionCases |> Array.map mkUnionCaseCloner
@@ -85,10 +85,10 @@ let rec stageCloner<'T> () : CloneExpr<'T> =
     | Shape.CliMutable s ->
         s.Accept { new ICliMutableVisitor<CloneExpr<'T>> with
             member __.Visit<'R> (shape : ShapeCliMutable<'R>) =
-                wrap(fun (source: Expr<'R>) ->
+                wrap(fun (source : Expr<'R>) ->
                     shape.Properties
                     |> Array.map (fun sp -> stageMemberCloner sp source)
-                    |> Expr.update (shape.CreateUninitializedExpr())) }
+                    |> Expr.update ("target", shape.CreateUninitializedExpr())) }
 
     | Shape.Poco s ->
         s.Accept { new IPocoVisitor<CloneExpr<'T>> with
@@ -96,12 +96,10 @@ let rec stageCloner<'T> () : CloneExpr<'T> =
                 wrap(fun (source : Expr<'P>) ->
                     shape.Fields
                     |> Array.map (fun sf -> stageMemberCloner sf source)
-                    |> Expr.update (shape.CreateUninitializedExpr())) }
+                    |> Expr.update ("target", shape.CreateUninitializedExpr())) }
 
     | _ -> failwithf "Unsupported type %O" typeof<'T>
 
-let mkCloneExpr<'T> () = stageCloner<'T>() |> Expr.lam |> Expr.unlambda
-
+let mkCloneExpr<'T> () = stageCloner<'T>() |> Expr.lam |> Expr.cleanup
 let mkStagedCloner<'T> () = mkCloneExpr<'T>() |> eval
-
 let decompileCloner<'T> () = mkCloneExpr<'T>() |> decompile

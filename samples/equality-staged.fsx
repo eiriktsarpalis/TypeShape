@@ -121,14 +121,8 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
 
     | _ -> failwithf "Unsupported shape %O" typeof<'T>
 
-let mkComparerExpr<'T>() = 
-    stageCmp<'T>() 
-    |> Expr.lam2 
-    |> Expr.unlambda 
-    |> Expr.unlet
-
+let mkComparerExpr<'T>() = stageCmp<'T>() |> Expr.lam2 |> Expr.cleanup
 let mkComparer<'T> () = mkComparerExpr<'T>() |> eval
-
 let decompileCmp<'T> () = mkComparerExpr<'T>() |> decompile
 
 // examples
@@ -138,11 +132,11 @@ let cmp = mkComparer<int list * string option>()
 cmp ([1 .. 100], Some "42") ([1 .. 100], Some "42")
 
 decompileCmp<int * (int * int)>()
-//  "fun t1 t2 -> 
-//      t1.m_Item1 = t2.m_Item1 && 
-//      let t1 = t1.m_Item2 
-//      let t2 = t2.m_Item2 
-//      t1.m_Item1 = t2.m_Item1 && t1.m_Item2 = t2.m_Item2"
+// fun t1 t2 -> 
+//     t1.m_Item1 = t2.m_Item1 && 
+//     let t1 = t1.m_Item2 
+//     let t2 = t2.m_Item2 
+//     t1.m_Item1 = t2.m_Item1 && t1.m_Item2 = t2.m_Item2
    
 type Foo = { A : int ; B : string }
 

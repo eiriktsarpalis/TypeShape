@@ -1,3 +1,6 @@
+### 2.2
+* Update staged samples.
+
 ### 2.1
 * Add Expr.unlet utility.
 
