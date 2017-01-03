@@ -21,20 +21,10 @@ and private aux<'T> () : unit -> 'T =
         }
 
     match TypeShape.Create<'T>() with
-    | Shape.Bool -> wrap(fun () -> false)
-    | Shape.Byte -> wrap(fun () -> 0uy)
-    | Shape.SByte -> wrap(fun () -> 0y)
-    | Shape.Int16 -> wrap(fun () -> 0s)
-    | Shape.Int32 -> wrap(fun () -> 0)
-    | Shape.Int64 -> wrap(fun () -> 0L)
-    | Shape.UInt16 -> wrap(fun () -> 0us)
-    | Shape.UInt32 -> wrap(fun () -> 0u)
-    | Shape.UInt64 -> wrap(fun () -> 0uL)
+    | Shape.Primitive -> fun () -> Unchecked.defaultof<'T>
     | Shape.Decimal -> wrap(fun () -> 0M)
-    | Shape.Single -> wrap(fun () -> 0.f)
-    | Shape.Double -> wrap(fun () -> 0.)
+    | Shape.BigInt -> wrap(fun () -> 0I)
     | Shape.Guid -> wrap(fun () -> Guid.Empty)
-    | Shape.Char -> wrap(fun () -> '\u0000')
     | Shape.String -> wrap(fun () -> "")
     | Shape.TimeSpan -> wrap(fun () -> TimeSpan.Zero)
     | Shape.DateTime -> wrap(fun () -> DateTime.MinValue)
@@ -51,6 +41,12 @@ and private aux<'T> () : unit -> 'T =
         s.Accept { new INullableVisitor<unit -> 'T> with
             member __.Visit<'t when 't : struct and 't :> ValueType and 't : (new : unit -> 't)>() = // 'T = 't
                 wrap(fun () -> new Nullable<'t>())
+        }
+
+    | Shape.DefaultConstructor s ->
+        s.Accept { new IDefaultConstructorVisitor<unit -> 'T> with
+            member __.Visit<'t when 't : (new : unit -> 't)>() = // 'T = 't
+                wrap(fun () -> new 't ())
         }
 
     | Shape.FSharpOption s ->

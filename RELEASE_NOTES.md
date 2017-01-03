@@ -1,3 +1,6 @@
+### 2.3
+* Add Shape.Primitive active pattern.
+
 ### 2.2
 * Update staged samples.
 

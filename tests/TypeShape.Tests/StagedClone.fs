@@ -28,7 +28,7 @@ let rec stageCloner<'T> () : CloneExpr<'T> =
         }
 
     match TypeShape.Create<'T>() with
-    | _ when typeof<'T>.IsPrimitive -> fun t -> <@ %t @>
+    | Shape.Primitive -> fun t -> <@ %t @>
     | Shape.TimeSpan
     | Shape.DateTimeOffset
     | Shape.DateTime

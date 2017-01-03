@@ -1463,6 +1463,9 @@ module Shape =
     let (|Single|_|) s = test<single> s
     let (|Double|_|) s = test<double> s
     let (|Char|_|) s = test<char> s
+    let (|Primitive|_|) (s:TypeShape) =
+        if s.Type.IsPrimitive then SomeU
+        else None
 
 #if !TYPESHAPE_DISABLE_BIGINT
     let (|BigInt|_|) s = test<bigint> s

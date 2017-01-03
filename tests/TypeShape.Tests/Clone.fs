@@ -20,7 +20,7 @@ let rec mkCloner<'T> () : 'T -> 'T =
         }
 
     match TypeShape.Create<'T>() with
-    | _ when typeof<'T>.IsPrimitive -> id
+    | Shape.Primitive -> id
     | Shape.TimeSpan
     | Shape.DateTimeOffset
     | Shape.DateTime

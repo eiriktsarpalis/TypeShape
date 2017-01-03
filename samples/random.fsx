@@ -18,7 +18,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
                 gen { let! f = rf in return fun dt -> shape.Inject dt f } }
 
     match TypeShape.Create<'T>() with
-    | s when s.Type.IsPrimitive -> wrap Arb.generate<'T>
+    | Shape.Primitive -> wrap Arb.generate<'T>
     | Shape.Unit -> wrap Arb.generate<unit>
     | Shape.String -> wrap Arb.generate<string>
     | Shape.Guid -> wrap Arb.generate<Guid>
