@@ -986,7 +986,7 @@ type IShapeConstructor =
 /// Identifies a constructor implementation shape
 and IShapeConstructor<'DeclaringType> =
     inherit IShapeConstructor
-    abstract Accept : IShapeConstructorVisitor<'DeclaringType, 'R> -> 'R
+    abstract Accept : IConstructorVisitor<'DeclaringType, 'R> -> 'R
 
 /// Identifies a constructor implementation shape
 and ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : ConstructorInfo, arity : int) =
@@ -1019,7 +1019,7 @@ and ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : ConstructorI
         member __.ArgumentsType = typeof<'CtorArgs>
         member __.Accept v = v.Visit __
 
-and IShapeConstructorVisitor<'CtorType, 'R> =
+and IConstructorVisitor<'CtorType, 'R> =
     abstract Visit<'CtorArgs> : ShapeConstructor<'CtorType, 'CtorArgs> -> 'R
 
 //---------------------------
