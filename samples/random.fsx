@@ -156,12 +156,14 @@ let rec mkGenerator<'T> () : Gen<'T> =
 type Person(name : string, age : int) =
     member __.Name = name
     member __.Age = age
+    override __.ToString() = sprintf "{ Name = \"%s\" ; Age = %d }" __.Name __.Age
 
 type Customer() =
-    member val Person = null with get, set
-    member val DateJoined = DateTime.MinValue with get, set
+    member val Person = Unchecked.defaultof<Person> with get, set
+    member val DateJoined = Unchecked.defaultof<DateTimeOffset> with get, set
+    member val Balance = Unchecked.defaultof<decimal> with get, set
 
 //let gen = Arb.generate<Customer list> // not supported
 let gen = mkGenerator<Customer list> ()
 
-Gen.sample 10 10 gen
+Gen.sample 3 4 gen
