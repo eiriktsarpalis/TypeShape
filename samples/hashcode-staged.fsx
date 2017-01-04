@@ -161,7 +161,7 @@ let hasher' = mkHasher<Bar>()
 
 hasher' (UC { A = 12 ; B = "test" })
 
-decompileHasher<Bar list>()
+decompileHasher<Bar>()
 //fun t -> 
 //    let tag = t.Tag 
 //    if tag = 0 then tag 
