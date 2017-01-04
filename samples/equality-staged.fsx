@@ -40,6 +40,7 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
                             let mutable areEqual = true
                             while areEqual && i < ts.Length do
                                 areEqual <- (% Expr.lam2 ec) ts.[i] ts'.[i]
+                                i <- i + 1
                             areEqual
                     @> )}
 
