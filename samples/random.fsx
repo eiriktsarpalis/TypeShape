@@ -2,7 +2,6 @@
 #r "../bin/FsCheck.dll"
 
 open System
-open System.Reflection
 open TypeShape
 open FsCheck
 
@@ -148,30 +147,21 @@ let rec mkGenerator<'T> () : Gen<'T> =
                 }
         }
 
-    | _ -> failwithf "Type %O does not support random value generation." typeof<'T>
+    | _ -> Arb.generate<'T> // fall back to FsCheck mechanism
 
 
 //--------------------------------------
 // Example
 
-type Customer() =
-    member val Name = "" with get, set
-    member val Age = 0 with get, set
-    member val DateJoined = DateTime.MinValue with get, set
-
-type Poco(name : string, age : int) =
+type Person(name : string, age : int) =
     member __.Name = name
     member __.Age = age
 
-type Foo<'T> =
-    {
-        Id : Guid
-        Poco : Poco
-        Value : 'T option
-        Data : Map<string, int>
-    }
+type Customer() =
+    member val Person = null with get, set
+    member val DateJoined = DateTime.MinValue with get, set
 
-//let gen = Arb.generate<Foo<Customer> list> // not supported
-let gen = mkGenerator<Foo<Customer> list> ()
+//let gen = Arb.generate<Customer list> // not supported
+let gen = mkGenerator<Customer list> ()
 
 Gen.sample 10 10 gen
