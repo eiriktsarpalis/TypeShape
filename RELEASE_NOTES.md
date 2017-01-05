@@ -1,3 +1,6 @@
+### 2.5
+* Staging bugfix.
+
 ### 2.4
 * Add RecType utility.
 * ShapePoco bugfixes.
