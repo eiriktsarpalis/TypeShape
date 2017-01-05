@@ -1,3 +1,7 @@
+### 2.4
+* Add RecType utility.
+* ShapePoco bugfixes.
+
 ### 2.3
 * Add Shape.Primitive active pattern.
 
