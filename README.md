@@ -10,6 +10,8 @@ The library uses reflection to derive the algebraic structure of a given
 `System.Type` instance and then applies a variant of the visitor pattern
 to provide relevant type information per shape.
 
+See my [slides](http://eiriktsarpalis.github.io/typeshape/) for a more thorough introduction to the concept.
+
 ### Installing
 
 To incorporate TypeShape in your project place the following line in your
