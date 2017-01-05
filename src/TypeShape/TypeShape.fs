@@ -1393,13 +1393,17 @@ type IShapePoco =
 /// Denotes any .NET type that is either a class or a struct
 and ShapePoco<'Poco> private () =
     let isStruct = typeof<'Poco>.IsValueType
-    let ctors =
-        typeof<'Poco>.GetConstructors(allInstanceMembers)
-        |> Array.map (fun c -> mkCtorUntyped<'Poco> c)
 
     let fields = 
         typeof<'Poco>.GetFields(allInstanceMembers)
         |> Array.map (fun f -> mkWriteMemberUntyped<'Poco> f.Name f [|f|])
+
+    let ctors =
+        typeof<'Poco>.GetConstructors(allInstanceMembers)
+        // filter any ctors that accept byrefs or pointers
+        |> Seq.filter (fun c -> c.GetParameters() |> Array.exists(fun p -> let t = p.ParameterType in t.IsPointer || t.IsByRef) |> not)
+        |> Seq.map (fun c -> mkCtorUntyped<'Poco> c)
+        |> Seq.toArray
 
     let properties =
         typeof<'Poco>.GetProperties(allInstanceMembers)
@@ -1931,8 +1935,15 @@ module Shape =
     /// Recognizes POCO shapes, .NET types that are either classes or structs
     let (|Poco|_|) (s : TypeShape) =
         if s.Type.IsClass || s.Type.IsValueType then
-            Activator.CreateInstanceGeneric<ShapePoco<_>>([|s.Type|], [||])
-            :?> IShapePoco
-            |> Some
+            let hasPointers = 
+                s.Type.GetFields allInstanceMembers 
+                |> Seq.map (fun f -> f.FieldType)
+                |> Seq.exists (fun t -> t.IsByRef || t.IsPointer)
+
+            if hasPointers then None // do not recognize if type has pointer fields
+            else
+                Activator.CreateInstanceGeneric<ShapePoco<_>>([|s.Type|], [||])
+                :?> IShapePoco
+                |> Some
         else
             None

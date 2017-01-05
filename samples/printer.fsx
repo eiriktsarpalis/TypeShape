@@ -2,15 +2,31 @@
 
 open System
 open TypeShape
+open TypeShape_Utils
+
+// Generic value printer with recursive type support
 
 let rec mkPrinter<'T> () : 'T -> string =
+    let state = new RecTypeManager()
+    mkPrinterCached<'T> state
+
+and mkPrinterCached<'T> (state : RecTypeManager) : 'T -> string =
+    match state.TryGetValue<'T -> string>() with
+    | Some p -> p
+    | None ->
+        let _ = state.Create<'T -> string>(fun f t -> f () t)
+        let r = mkPrinterAux<'T> state
+        state.Complete r
+        r
+
+and mkPrinterAux<'T> (state : RecTypeManager) : 'T -> string =
     let wrap(p : 'a -> string) = unbox<'T -> string> p
     let mkFieldPrinter (field : IShapeMember<'DeclaringType>) =
         field.Accept {
-            new IMemberVisitor<'DeclaringType, 'DeclaringType -> string * string> with
+            new IMemberVisitor<'DeclaringType, string * ('DeclaringType -> string)> with
                 member __.Visit(field : ShapeMember<'DeclaringType, 'Field>) =
-                    let fp = mkPrinter<'Field>()
-                    fun (r:'DeclaringType) -> field.Label, field.Project r |> fp
+                    let fp = mkPrinterCached<'Field> state
+                    field.Label, fun (r:'DeclaringType) -> field.Project r |> fp
         }
 
     match TypeShape.Create<'T>() with
@@ -24,24 +40,15 @@ let rec mkPrinter<'T> () : 'T -> string =
         s.Accept {
             new IFSharpOptionVisitor<'T -> string> with
                 member __.Visit<'a> () = // 'T = 'a option
-                    let tp = mkPrinter<'a>()
+                    let tp = mkPrinterCached<'a> state
                     wrap(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
-        }
-
-    | Shape.Tuple2 s ->
-        s.Accept {
-            new ITuple2Visitor<'T -> string> with
-                member __.Visit<'t1, 't2> () = // 'T = 't1 * 't2
-                    let tp = mkPrinter<'t1>()
-                    let sp = mkPrinter<'t2>()
-                    wrap(fun (t : 't1, s : 't2) -> sprintf "(%s, %s)" (tp t) (sp s))
         }
 
     | Shape.FSharpList s ->
         s.Accept {
             new IFSharpListVisitor<'T -> string> with
                 member __.Visit<'a> () = // 'T = 'a list
-                    let tp = mkPrinter<'a>()
+                    let tp = mkPrinterCached<'a> state
                     wrap(fun (ts : 'a list) -> ts |> Seq.map tp |> String.concat "; " |> sprintf "[%s]")
         }
 
@@ -49,7 +56,7 @@ let rec mkPrinter<'T> () : 'T -> string =
         s.Accept {
             new IArrayVisitor<'T -> string> with
                 member __.Visit<'a> _ = // 'T = 'a []
-                    let tp = mkPrinter<'a> ()
+                    let tp = mkPrinterCached<'a> state
                     wrap(fun (ts : 'a []) -> ts |> Seq.map tp |> String.concat "; " |> sprintf "[|%s|]")
         }
 
@@ -57,7 +64,7 @@ let rec mkPrinter<'T> () : 'T -> string =
         s.Accept {
             new IFSharpSetVisitor<'T -> string> with
                 member __.Visit<'a when 'a : comparison> () =  // 'T = Set<'a>
-                    let tp = mkPrinter<'a>()
+                    let tp = mkPrinterCached<'a> state
                     wrap(fun (s : Set<'a>) -> s |> Seq.map tp |> String.concat "; " |> sprintf "set [%s]")
         }
 
@@ -68,7 +75,7 @@ let rec mkPrinter<'T> () : 'T -> string =
                     let elemPrinters = s.Elements |> Array.map mkFieldPrinter
                     wrap(fun (t:'Tuple) ->
                         elemPrinters
-                        |> Seq.map (fun ep -> let _,value = ep t in value)
+                        |> Seq.map (fun (_,ep) -> let value = ep t in value)
                         |> String.concat ", "
                         |> sprintf "(%s)")
         }
@@ -80,7 +87,7 @@ let rec mkPrinter<'T> () : 'T -> string =
                     let fieldPrinters = s.Fields |> Array.map mkFieldPrinter
                     wrap(fun (r:'Record) ->
                         fieldPrinters
-                        |> Seq.map (fun ep -> let label, value = ep r in sprintf "%s = %s" label value)
+                        |> Seq.map (fun (label, ep) -> let value = ep r in sprintf "%s = %s" label value)
                         |> String.concat "; "
                         |> sprintf "{ %s }")
         }
@@ -94,10 +101,10 @@ let rec mkPrinter<'T> () : 'T -> string =
                         fun (u:'Union) -> 
                             match fieldPrinters with
                             | [||] -> s.CaseInfo.Name
-                            | [|fp|] -> sprintf "%s %s" s.CaseInfo.Name (fp u |> snd)
+                            | [|_,fp|] -> sprintf "%s %s" s.CaseInfo.Name (fp u)
                             | fps ->
                                 fps
-                                |> Seq.map (fun fp -> fp u |> snd)
+                                |> Seq.map (fun (_,fp) -> fp u)
                                 |> String.concat ", "
                                 |> sprintf "%s(%s)" s.CaseInfo.Name
 
@@ -136,3 +143,16 @@ p2 value
 for i = 1 to 1000 do ignore <| p1 value
 // Real: 00:00:00.017, CPU: 00:00:00.015, GC gen0: 3, gen1: 0, gen2: 0
 for i = 1 to 1000 do ignore <| p2 value
+
+
+//
+//  Recursive types
+//
+
+type Peano = Z | S of Peano
+
+let rec int2Peano = function 0 -> Z | n -> S(int2Peano(n-1))
+
+let printer = mkPrinter<Peano>()
+
+int2Peano 10 |> printer

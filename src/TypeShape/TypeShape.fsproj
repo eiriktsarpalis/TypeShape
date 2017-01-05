@@ -82,6 +82,7 @@
   <Import Project="..\..\.paket\paket.targets" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Utils.fs" />
     <Compile Include="TypeShape.fs" />
     <Compile Include="ISerializableExtensions.fs" />
     <Compile Include="StagingExtensions.fs" />
