@@ -84,8 +84,10 @@ module Expr =
     /// expands a collection of computations
     /// into a sequenced expression
     let seq (comps : Expr<unit> []) : Expr<unit> =
-        if Array.isEmpty comps then <@ () @>
-        else
+        match comps with
+        | [||] -> <@ () @>
+        | [|c|] -> c
+        | _ ->
             Array.foldBack 
                 (fun c s -> <@ %c ; %s @>) 
                 comps.[..comps.Length - 2] comps.[comps.Length - 1]
