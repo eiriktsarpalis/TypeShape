@@ -6,7 +6,13 @@ open TypeShape
 
 let rec gmapQ<'T,'S,'U> (f : 'T -> 'S) : 'U -> 'S list =
     let wrap(f : 'a -> 'S list) = unbox<'U -> 'S list> f
-    match TypeShape.Create<'U>() :> TypeShape with
+
+    let gmapQMember (shape : IShapeMember<'a>) =
+        shape.Accept { new IMemberVisitor<'a, 'a -> 'S list> with
+            member __.Visit (shape : ShapeMember<'a, 'f>) =
+                gmapQ<'T, 'S, 'f> f << shape.Project }
+
+    match shapeof<'U> :> TypeShape with
     | :? TypeShape<'T> -> wrap(fun (t:'T) -> [f t])
     | Shape.FSharpOption s ->
         s.Accept {
@@ -16,23 +22,12 @@ let rec gmapQ<'T,'S,'U> (f : 'T -> 'S) : 'U -> 'S list =
                     wrap(function None -> [] | Some t -> tm t)
         }
 
-    | Shape.Tuple2 s ->
+    | Shape.Array s when s.Rank = 1 ->
         s.Accept {
-            new ITuple2Visitor<'U -> 'S list> with
-                member __.Visit<'a,'b>() =
-                    let am = gmapQ<'T,'S,'a> f
-                    let bm = gmapQ<'T,'S,'b> f
-                    wrap(fun (a,b) -> am a @ bm b)
-        }
-
-    | Shape.Tuple3 s ->
-        s.Accept {
-            new ITuple3Visitor<'U -> 'S list> with
-                member __.Visit<'a,'b,'c>() =
-                    let am = gmapQ<'T,'S,'a> f
-                    let bm = gmapQ<'T,'S,'b> f
-                    let cm = gmapQ<'T,'S,'c> f
-                    wrap(fun (a,b,c) -> am a @ bm b @ cm c)
+            new IArrayVisitor<'U -> 'S list> with
+                member __.Visit<'a> _ =
+                    let tm = gmapQ<'T, 'S, 'a> f
+                    wrap(fun (ts : 'a []) -> ts |> Seq.collect tm |> Seq.toList)
         }
 
     | Shape.FSharpList s ->
@@ -51,9 +46,37 @@ let rec gmapQ<'T,'S,'U> (f : 'T -> 'S) : 'U -> 'S list =
                     wrap(fun (ts : Set<'a>) -> ts |> Seq.collect tm |> Seq.toList)
         }
 
+    | Shape.Tuple (:? ShapeTuple<'U> as shape) ->
+        let eMappers = shape.Elements |> Seq.map gmapQMember |> Seq.toList
+        fun (u:'U) -> eMappers |> List.collect (fun m -> m u)
+
+    | Shape.FSharpRecord (:? ShapeFSharpRecord<'U> as shape) ->
+        let fMappers = shape.Fields |> Seq.map gmapQMember |> Seq.toList
+        fun (u:'U) -> fMappers |> List.collect (fun m -> m u)
+
+    | Shape.FSharpUnion (:? ShapeFSharpUnion<'U> as shape) ->
+        let umappers = 
+            shape.UnionCases 
+            |> Array.map (fun uc -> uc.Fields |> Seq.map gmapQMember |> Seq.toList)
+
+        fun (u:'U) ->
+            let tag = shape.GetTag u
+            umappers.[tag] |> List.collect (fun m -> m u)
+
     | s -> 
         s.Accept { new ITypeShapeVisitor<'U -> 'S list> with
             member __.Visit<'a>() = wrap(fun (_:'a) -> []) }
 
+
+// examples
+
 gmapQ id<int> (Some 42, ([1 .. 10], set[5;6;7]))
 gmapQ id<string> (Some 42, ([1 .. 10], "42", set[5;6;7]))
+
+
+type Foo = A | B of int | C of int * string
+type Bar = { Foo : Foo ; A : int ; B : string }
+
+let value = { Foo = C(2,"2") ; A = 1 ; B = "1" }
+gmapQ id<int> value
+gmapQ id<string> value
