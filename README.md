@@ -144,9 +144,11 @@ Similarly, we could also add support for arbitrary F# unions:
         let cases : ShapeFSharpUnionCase<'T> [] = s.UnionCases // all union cases
         let mkUnionCasePrinter (case : ShapeFSharpUnionCase<'T>) =
             let fieldPrinters = case.Fields |> Array.map mkMemberPrinter
-            (fun (u:'Union) -> 
-                let csvs = fieldPrinters |> Seq.map (fun f -> f r) |> String.concat ", "
-                sprintf "%s(%s)" case.CaseInfo.Name csvs)
+            fun (u:'Union) -> 
+                fieldPrinters 
+                |> Seq.map (fun f -> f r) 
+                |> String.concat ", "
+                |> sprintf "%s(%s)" case.CaseInfo.Name
 
         let casePrinters = cases |> Array.map mkUnionCasePrinter // generate printers for all union cases
         fun (u:'T) ->
