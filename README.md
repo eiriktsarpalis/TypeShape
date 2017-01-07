@@ -153,7 +153,7 @@ Similarly, we could also add support for arbitrary F# unions:
         let casePrinters = cases |> Array.map mkUnionCasePrinter // generate printers for all union cases
         fun (u:'T) ->
             let tag : int = s.GetTag u // get the underlying tag for the union case
-            casePrinters.[tag] u)
+            casePrinters.[tag] u
 ```
 Similar active patterns exist for classes with settable properties and general POCOs.
 
