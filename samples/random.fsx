@@ -16,7 +16,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
                 let rf = mkGenerator<'Field>()
                 gen { let! f = rf in return fun dt -> shape.Inject dt f } }
 
-    match TypeShape.Create<'T>() with
+    match shapeof<'T> with
     | Shape.Primitive -> wrap Arb.generate<'T>
     | Shape.Unit -> wrap Arb.generate<unit>
     | Shape.String -> wrap Arb.generate<string>
@@ -79,71 +79,56 @@ let rec mkGenerator<'T> () : Gen<'T> =
                     wrap(kvG |> Gen.map Map.ofList)
         }
 
-    | Shape.Tuple s ->
-        s.Accept { new ITupleVisitor<Gen<'T>> with
-            member __.Visit (shape : ShapeTuple<'Tuple>) =
-                let eGens = shape.Elements |> Array.map mkRandomMember
-                gen {
-                    let mutable target = shape.CreateUninitialized()
-                    for eg in eGens do let! u = eg in target <- u target
-                    return target
-                } |> wrap
+    | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
+        let eGens = shape.Elements |> Array.map mkRandomMember
+        gen {
+            let mutable target = shape.CreateUninitialized()
+            for eg in eGens do let! u = eg in target <- u target
+            return target
         }
 
-    | Shape.FSharpRecord s ->
-        s.Accept { new IFSharpRecordVisitor<Gen<'T>> with
-            member __.Visit (shape : ShapeFSharpRecord<'Record>) =
-                let fieldGen = shape.Fields |> Array.map mkRandomMember
-                gen {
-                    let mutable target = shape.CreateUninitialized()
-                    for eg in fieldGen do let! u = eg in target <- u target
-                    return target
-                } |> wrap
+    | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
+        let fieldGen = shape.Fields |> Array.map mkRandomMember
+        gen {
+            let mutable target = shape.CreateUninitialized()
+            for eg in fieldGen do let! u = eg in target <- u target
+            return target
         }
 
-    | Shape.FSharpUnion s ->
-        s.Accept { new IFSharpUnionVisitor<Gen<'T>> with
-            member __.Visit (shape : ShapeFSharpUnion<'Union>) =
-                let caseFieldGen = shape.UnionCases |> Array.map (fun uc -> uc.Fields |> Array.map mkRandomMember)
-                gen {
-                    let! tag = Gen.choose(0, caseFieldGen.Length - 1)
-                    let mutable u = shape.UnionCases.[tag].CreateUninitialized()
-                    for f in caseFieldGen.[tag] do let! uf = f in u <- uf u
-                    return u
-                } |> wrap
+    | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
+        let caseFieldGen = shape.UnionCases |> Array.map (fun uc -> uc.Fields |> Array.map mkRandomMember)
+        gen {
+            let! tag = Gen.choose(0, caseFieldGen.Length - 1)
+            let mutable u = shape.UnionCases.[tag].CreateUninitialized()
+            for f in caseFieldGen.[tag] do let! uf = f in u <- uf u
+            return u
         }
 
-    | Shape.CliMutable s ->
-        s.Accept { new ICliMutableVisitor<Gen<'T>> with
-            member __.Visit (shape : ShapeCliMutable<'Class>) =
-                let propGen = shape.Properties |> Array.map mkRandomMember
-                gen {
-                    let mutable target = shape.CreateUninitialized()
-                    for ep in propGen do let! up = ep in target <- up target
-                    return target
-                } |> wrap
+    | Shape.CliMutable (:? ShapeCliMutable<'T> as shape) ->
+        let propGen = shape.Properties |> Array.map mkRandomMember
+        gen {
+            let mutable target = shape.CreateUninitialized()
+            for ep in propGen do let! up = ep in target <- up target
+            return target
         }
 
-    | Shape.Poco s ->
-        s.Accept { new IPocoVisitor<Gen<'T>> with
-            member __.Visit (shape : ShapePoco<'Poco>) =
-                let bestCtor =
-                    shape.Constructors 
-                    |> Seq.filter (fun c -> c.IsPublic) 
-                    |> Seq.sortBy (fun c -> c.Arity) 
-                    |> Seq.tryFind (fun _ -> true)
+    | Shape.Poco (:? ShapePoco<'T> as shape) ->
+        let bestCtor =
+            shape.Constructors 
+            |> Seq.filter (fun c -> c.IsPublic) 
+            |> Seq.sortBy (fun c -> c.Arity) 
+            |> Seq.tryFind (fun _ -> true)
 
-                match bestCtor with
-                | None -> failwithf "Class %O lacking an appropriate ctor" typeof<'Poco>
-                | Some ctor ->
+        match bestCtor with
+        | None -> failwithf "Class %O lacking an appropriate ctor" typeof<'T>
+        | Some ctor ->
 
-                ctor.Accept { new IConstructorVisitor<'CtorParams, Gen<'T>> with
-                    member __.Visit<'CtorParams> (ctor : ShapeConstructor<'Poco, 'CtorParams>) =
-                        let paramGen = mkGenerator<'CtorParams>()
-                        gen {
-                            let! args = paramGen
-                            return ctor.Invoke args
-                        } |> wrap
+        ctor.Accept { new IConstructorVisitor<'T, Gen<'T>> with
+            member __.Visit<'CtorParams> (ctor : ShapeConstructor<'T, 'CtorParams>) =
+                let paramGen = mkGenerator<'CtorParams>()
+                gen {
+                    let! args = paramGen
+                    return ctor.Invoke args
                 }
         }
 

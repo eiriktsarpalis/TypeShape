@@ -26,10 +26,10 @@ and mkPrinterAux<'T> (state : RecTypeManager) : 'T -> string =
             new IMemberVisitor<'DeclaringType, string * ('DeclaringType -> string)> with
                 member __.Visit(field : ShapeMember<'DeclaringType, 'Field>) =
                     let fp = mkPrinterCached<'Field> state
-                    field.Label, fun (r:'DeclaringType) -> field.Project r |> fp
+                    field.Label, fp << field.Project
         }
 
-    match TypeShape.Create<'T>() with
+    match shapeof<'T> with
     | Shape.Unit -> wrap(fun () -> "()") // 'T = unit
     | Shape.Bool -> wrap(sprintf "%b") // 'T = bool
     | Shape.Byte -> wrap(fun (b:byte) -> sprintf "%duy" b) // 'T = byte
@@ -68,51 +68,39 @@ and mkPrinterAux<'T> (state : RecTypeManager) : 'T -> string =
                     wrap(fun (s : Set<'a>) -> s |> Seq.map tp |> String.concat "; " |> sprintf "set [%s]")
         }
 
-    | Shape.Tuple s ->
-        s.Accept {
-            new ITupleVisitor<'T -> string> with
-                member __.Visit (s : ShapeTuple<'Tuple>) = // 'Tuple = 'T
-                    let elemPrinters = s.Elements |> Array.map mkFieldPrinter
-                    wrap(fun (t:'Tuple) ->
-                        elemPrinters
-                        |> Seq.map (fun (_,ep) -> let value = ep t in value)
-                        |> String.concat ", "
-                        |> sprintf "(%s)")
-        }
+    | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
+        let elemPrinters = shape.Elements |> Array.map mkFieldPrinter
+        fun (t:'T) ->
+            elemPrinters
+            |> Seq.map (fun (_,ep) -> let value = ep t in value)
+            |> String.concat ", "
+            |> sprintf "(%s)"
 
-    | Shape.FSharpRecord s ->
-        s.Accept {
-            new IFSharpRecordVisitor<'T -> string> with
-                member __.Visit (s : ShapeFSharpRecord<'Record>) = // 'Record = 'T
-                    let fieldPrinters = s.Fields |> Array.map mkFieldPrinter
-                    wrap(fun (r:'Record) ->
-                        fieldPrinters
-                        |> Seq.map (fun (label, ep) -> let value = ep r in sprintf "%s = %s" label value)
-                        |> String.concat "; "
-                        |> sprintf "{ %s }")
-        }
+    | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
+        let fieldPrinters = shape.Fields |> Array.map mkFieldPrinter
+        fun (r:'T) ->
+            fieldPrinters
+            |> Seq.map (fun (label, ep) -> let value = ep r in sprintf "%s = %s" label value)
+            |> String.concat "; "
+            |> sprintf "{ %s }"
 
-    | Shape.FSharpUnion s ->
-        s.Accept {
-            new IFSharpUnionVisitor<'T -> string> with
-                member __.Visit (s : ShapeFSharpUnion<'Union>) = // 'Union = 'T
-                    let mkUnionCasePrinter (s : ShapeFSharpUnionCase<'Union>) =
-                        let fieldPrinters = s.Fields |> Array.map mkFieldPrinter
-                        fun (u:'Union) -> 
-                            match fieldPrinters with
-                            | [||] -> s.CaseInfo.Name
-                            | [|_,fp|] -> sprintf "%s %s" s.CaseInfo.Name (fp u)
-                            | fps ->
-                                fps
-                                |> Seq.map (fun (_,fp) -> fp u)
-                                |> String.concat ", "
-                                |> sprintf "%s(%s)" s.CaseInfo.Name
+    | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
+        let mkUnionCasePrinter (s : ShapeFSharpUnionCase<'T>) =
+            let fieldPrinters = s.Fields |> Array.map mkFieldPrinter
+            fun (u:'T) -> 
+                match fieldPrinters with
+                | [||] -> s.CaseInfo.Name
+                | [|_,fp|] -> sprintf "%s %s" s.CaseInfo.Name (fp u)
+                | fps ->
+                    fps
+                    |> Seq.map (fun (_,fp) -> fp u)
+                    |> String.concat ", "
+                    |> sprintf "%s(%s)" s.CaseInfo.Name
 
-                    let casePrinters = s.UnionCases |> Array.map mkUnionCasePrinter
-                    wrap(fun (u:'Union) -> 
-                        let printer = casePrinters.[s.GetTag u]
-                        printer u)
-        }
+        let casePrinters = shape.UnionCases |> Array.map mkUnionCasePrinter
+        fun (u:'T) -> 
+            let printer = casePrinters.[shape.GetTag u]
+            printer u
 
     | _ -> failwithf "unsupported type '%O'" typeof<'T>
 

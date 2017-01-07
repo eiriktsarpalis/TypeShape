@@ -19,7 +19,7 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
                     fcmp (shape.ProjectExpr dt) 
                          (shape.ProjectExpr dt') }
 
-    match TypeShape.Create<'T> () with
+    match shapeof<'T> with
     | Shape.Unit -> wrap(fun (_: Expr<unit>) _ -> <@ true @>)
     | Shape.Bool -> wrap(fun (b: Expr<bool>) b' -> <@ %b = %b' @>)
     | Shape.Int32 -> wrap(fun (n: Expr<int>) n' -> <@ %n = %n' @>)
@@ -71,54 +71,48 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
                         aux %ts %ts'
                     @> ) }
 
-    | Shape.Tuple s ->
-        s.Accept { new ITupleVisitor<CmpExpr<'T>> with
-            member __.Visit (shape : ShapeTuple<'Tuple>) =
-                let elemCmps = shape.Elements |> Array.map stageMemberCmp
-                wrap (fun t1 t2 ->
-                    <@
-                        let t1 = %t1
-                        let t2 = %t2
-                        (% Expr.lam2 (fun t1 t2 ->
-                            elemCmps 
-                            |> Array.map (fun ec -> ec t1 t2)
-                            |> Expr.forall)) t1 t2 @>)}
+    | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
+        let elemCmps = shape.Elements |> Array.map stageMemberCmp
+        fun t1 t2 ->
+            <@
+                let t1 = %t1
+                let t2 = %t2
+                (% Expr.lam2 (fun t1 t2 ->
+                    elemCmps 
+                    |> Array.map (fun ec -> ec t1 t2)
+                    |> Expr.forall)) t1 t2 @>
 
-    | Shape.FSharpRecord s ->
-        s.Accept { new IFSharpRecordVisitor<CmpExpr<'T>> with
-            member __.Visit (shape : ShapeFSharpRecord<'Record>) =
-                let fldCmps = shape.Fields |> Array.map stageMemberCmp
-                wrap (fun r1 r2 ->
-                    <@
-                        let r1 = %r1
-                        let r2 = %r2
-                        (% Expr.lam2 (fun r1 r2 ->
-                            fldCmps
-                            |> Array.map (fun ec -> ec r1 r2)
-                            |> Expr.forall)) r1 r2 @>) }
+    | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
+        let fldCmps = shape.Fields |> Array.map stageMemberCmp
+        fun r1 r2 ->
+            <@
+                let r1 = %r1
+                let r2 = %r2
+                (% Expr.lam2 (fun r1 r2 ->
+                    fldCmps
+                    |> Array.map (fun ec -> ec r1 r2)
+                    |> Expr.forall)) r1 r2 @>
 
-    | Shape.FSharpUnion s ->
-        s.Accept { new IFSharpUnionVisitor<CmpExpr<'T>> with
-            member __.Visit (shape : ShapeFSharpUnion<'Union>) =
-                let stageUnionCaseCmp (case : ShapeFSharpUnionCase<'Union>) =
-                    let fldCmps = case.Fields |> Array.map stageMemberCmp
-                    fun u1 u2 ->
-                        fldCmps
-                        |> Array.map (fun ec -> ec u1 u2)
-                        |> Expr.forall
+    | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
+        let stageUnionCaseCmp (case : ShapeFSharpUnionCase<'T>) =
+            let fldCmps = case.Fields |> Array.map stageMemberCmp
+            fun u1 u2 ->
+                fldCmps
+                |> Array.map (fun ec -> ec u1 u2)
+                |> Expr.forall
 
-                let unionCaseCmps = shape.UnionCases |> Array.map stageUnionCaseCmp
+        let unionCaseCmps = shape.UnionCases |> Array.map stageUnionCaseCmp
 
-                wrap(fun u1 u2 ->
-                    let caseCmps = unionCaseCmps |> Array.map (fun cmp -> cmp u1 u2)
-                    <@
-                        let u1 = %u1
-                        let u2 = %u2
-                        let tag1 = (% Expr.lam shape.GetTagExpr) u1
-                        let tag2 = (% Expr.lam shape.GetTagExpr) u2
-                        if tag1 <> tag2 then false else
-                        (% Expr.lam (fun tag -> Expr.switch tag caseCmps)) tag1
-                    @> ) }
+        fun u1 u2 ->
+            let caseCmps = unionCaseCmps |> Array.map (fun cmp -> cmp u1 u2)
+            <@
+                let u1 = %u1
+                let u2 = %u2
+                let tag1 = (% Expr.lam shape.GetTagExpr) u1
+                let tag2 = (% Expr.lam shape.GetTagExpr) u2
+                if tag1 <> tag2 then false else
+                (% Expr.lam (fun tag -> Expr.switch tag caseCmps)) tag1
+            @>
 
     | _ -> failwithf "Unsupported shape %O" typeof<'T>
 

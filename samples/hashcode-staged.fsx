@@ -20,7 +20,7 @@ let rec stageHasher<'T> () : HashExpr<'T> =
                 let fhash = stageHasher<'FieldType>()
                 fun dt -> fhash(shape.ProjectExpr dt) }
 
-    match TypeShape.Create<'T> () with
+    match shapeof<'T> with
     | Shape.Unit -> wrap(fun (_: Expr<unit>) -> <@ 0 @>)
     | Shape.Bool -> wrap(fun (b: Expr<bool>) -> <@ if %b then 1 else 0 @>)
     | Shape.Int32 -> wrap(fun (n: Expr<int>) -> <@ %n @>)
@@ -69,59 +69,53 @@ let rec stageHasher<'T> () : HashExpr<'T> =
                         agg
                     @> ) }
 
-    | Shape.Tuple s ->
-        s.Accept { new ITupleVisitor<HashExpr<'T>> with
-            member __.Visit (shape : ShapeTuple<'Tuple>) =
-                wrap (fun (tuple : Expr<'Tuple>) ->
-                    let mkElementHasher tuple =
-                        shape.Elements
-                        |> Array.map (fun e -> stageMemberHash e tuple)
-                        |> Array.map (fun eh agg -> combineHash eh agg)
-                        |> Expr.update ("agg", <@ 0 @>)
+    | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
+        fun (tuple : Expr<'T>) ->
+            let mkElementHasher tuple =
+                shape.Elements
+                |> Array.map (fun e -> stageMemberHash e tuple)
+                |> Array.map (fun eh agg -> combineHash eh agg)
+                |> Expr.update ("agg", <@ 0 @>)
 
-                    <@
-                        let tuple = %tuple
-                        (% Expr.lam mkElementHasher) tuple
-                    @>) }
+            <@
+                let tuple = %tuple
+                (% Expr.lam mkElementHasher) tuple
+            @>
 
-    | Shape.FSharpRecord s ->
-        s.Accept { new IFSharpRecordVisitor<HashExpr<'T>> with
-            member __.Visit (shape : ShapeFSharpRecord<'Record>) =
-                wrap (fun (record : Expr<'Record>) ->
-                    let mkFieldHasher record =
-                        shape.Fields
-                        |> Array.map (fun e -> stageMemberHash e record)
-                        |> Array.map (fun eh agg -> combineHash eh agg)
-                        |> Expr.update ("agg", <@ 0 @>)
-                            
-                    <@
-                        let record = %record
-                        (% Expr.lam mkFieldHasher) record
-                    @> )}
-
-    | Shape.FSharpUnion s ->
-        s.Accept { new IFSharpUnionVisitor<HashExpr<'T>> with
-            member __.Visit (shape : ShapeFSharpUnion<'Union>) =
-                wrap(fun (u : Expr<'Union>) ->
-                    let stageUnionCaseHasher 
-                        (union : Expr<'Union>) (tag : Expr<int>)
-                        (case : ShapeFSharpUnionCase<'Union>) =
+    | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
+        fun (record : Expr<'T>) ->
+            let mkFieldHasher record =
+                shape.Fields
+                |> Array.map (fun e -> stageMemberHash e record)
+                |> Array.map (fun eh agg -> combineHash eh agg)
+                |> Expr.update ("agg", <@ 0 @>)
                     
-                        case.Fields
-                        |> Array.map (fun c -> stageMemberHash c union)
-                        |> Array.map (fun fh agg -> combineHash fh agg)
-                        |> Expr.update ("agg", tag)
+            <@
+                let record = %record
+                (% Expr.lam mkFieldHasher) record
+            @>
 
-                    let stageUnionCaseHashers (u : Expr<'Union>) (tag : Expr<int>) =
-                        shape.UnionCases
-                        |> Array.map (stageUnionCaseHasher u tag)
-                        |> Expr.switch tag
+    | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
+        fun (u : Expr<'T>) ->
+            let stageUnionCaseHasher 
+                (union : Expr<'T>) (tag : Expr<int>)
+                (case : ShapeFSharpUnionCase<'T>) =
+            
+                case.Fields
+                |> Array.map (fun c -> stageMemberHash c union)
+                |> Array.map (fun fh agg -> combineHash fh agg)
+                |> Expr.update ("agg", tag)
 
-                    <@
-                        let union = %u
-                        let tag = (% Expr.lam shape.GetTagExpr) union
-                        (% Expr.lam2 stageUnionCaseHashers) union tag  
-                    @> )}
+            let stageUnionCaseHashers (u : Expr<'T>) (tag : Expr<int>) =
+                shape.UnionCases
+                |> Array.map (stageUnionCaseHasher u tag)
+                |> Expr.switch tag
+
+            <@
+                let union = %u
+                let tag = (% Expr.lam shape.GetTagExpr) union
+                (% Expr.lam2 stageUnionCaseHashers) union tag  
+            @>
 
     | _ -> failwithf "Unsupported shape %O" typeof<'T>
 
