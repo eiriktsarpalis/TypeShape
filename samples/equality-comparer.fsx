@@ -30,7 +30,7 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
                 for ec in memberComps do hash <- combine hash (ec.GetHashCode d)
                 hash }
 
-    match TypeShape.Create<'T>() with
+    match shapeof<'T> with
     | Shape.Unit -> wrap (fun () -> 0) (fun () () -> true)
     | Shape.Bool -> wrap (function false -> 0 | true -> 1) (=)
     | Shape.Byte -> wrap (fun (b:byte) -> int b) (=)
@@ -96,36 +96,6 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
                     wrap hash equals    
         }
 
-    | Shape.Tuple s ->
-        s.Accept {
-            new ITupleVisitor<IEqualityComparer<'T>> with
-                member __.Visit (shape : ShapeTuple<'Tuple>) =
-                    mkMembersComparer shape.Elements |> unbox
-        }
-
-    | Shape.FSharpRecord s ->
-        s.Accept {
-            new IFSharpRecordVisitor<IEqualityComparer<'T>> with
-                member __.Visit (shape : ShapeFSharpRecord<'Record>) =
-                    mkMembersComparer shape.Fields |> unbox
-        }
-
-    | Shape.FSharpUnion s ->
-        s.Accept {
-            new IFSharpUnionVisitor<IEqualityComparer<'T>> with
-                member __.Visit (shape : ShapeFSharpUnion<'Union>) =
-                    let unionCaseComparers = shape.UnionCases |> Array.map (fun uc -> mkMembersComparer uc.Fields)
-                    { new IEqualityComparer<'Union> with
-                        member __.Equals (u1,u2) =
-                            match shape.GetTag u1, shape.GetTag u2 with
-                            | t1, t2 when t1 <> t2 -> false
-                            | tag, _ -> unionCaseComparers.[tag].Equals(u1,u2)
-
-                        member __.GetHashCode u = 
-                            let tag = shape.GetTag u
-                            combine tag (unionCaseComparers.[tag].GetHashCode u) } |> unbox
-        }
-
     | Shape.FSharpSet s ->
         s.Accept {
             new IFSharpSetVisitor<IEqualityComparer<'T>> with
@@ -150,6 +120,24 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
 
                     wrap hash equals
         }
+
+    | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
+        mkMembersComparer shape.Elements
+
+    | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
+        mkMembersComparer shape.Fields
+
+    | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
+        let unionCaseComparers = shape.UnionCases |> Array.map (fun uc -> mkMembersComparer uc.Fields)
+        { new IEqualityComparer<'T> with
+            member __.Equals (u1,u2) =
+                match shape.GetTag u1, shape.GetTag u2 with
+                | t1, t2 when t1 <> t2 -> false
+                | tag, _ -> unionCaseComparers.[tag].Equals(u1,u2)
+
+            member __.GetHashCode u = 
+                let tag = shape.GetTag u
+                combine tag (unionCaseComparers.[tag].GetHashCode u) }
 
     | _ -> failwithf "unsupported type '%O'" typeof<'T>
 

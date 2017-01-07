@@ -19,7 +19,7 @@ and private aux<'T> () : unit -> 'T =
                 fun inst -> shape.Inject inst (fe ())
         }
 
-    match TypeShape.Create<'T>() with
+    match shapeof<'T> with
     | Shape.Primitive -> fun () -> Unchecked.defaultof<'T>
     | Shape.Decimal -> wrap(fun () -> 0M)
     | Shape.BigInt -> wrap(fun () -> 0I)
@@ -82,30 +82,30 @@ and private aux<'T> () : unit -> 'T =
         s.Accept { new IFSharpMapVisitor<unit -> 'T> with
             member __.Visit<'k, 'v when 'k : comparison>() = wrap(fun () -> Map.empty<'k,'v>) } // 'T = Map<'k,'v>
 
-    | Shape.Tuple s ->
-        s.Accept { new ITupleVisitor<unit -> 'T> with
-            member __.Visit (shape : ShapeTuple<'Tuple>) = // 'T = 'Tuple
-                let elemInitializers = shape.Elements |> Array.map mkMemberInitializer
-                wrap(fun () ->
-                    let mutable inst = shape.CreateUninitialized()
-                    for f in elemInitializers do inst <- f inst
-                    inst) }
+    | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
+        let elemInitializers = shape.Elements |> Array.map mkMemberInitializer
+        fun () ->
+            let mutable inst = shape.CreateUninitialized()
+            for f in elemInitializers do inst <- f inst
+            inst
 
+    | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
+        let fieldInitializers = shape.Fields |> Array.map mkMemberInitializer
+        fun () ->
+            let mutable inst = shape.CreateUninitialized()
+            for f in fieldInitializers do inst <- f inst
+            inst
 
-    | Shape.FSharpRecord s ->
-        s.Accept { new IFSharpRecordVisitor<unit -> 'T> with
-            member __.Visit (shape : ShapeFSharpRecord<'Record>) = // 'T = 'Record
-                let fieldInitializers = shape.Fields |> Array.map mkMemberInitializer
-                wrap(fun () ->
-                    let mutable inst = shape.CreateUninitialized()
-                    for f in fieldInitializers do inst <- f inst
-                    inst) }
+    | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
+        let defaultUnionCase = shape.UnionCases |> Array.minBy (fun c -> c.Fields.Length)
+        let fieldInitializers = defaultUnionCase.Fields |> Array.map mkMemberInitializer
+        fun () ->
+            let mutable inst = defaultUnionCase.CreateUninitialized()
+            for f in fieldInitializers do inst <- f inst
+            inst
 
-    | Shape.CliMutable s ->
-        s.Accept { new ICliMutableVisitor<unit -> 'T> with
-            member __.Visit (shape : ShapeCliMutable<'Class>) = // 'T = 'Class
-                wrap(fun () -> shape.CreateUninitialized())
-        }
+    | Shape.CliMutable (:? ShapeCliMutable<'T> as shape) ->
+        fun () -> shape.CreateUninitialized()
 
     | _ -> failwithf "Type '%O' does not support empty values." typeof<'T>
 
