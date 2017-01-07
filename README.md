@@ -33,7 +33,7 @@ open TypeShape
 
 let rec mkPrinter<'T> () : 'T -> string =
     let wrap(p : 'a -> string) = unbox<'T -> string> p
-    match TypeShape.Create<'T>() with
+    match shapeof<'T> with
     | Shape.Unit -> wrap(fun () -> "()")
     | Shape.Bool -> wrap(sprintf "%b")
     | Shape.Byte -> wrap(fun (b:byte) -> sprintf "%duy" b)
@@ -124,31 +124,34 @@ let mkMemberPrinter (shape : IShapeMember<'DeclaringType>) =
            let fieldPrinter = mkPrinter<'Field>()
            fieldPrinter << shape.Project }
 ```
-The for F# records:
+Then for F# records:
 ```fsharp
-    | Shape.FSharpRecord s ->
-        s.Accept { new IFSharpRecordVisitor<'T -> string> with
-            member __.Visit (s : ShapeFSharpRecord<'Record>) =
-                let fieldPrinters : ('Record -> string) [] = s.Fields |> Array.map mkMemberPrinter
-                let labels : string [] = s.Fields |> Array.map (fun f -> f.Label)
-                wrap(fun (r:'Record) -> sprintf "{ %s = %s }" labels.[0] (fieldPrinters.[0] r)) }
+    match shapeof<'T> with
+    | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
+        let fieldPrinters : (string * ('T -> string)) [] = 
+            s.Fields |> Array.map (fun f -> f.Label, mkMemberPrinter f)
+
+        fun (r:'T) ->
+            fieldPrinters
+            |> Seq.map (fun (label, fp) -> sprintf "%s = %s" label (fp r))
+            |> String.concat "; "
+            |> sprintf "{ %s }"
 ```
 Similarly, we could also add support for arbitrary F# unions:
 ```fsharp
-    | Shape.FSharpUnion s ->
-        s.Accept { new IFSharpUnionVisitor<'T -> string> with
-            member __.Visit (s : ShapeFSharpUnion<'Union>) =
-                let cases : ShapeFSharpUnionCase<'Union> [] = s.UnionCases // all union cases
-                let mkUnionCasePrinter (case : ShapeFSharpUnionCase<'Union>) =
-                    let fieldPrinters = case.Fields |> Array.map mkMemberPrinter
-                    (fun (u:'Union) -> 
-                        let csvs = fieldPrinters |> Seq.map (fun f -> f r) |> String.concat ", "
-                        sprintf "%s(%s)" case.CaseInfo.Name csvs)
+    match shapeof<'T> with
+    | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
+        let cases : ShapeFSharpUnionCase<'T> [] = s.UnionCases // all union cases
+        let mkUnionCasePrinter (case : ShapeFSharpUnionCase<'T>) =
+            let fieldPrinters = case.Fields |> Array.map mkMemberPrinter
+            (fun (u:'Union) -> 
+                let csvs = fieldPrinters |> Seq.map (fun f -> f r) |> String.concat ", "
+                sprintf "%s(%s)" case.CaseInfo.Name csvs)
 
-                let casePrinters = cases |> Array.map mkUnionCasePrinter // generate printers for all union cases
-                wrap(fun (u:'Union) ->
-                    let tag : int = s.GetTag u // get the underlying tag for the union case
-                    casePrinters.[tag] u) }
+        let casePrinters = cases |> Array.map mkUnionCasePrinter // generate printers for all union cases
+        fun (u:'T) ->
+            let tag : int = s.GetTag u // get the underlying tag for the union case
+            casePrinters.[tag] u)
 ```
 Similar active patterns exist for classes with settable properties and general POCOs.
 
