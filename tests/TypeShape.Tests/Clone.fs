@@ -19,8 +19,8 @@ let rec mkCloner<'T> () : 'T -> 'T =
                         shape.Inject tgt field'
         }
 
-    match TypeShape.Create<'T>() with
-    | Shape.Primitive -> id
+    match shapeof<'T> with
+    | Shape.Primitive
     | Shape.TimeSpan
     | Shape.DateTimeOffset
     | Shape.DateTime
@@ -45,70 +45,55 @@ let rec mkCloner<'T> () : 'T -> 'T =
                     let ec = mkCloner<'t>()
                     wrap(List.map ec) }
 
-    | Shape.Tuple s ->
-        s.Accept {
-            new ITupleVisitor<'T -> 'T> with
-                member __.Visit (shape : ShapeTuple<'Tuple>) =
-                    let memberCloners = shape.Elements |> Array.map mkMemberCloner
-                    wrap(fun (source : 'Tuple) ->
-                        let mutable target = shape.CreateUninitialized()
-                        for mc in memberCloners do
-                            target <- mc source target
-                        
-                        target) }
+    | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
+        let memberCloners = shape.Elements |> Array.map mkMemberCloner
+        fun source ->
+            let mutable target = shape.CreateUninitialized()
+            for mc in memberCloners do
+                target <- mc source target
+            
+            target
 
-    | Shape.FSharpRecord s ->
-        s.Accept {
-            new IFSharpRecordVisitor<'T -> 'T> with
-                member __.Visit (shape : ShapeFSharpRecord<'R>) =
-                    let memberCloners = shape.Fields |> Array.map mkMemberCloner
-                    wrap(fun (source:'R) ->
-                        let mutable target = shape.CreateUninitialized()
-                        for mc in memberCloners do
-                            target <- mc source target
-                        
-                        target) }
+    | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
+        let memberCloners = shape.Fields |> Array.map mkMemberCloner
+        fun source ->
+            let mutable target = shape.CreateUninitialized()
+            for mc in memberCloners do
+                target <- mc source target
+            
+            target
 
-    | Shape.FSharpUnion s ->
-        s.Accept {
-            new IFSharpUnionVisitor<'T -> 'T> with
-                member __.Visit (shape : ShapeFSharpUnion<'U>) =
-                    let caseMemberCloners = 
-                        shape.UnionCases 
-                        |> Array.map (fun c -> c.Fields |> Array.map mkMemberCloner)
+    | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
+        let caseMemberCloners = 
+            shape.UnionCases 
+            |> Array.map (fun c -> c.Fields |> Array.map mkMemberCloner)
 
-                    wrap(fun (source:'U) ->
-                        let tag = shape.GetTag source
-                        let case = shape.UnionCases.[tag]
-                        let memberCloners = caseMemberCloners.[tag]
-                        let mutable target = case.CreateUninitialized()
-                        for mc in memberCloners do
-                            target <- mc source target
+        fun source ->
+            let tag = shape.GetTag source
+            let case = shape.UnionCases.[tag]
+            let memberCloners = caseMemberCloners.[tag]
+            let mutable target = case.CreateUninitialized()
+            for mc in memberCloners do
+                target <- mc source target
 
-                        target) }
+            target
 
-    | Shape.CliMutable s ->
-        s.Accept {
-            new ICliMutableVisitor<'T -> 'T> with
-                member __.Visit<'R> (shape : ShapeCliMutable<'R>) =
-                    let memberCloners = shape.Properties |> Array.map mkMemberCloner
-                    wrap(fun (source:'R) ->
-                        let mutable target = shape.CreateUninitialized()
-                        for mc in memberCloners do
-                            target <- mc source target
-                        
-                        target) }
+    | Shape.CliMutable (:? ShapeCliMutable<'T> as shape) ->
+        let memberCloners = shape.Properties |> Array.map mkMemberCloner
+        fun source ->
+            let mutable target = shape.CreateUninitialized()
+            for mc in memberCloners do
+                target <- mc source target
+            
+            target
 
-    | Shape.Poco s ->
-        s.Accept {
-            new IPocoVisitor<'T -> 'T> with
-                member __.Visit (shape : ShapePoco<'P>) =
-                    let fieldCloners = shape.Fields |> Array.map mkMemberCloner
-                    wrap(fun (source : 'P) ->
-                        let mutable target = shape.CreateUninitialized()
-                        for fc in fieldCloners do
-                            target <- fc source target
+    | Shape.Poco (:? ShapePoco<'T> as shape) ->
+        let fieldCloners = shape.Fields |> Array.map mkMemberCloner
+        fun source ->
+            let mutable target = shape.CreateUninitialized()
+            for fc in fieldCloners do
+                target <- fc source target
 
-                        target) }
+            target
 
     | _ -> failwithf "Unsupported type %O" typeof<'T>

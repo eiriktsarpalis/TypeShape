@@ -27,8 +27,8 @@ let rec stageCloner<'T> () : CloneExpr<'T> =
                         @>
         }
 
-    match TypeShape.Create<'T>() with
-    | Shape.Primitive -> fun t -> <@ %t @>
+    match shapeof<'T> with
+    | Shape.Primitive
     | Shape.TimeSpan
     | Shape.DateTimeOffset
     | Shape.DateTime
@@ -53,50 +53,40 @@ let rec stageCloner<'T> () : CloneExpr<'T> =
                     let ec = stageCloner<'t>()
                     <@ List.map (% Expr.lam ec) %ts @> ) }
 
-    | Shape.Tuple s ->
-        s.Accept { new ITupleVisitor<CloneExpr<'T>> with
-            member __.Visit (shape : ShapeTuple<'Tuple>) =
-                wrap(fun (source : Expr<'Tuple>) ->
-                    shape.Elements 
-                    |> Array.map (fun sf -> stageMemberCloner sf source)
-                    |> Expr.update ("target", shape.CreateUninitializedExpr())) }
+    | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
+        fun source ->
+            shape.Elements 
+            |> Array.map (fun sf -> stageMemberCloner sf source)
+            |> Expr.update ("target", shape.CreateUninitializedExpr())
 
-    | Shape.FSharpRecord s ->
-        s.Accept { new IFSharpRecordVisitor<CloneExpr<'T>> with
-            member __.Visit (shape : ShapeFSharpRecord<'R>) =
-                wrap(fun (source : Expr<'R>) ->
-                    shape.Fields
-                    |> Array.map (fun sf -> stageMemberCloner sf source)
-                    |> Expr.update ("target", shape.CreateUninitializedExpr())) }
+    | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
+        fun source ->
+            shape.Fields
+            |> Array.map (fun sf -> stageMemberCloner sf source)
+            |> Expr.update ("target", shape.CreateUninitializedExpr())
 
-    | Shape.FSharpUnion s ->
-        s.Accept { new IFSharpUnionVisitor<CloneExpr<'T>> with
-            member __.Visit (shape : ShapeFSharpUnion<'U>) =
-                wrap(fun (source : Expr<'U>) ->
-                    let mkUnionCaseCloner (case : ShapeFSharpUnionCase<'U>) =
-                        case.Fields
-                        |> Array.map (fun sf -> stageMemberCloner sf source)
-                        |> Expr.update ("target", case.CreateUninitializedExpr())
+    | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
+        fun source ->
+            let mkUnionCaseCloner (case : ShapeFSharpUnionCase<'T>) =
+                case.Fields
+                |> Array.map (fun sf -> stageMemberCloner sf source)
+                |> Expr.update ("target", case.CreateUninitializedExpr())
 
-                    let tag = shape.GetTagExpr source
-                    let unionCaseCloners = shape.UnionCases |> Array.map mkUnionCaseCloner
-                    Expr.switch tag unionCaseCloners) }
+            let tag = shape.GetTagExpr source
+            let unionCaseCloners = shape.UnionCases |> Array.map mkUnionCaseCloner
+            Expr.switch tag unionCaseCloners
 
-    | Shape.CliMutable s ->
-        s.Accept { new ICliMutableVisitor<CloneExpr<'T>> with
-            member __.Visit<'R> (shape : ShapeCliMutable<'R>) =
-                wrap(fun (source : Expr<'R>) ->
-                    shape.Properties
-                    |> Array.map (fun sp -> stageMemberCloner sp source)
-                    |> Expr.update ("target", shape.CreateUninitializedExpr())) }
+    | Shape.CliMutable (:? ShapeCliMutable<'T> as shape) ->
+        fun source ->
+            shape.Properties
+            |> Array.map (fun sp -> stageMemberCloner sp source)
+            |> Expr.update ("target", shape.CreateUninitializedExpr())
 
-    | Shape.Poco s ->
-        s.Accept { new IPocoVisitor<CloneExpr<'T>> with
-            member __.Visit (shape : ShapePoco<'P>) =
-                wrap(fun (source : Expr<'P>) ->
-                    shape.Fields
-                    |> Array.map (fun sf -> stageMemberCloner sf source)
-                    |> Expr.update ("target", shape.CreateUninitializedExpr())) }
+    | Shape.Poco (:? ShapePoco<'T> as shape) ->
+        fun source ->
+            shape.Fields
+            |> Array.map (fun sf -> stageMemberCloner sf source)
+            |> Expr.update ("target", shape.CreateUninitializedExpr())
 
     | _ -> failwithf "Unsupported type %O" typeof<'T>
 
