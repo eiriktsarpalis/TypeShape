@@ -6,71 +6,40 @@ open System
 open FParsec
 open TypeShape
 
-[<AutoOpen>]
-module Utils =
-    type Parser<'T> = Parser<'T, unit>
+type Parser<'T> = Parser<'T, unit>
 
-    let inline delay (f : unit -> 'T) : Parser<'T> =
-        fun stream -> Reply(f ())
+let inline delay (f : unit -> 'T) : Parser<'T> =
+    fun _ -> Reply(f())
 
-    /// Parser folding combinator with separator support
-    let fold (folder : 'State -> 'T -> 'State) 
-                (init : Parser<'State>) (parsers : Parser<'T> []) 
-                (sep : Parser<'Sep>) : Parser<'State> =
+let (<*>) (f : Parser<'T -> 'S>) (t : Parser<'T>) : Parser<'S> = 
+    parse {
+        let! tv = t
+        let! fv = f
+        return fv tv
+    }
 
-        fun stream ->
-            let mutable state = init stream
-            if state.Status <> Ok then state else
-            let mutable success = true
-            let mutable i = 0
-            let n = parsers.Length
-            while i < n && success do
-                if i > 0 then 
-                    let r = sep stream 
-                    if r.Status <> Ok then
-                        success <- false
-                        state <- Reply(r.Status, r.Error)
-
-                if success then
-                    let r = parsers.[i] stream
-                    if r.Status <> Ok then
-                        success <- false
-                        state <- Reply(r.Status, r.Error)
-                    else
-                        state <- Reply(folder state.Result r.Result)
-
-                i <- i + 1
-
-            state
-
-
-/// Generates a parser for given type
-let rec mkParser<'T> () : string -> 'T = 
-    let fp = mkFParser<'T>() in 
-    fun inp -> 
-        match run fp inp with
-        | Success(r,_,_) -> r
-        | Failure(msg,_,_) -> failwithf "Parse error: %s" msg
-
-and private mkFParser<'T> () : Parser<'T> =
+/// Generates a parser for supplied type
+let rec genParser<'T> () : Parser<'T> =
     let spaced p = between spaces spaces p
     let token str = spaced (pstring str) >>% ()
     let paren p = between (token "(") (token ")") p
     let wrap (p : Parser<'a>) = unbox<Parser<'T>>(spaced p)
 
-    let mkMemberParser (shape : IShapeWriteMember<'DeclaringType>) =
-        shape.Accept { new IWriteMemberVisitor<'DeclaringType, Parser<'DeclaringType -> 'DeclaringType>> with
-            member __.Visit (shape : ShapeWriteMember<'DeclaringType, 'Field>) =
-                let fp = mkFParser<'Field>()
+    let mkMemberParser (shape : IShapeWriteMember<'Class>) =
+        shape.Accept { new IWriteMemberVisitor<'Class, Parser<'Class -> 'Class>> with
+            member __.Visit (shape : ShapeWriteMember<'Class, 'Field>) =
+                let fp = genParser<'Field>()
                 fp |>> fun f dt -> shape.Inject dt f
         }
 
     let combineMemberParsers 
-        (init : Parser<'DeclaringType>) 
-        (injectors : Parser<'DeclaringType -> 'DeclaringType> [])
+        (init : Parser<'Class>) 
+        (injectors : Parser<'Class -> 'Class> [])
         (separator : Parser<'Sep>) =
 
-        fold (fun d i -> i d) init injectors separator
+        match Array.toList injectors with
+        | [] -> init
+        | hd :: tl -> List.fold (fun acc i -> (separator >>. i) <*> acc) (hd <*> init) tl
 
     match shapeof<'T> with
     | Shape.Unit -> wrap(paren spaces)
@@ -83,7 +52,7 @@ and private mkFParser<'T> () : Parser<'T> =
         s.Accept {
             new IFSharpOptionVisitor<Parser<'T>> with
                 member __.Visit<'t> () =
-                    let tp = mkFParser<'t>() |>> Some
+                    let tp = genParser<'t>() |>> Some
                     let nP = stringReturn "None" None
                     let vp = attempt (paren tp) <|> tp
                     let sP = token "Some" >>. vp
@@ -94,7 +63,7 @@ and private mkFParser<'T> () : Parser<'T> =
         s.Accept {
             new IFSharpListVisitor<Parser<'T>> with
                 member __.Visit<'t> () =
-                    let tp = mkFParser<'t>()
+                    let tp = genParser<'t>()
                     let sep = token ";"
                     let lp = between (token "[") (token "]") (sepBy tp sep)
                     wrap lp
@@ -104,7 +73,7 @@ and private mkFParser<'T> () : Parser<'T> =
         s.Accept {
             new IArrayVisitor<Parser<'T>> with
                 member __.Visit<'t> _ =
-                    let tp = mkFParser<'t> ()
+                    let tp = genParser<'t> ()
                     let sep = token ";"
                     let lp = between (token "[|") (token "|]") (sepBy tp sep)
                     wrap(lp |>> Array.ofList)
@@ -146,6 +115,14 @@ and private mkFParser<'T> () : Parser<'T> =
 
     | _ -> failwithf "unsupported type '%O'" typeof<'T>
 
+
+/// Generates a string parser for given type
+let mkParser<'T> () : string -> 'T = 
+    let fp = genParser<'T>() in 
+    fun inp -> 
+        match run fp inp with
+        | Success(r,_,_) -> r
+        | Failure(msg,_,_) -> failwithf "Parse error: %s" msg
 
 // examples
 
