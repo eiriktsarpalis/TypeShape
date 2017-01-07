@@ -72,7 +72,7 @@ and private mkFParser<'T> () : Parser<'T> =
 
         fold (fun d i -> i d) init injectors separator
 
-    match TypeShape.Create<'T>() with
+    match shapeof<'T> with
     | Shape.Unit -> wrap(paren spaces)
     | Shape.Bool -> wrap(stringReturn "true" true <|> stringReturn "false" false)
     | Shape.Byte -> wrap(puint8)
@@ -110,48 +110,39 @@ and private mkFParser<'T> () : Parser<'T> =
                     wrap(lp |>> Array.ofList)
         }
 
-    | Shape.Tuple s ->
-        s.Accept { new ITupleVisitor<Parser<'T>> with
-            member __.Visit (shape : ShapeTuple<'Tuple>) =
-                let init = delay shape.CreateUninitialized
-                let eps = shape.Elements |> Array.map mkMemberParser
-                let composed = combineMemberParsers init eps (token ",")
-                wrap(paren composed) }
+    | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
+        let init = delay shape.CreateUninitialized
+        let eps = shape.Elements |> Array.map mkMemberParser
+        let composed = combineMemberParsers init eps (token ",")
+        paren composed
 
-    | Shape.FSharpRecord s ->
-        s.Accept { new IFSharpRecordVisitor<Parser<'T>> with
-            member __.Visit (shape : ShapeFSharpRecord<'Record>) =
-                let init = delay shape.CreateUninitialized
-                let fps = 
-                    shape.Fields 
-                    |> Array.map (fun f -> token f.Label >>. token "=" >>. mkMemberParser f)
+    | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
+        let init = delay shape.CreateUninitialized
+        let fps = 
+            shape.Fields 
+            |> Array.map (fun f -> token f.Label >>. token "=" >>. mkMemberParser f)
 
-                let composed = combineMemberParsers init fps (token ";")
-                wrap(between (token "{") (token "}") composed) }
+        let composed = combineMemberParsers init fps (token ";")
+        between (token "{") (token "}") composed
 
-    | Shape.FSharpUnion s ->
-        s.Accept { new IFSharpUnionVisitor<Parser<'T>> with
-            member __.Visit (shape : ShapeFSharpUnion<'Union>) =
-                let mkUnionCaseParser (case : ShapeFSharpUnionCase<'Union>) =
-                    let caseName = pstring case.CaseInfo.Name
-                    let init = delay case.CreateUninitialized
-                    match case.Fields |> Array.map mkMemberParser with
-                    | [||] -> caseName >>. init
-                    | fps ->
-                        let composed = combineMemberParsers init fps (token ",")
-                        let parenP = paren composed
-                        let valueP = 
-                            if fps.Length = 1 then attempt parenP <|> composed
-                            else parenP
+    | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
+        let mkUnionCaseParser (case : ShapeFSharpUnionCase<'T>) =
+            let caseName = pstring case.CaseInfo.Name
+            let init = delay case.CreateUninitialized
+            match case.Fields |> Array.map mkMemberParser with
+            | [||] -> caseName >>. init
+            | fps ->
+                let composed = combineMemberParsers init fps (token ",")
+                let parenP = paren composed
+                let valueP = 
+                    if fps.Length = 1 then attempt parenP <|> composed
+                    else parenP
 
-                        caseName >>. valueP
+                caseName >>. valueP
 
-                let unionParser =
-                    shape.UnionCases 
-                    |> Array.map mkUnionCaseParser
-                    |> choice
-
-                wrap unionParser }
+        shape.UnionCases 
+        |> Array.map mkUnionCaseParser
+        |> choice
 
     | _ -> failwithf "unsupported type '%O'" typeof<'T>
 
