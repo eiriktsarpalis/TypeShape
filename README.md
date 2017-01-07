@@ -146,7 +146,7 @@ Similarly, we could also add support for arbitrary F# unions:
             let fieldPrinters = case.Fields |> Array.map mkMemberPrinter
             fun (u:'T) -> 
                 fieldPrinters 
-                |> Seq.map (fun f -> f r) 
+                |> Seq.map (fun fp -> fp u) 
                 |> String.concat ", "
                 |> sprintf "%s(%s)" case.CaseInfo.Name
 
