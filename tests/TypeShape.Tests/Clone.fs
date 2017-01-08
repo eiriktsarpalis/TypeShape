@@ -8,7 +8,7 @@ open TypeShape_Utils
 
 // Simple object clone implementation used to verify implementation correctness of shapes
 
-let rec private cache = new TypedIndex()
+let rec private cache = new TypeCache()
 and mkCloner<'T> () : 'T -> 'T =
     match cache.TryFind<'T -> 'T> () with
     | Some c -> c

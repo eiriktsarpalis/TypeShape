@@ -7,7 +7,7 @@ open System.Collections.Generic
 open TypeShape
 open TypeShape_Utils
 
-let rec private cache = new TypedIndex()
+let rec private cache = new TypeCache()
 and mkEmptyFunc<'T> () : unit -> 'T =
     let mutable f = Unchecked.defaultof<unit -> 'T>
     if cache.TryGetValue(&f) then f

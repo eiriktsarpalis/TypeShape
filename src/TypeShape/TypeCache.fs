@@ -18,7 +18,7 @@ type Cell<'T> internal (container : 'T option ref) =
 type private Payload<'T> = 'T option ref * 'T
 
 /// Thread-safe cache of values indexed by type that supports recursion.
-type TypedIndex() =
+type TypeCache() =
     let dict = new ConcurrentDictionary<Type, obj>()
 
     /// <summary>

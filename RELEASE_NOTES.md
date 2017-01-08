@@ -1,3 +1,6 @@
+### 2.7
+* Rename TypeIndex to TypeCache.
+
 ### 2.6
 * Refactor ISerializable shape to include constructor and staging support.
 * Refactor TypedIndex API.

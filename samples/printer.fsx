@@ -6,7 +6,7 @@ open TypeShape_Utils
 
 // Generic value printer with recursive type support
 
-let rec private cache = new TypedIndex()
+let rec private cache = new TypeCache()
 and mkPrinter<'T> () : 'T -> string =
     match cache.TryFind<'T -> string> () with
     | Some p -> p

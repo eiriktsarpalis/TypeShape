@@ -5,11 +5,14 @@
 open System
 open FParsec
 open TypeShape
+open TypeShape_Utils
 
 type Parser<'T> = Parser<'T, unit>
 
 let inline delay (f : unit -> 'T) : Parser<'T> =
     fun _ -> Reply(f())
+
+let spaced p = between spaces spaces p
 
 let (<*>) (f : Parser<'T -> 'S>) (t : Parser<'T>) : Parser<'S> = 
     parse {
@@ -20,9 +23,17 @@ let (<*>) (f : Parser<'T -> 'S>) (t : Parser<'T>) : Parser<'S> =
 
 /// Generates a parser for supplied type
 let rec genParser<'T> () : Parser<'T> =
-    let spaced p = between spaces spaces p
+    let mutable p = Unchecked.defaultof<Parser<'T>>
+    if cache.TryGetValue (&p) then p
+    else
+        // create a delayed uninitialized instance for recursive type definitions
+        let _ = cache.CreateUninitialized<Parser<'T>>(fun c -> (fun (s:CharStream<unit>) -> c.Value s))
+        let p = genParserAux<'T> ()
+        cache.Commit (spaced p)
+    
+and genParserAux<'T> () : Parser<'T> =
     let token str = spaced (pstring str) >>% ()
-    let paren p = between (token "(") (token ")") p
+    let paren p = between (pchar '(') (pchar ')') (spaced p)
     let wrap (p : Parser<'a>) = unbox<Parser<'T>>(spaced p)
 
     let mkMemberParser (shape : IShapeWriteMember<'Class>) =
@@ -64,8 +75,8 @@ let rec genParser<'T> () : Parser<'T> =
             new IFSharpListVisitor<Parser<'T>> with
                 member __.Visit<'t> () =
                     let tp = genParser<'t>()
-                    let sep = token ";"
-                    let lp = between (token "[") (token "]") (sepBy tp sep)
+                    let sep = pchar ';'
+                    let lp = between (pchar '[') (pchar ']') (sepBy tp sep)
                     wrap lp
         }
 
@@ -74,25 +85,25 @@ let rec genParser<'T> () : Parser<'T> =
             new IArrayVisitor<Parser<'T>> with
                 member __.Visit<'t> _ =
                     let tp = genParser<'t> ()
-                    let sep = token ";"
-                    let lp = between (token "[|") (token "|]") (sepBy tp sep)
+                    let sep = pchar ';'
+                    let lp = between (pstring "[|") (pstring "|]") (sepBy tp sep)
                     wrap(lp |>> Array.ofList)
         }
 
     | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
         let init = delay shape.CreateUninitialized
         let eps = shape.Elements |> Array.map mkMemberParser
-        let composed = combineMemberParsers init eps (token ",")
+        let composed = combineMemberParsers init eps (pchar ',')
         paren composed
 
     | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
         let init = delay shape.CreateUninitialized
         let fps = 
             shape.Fields 
-            |> Array.map (fun f -> token f.Label >>. token "=" >>. mkMemberParser f)
+            |> Array.map (fun f -> token f.Label >>. pchar '=' >>. mkMemberParser f)
 
-        let composed = combineMemberParsers init fps (token ";")
-        between (token "{") (token "}") composed
+        let composed = combineMemberParsers init fps (pchar ';')
+        between (pchar '{') (pchar '}') composed
 
     | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
         let mkUnionCaseParser (case : ShapeFSharpUnionCase<'T>) =
@@ -101,36 +112,38 @@ let rec genParser<'T> () : Parser<'T> =
             match case.Fields |> Array.map mkMemberParser with
             | [||] -> caseName >>. init
             | fps ->
-                let composed = combineMemberParsers init fps (token ",")
-                let parenP = paren composed
+                let composed = combineMemberParsers init fps (pchar ',')
                 let valueP = 
-                    if fps.Length = 1 then attempt parenP <|> composed
-                    else parenP
+                    if fps.Length = 1 then paren composed <|> composed
+                    else paren composed
 
-                caseName >>. valueP
+                caseName >>. spaces >>. valueP
 
-        shape.UnionCases 
+        shape.UnionCases
         |> Array.map mkUnionCaseParser
         |> choice
 
     | _ -> failwithf "unsupported type '%O'" typeof<'T>
+ 
+and private cache : TypeCache = new TypeCache()
 
 
 /// Generates a string parser for given type
 let mkParser<'T> () : string -> 'T = 
-    let fp = genParser<'T>() in 
+    let fp = genParser<'T>() .>> eof
     fun inp -> 
         match run fp inp with
         | Success(r,_,_) -> r
         | Failure(msg,_,_) -> failwithf "Parse error: %s" msg
 
-// examples
+//--------------------------
+// Examples
 
 let p1 = mkParser<int * int list>()
 p1 "(42, [1;2;3])"
 
 let p2 = mkParser<int * string list option * string ref>()
-p2 """(42, Some (["1" ;  "2"]), { contents= "value" }) ) """
+p2 """(42, Some (["1" ;  "2"]), { contents= "value" } ) """
 
 type Foo = { A : int ; B : string }
 
@@ -142,4 +155,12 @@ type Bar =
 
 let p3 = mkParser<Bar list []>()
 
-p3 """ [| [ Bar 42 ; Bar(42) ; Foo { A = 12 ; B = "Foo" } ; C] ; [] ; [D (Some "42")]|] """
+p3 """ [| [ Bar 42 ; Bar(42) ; Foo { A = 12 ; B = "Foo" } ; C ] ; [] ; [D (Some "42")]|] """
+
+// Recursive type parsing
+
+type Peano = Zero | Succ of Peano
+
+let p4 = mkParser<Peano> ()
+
+p4 "Succ (Succ (Succ ( Succ Zero)))"
