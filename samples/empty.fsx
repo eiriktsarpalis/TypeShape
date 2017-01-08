@@ -7,8 +7,7 @@ open System.Collections.Generic
 open TypeShape
 open TypeShape_Utils
 
-let rec private cache = new TypeCache()
-and mkEmptyFunc<'T> () : unit -> 'T =
+let rec mkEmptyFunc<'T> () : unit -> 'T =
     let mutable f = Unchecked.defaultof<unit -> 'T>
     if cache.TryGetValue(&f) then f
     else
@@ -16,7 +15,7 @@ and mkEmptyFunc<'T> () : unit -> 'T =
         let f = mkEmptyFuncAux<'T>()
         cache.Commit f
 
-and private mkEmptyFuncAux<'T> () : unit -> 'T =  
+and private mkEmptyFuncAux<'T> () : unit -> 'T =
     let wrap (f : unit -> 'a) = unbox<unit -> 'T> f
 
     let mkMemberInitializer (shape : IShapeWriteMember<'DeclaringType>) =
@@ -116,8 +115,11 @@ and private mkEmptyFuncAux<'T> () : unit -> 'T =
 
     | _ -> failwithf "Type '%O' does not support empty values." typeof<'T>
 
+and private cache : TypeCache = new TypeCache()
+
 /// Generates a structural empty value for given type
-and empty<'T> = mkEmptyFunc<'T> () ()
+let empty<'T> = mkEmptyFunc<'T> () ()
+
 
 //-------------------------
 // examples

@@ -23,11 +23,11 @@ let (<*>) (f : Parser<'T -> 'S>) (t : Parser<'T>) : Parser<'S> =
 
 /// Generates a parser for supplied type
 let rec genParser<'T> () : Parser<'T> =
-    let mutable p = Unchecked.defaultof<Parser<'T>>
-    if cache.TryGetValue (&p) then p
-    else
+    match cache.TryFind<Parser<'T>> () with
+    | Some p -> p
+    | None ->
         // create a delayed uninitialized instance for recursive type definitions
-        let _ = cache.CreateUninitialized<Parser<'T>>(fun c -> (fun (s:CharStream<unit>) -> c.Value s))
+        let _ = cache.CreateUninitialized<Parser<'T>>(fun c s -> c.Value s)
         let p = genParserAux<'T> ()
         cache.Commit (spaced p)
     
@@ -159,8 +159,8 @@ p3 """ [| [ Bar 42 ; Bar(42) ; Foo { A = 12 ; B = "Foo" } ; C ] ; [] ; [D (Some 
 
 // Recursive type parsing
 
-type Peano = Zero | Succ of Peano
+type BinTree<'T> = Leaf | Node of 'T * BinTree<'T> * BinTree<'T>
 
-let p4 = mkParser<Peano> ()
+let p4 = mkParser<BinTree<int>> ()
 
-p4 "Succ (Succ (Succ ( Succ Zero)))"
+p4 "Node(3, Node(1, Leaf, Node(2, Leaf,Leaf)), Leaf)"
