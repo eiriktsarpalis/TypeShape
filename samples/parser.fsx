@@ -33,7 +33,7 @@ let rec genParser<'T> () : Parser<'T> =
         }
 
     let combineMemberParsers 
-        (init : Parser<'Class>) 
+        (init : Parser<'Class>)
         (injectors : Parser<'Class -> 'Class> [])
         (separator : Parser<'Sep>) =
 
@@ -142,4 +142,4 @@ type Bar =
 
 let p3 = mkParser<Bar list []>()
 
-p3 """ [| [ Bar 42 ; Bar(42) ; Foo({ A = 12 ; B = "Foof" }) ; C ] ; [] ; [D (Some "42")]|] """
+p3 """ [| [ Bar 42 ; Bar(42) ; Foo { A = 12 ; B = "Foo" } ; C] ; [] ; [D (Some "42")]|] """

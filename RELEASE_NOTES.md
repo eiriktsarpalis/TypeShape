@@ -1,3 +1,7 @@
+### 2.6
+* Refactor ISerializable shape to include constructor and staging support.
+* Refactor TypedIndex API.
+
 ### 2.5
 * Staging bugfix.
 

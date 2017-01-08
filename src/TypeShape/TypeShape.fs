@@ -833,6 +833,16 @@ module private MemberUtils =
             gen.Emit OpCodes.Ret
 
         emitDynamicMethod<Func<'U, int>> tagReader "tagReader" [|typeof<'U>|] typeof<int> builder
+
+    let emitISerializableCtor<'T when 'T :> ISerializable> (ctorInfo : ConstructorInfo) =
+        let builder (gen : ILGenerator) =
+            gen.Emit OpCodes.Ldarg_0
+            gen.Emit OpCodes.Ldarg_1
+            gen.Emit(OpCodes.Newobj, ctorInfo)
+            gen.Emit OpCodes.Ret
+
+        emitDynamicMethod<Func<SerializationInfo, StreamingContext, 'T>> ctorInfo "ctor" 
+            [|typeof<SerializationInfo>; typeof<StreamingContext>|] typeof<'T> builder
 #endif
                 
 
@@ -1104,8 +1114,7 @@ module private ShapeTupleImpl =
             | Some (fI,n) -> aux (fI :: fs) n
             | _ -> fs
 
-        aux [] tI 
-//        |> List.rev 
+        aux [] tI
         |> List.toArray
 
 //---------------------------
@@ -1438,6 +1447,46 @@ and ShapePoco<'Poco> private () =
 and IPocoVisitor<'R> =
     abstract Visit : ShapePoco<'Poco> -> 'R
 
+
+//-----------------------------
+// Section: Shape ISerializable
+
+type ISerializableVisitor<'R> =
+    abstract Visit<'T when 'T :> ISerializable> : ShapeISerializable<'T> -> 'R
+
+and IShapeISerializable =
+    abstract CtorInfo : ConstructorInfo
+    abstract Accept : ISerializableVisitor<'R> -> 'R
+
+and ShapeISerializable<'T when 'T :> ISerializable> private () =
+    let ctorTypes = [|typeof<SerializationInfo>; typeof<StreamingContext>|]
+    let ctorInfo = typeof<'T>.GetConstructor(allInstanceMembers, null, ctorTypes, [||])
+    let getCtorInfo () =
+        match ctorInfo with
+        | null -> invalidOp <| sprintf "ISerializable constructor not available for type '%O'" typeof<'T>
+        | ctor -> ctor
+
+#if TYPESHAPE_EMIT
+    let ctor = lazy(let c = emitISerializableCtor<'T> (getCtorInfo()) in c.Value)
+#endif
+
+    member __.CtorInfo = ctorInfo
+    member __.Create(serializationInfo : SerializationInfo, streamingContext : StreamingContext) : 'T =
+#if TYPESHAPE_EMIT
+        ctor.Value.Invoke(serializationInfo, streamingContext)
+#else
+        getCtorInfo.Invoke [| serializationInfo ; streamingContext |] :?> 'T
+#endif
+
+#if TYPESHAPE_EXPR
+    member __.CreateExpr (serializationInfo : Expr<SerializationInfo>) (streamingContext : Expr<StreamingContext>) : Expr<'T> =
+        Expr.Cast<'T>(Expr.NewObject(getCtorInfo(), [serializationInfo; streamingContext]))
+#endif
+
+    interface IShapeISerializable with
+        member __.CtorInfo = ctorInfo
+        member __.Accept v = v.Visit<'T> __
+
 //--------------------------------------
 // Section: TypeShape active recognizers
 
@@ -1663,12 +1712,21 @@ module Shape =
         else
             None
 
-    /// Recognozes shapes that inherit from System.Exception
+    /// Recognizes shapes that inherit from System.Exception
     let (|Exception|_|) (s : TypeShape) =
         if typeof<System.Exception>.IsAssignableFrom s.Type then
             let isFSharpExn = FSharpType.IsExceptionRepresentation(s.Type, allMembers)
             Activator.CreateInstanceGeneric<ShapeException<_>>([|s.Type|], [|isFSharpExn|])
             :?> IShapeException
+            |> Some
+        else
+            None
+
+    /// Recognizes shapes that implement ISerializable
+    let (|ISerializable|_|) (shape : TypeShape) =
+        if typeof<ISerializable>.IsInterfaceAssignableFrom shape.Type then
+            Activator.CreateInstanceGeneric<ShapeISerializable<_>>([|shape.Type|])
+            :?> IShapeISerializable
             |> Some
         else
             None

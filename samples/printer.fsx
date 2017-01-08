@@ -6,26 +6,22 @@ open TypeShape_Utils
 
 // Generic value printer with recursive type support
 
-let rec mkPrinter<'T> () : 'T -> string =
-    let state = new RecTypeManager()
-    mkPrinterCached<'T> state
-
-and mkPrinterCached<'T> (state : RecTypeManager) : 'T -> string =
-    match state.TryGetValue<'T -> string>() with
+let rec private cache = new TypedIndex()
+and mkPrinter<'T> () : 'T -> string =
+    match cache.TryFind<'T -> string> () with
     | Some p -> p
     | None ->
-        let _ = state.Create<'T -> string>(fun f t -> f () t)
-        let r = mkPrinterAux<'T> state
-        state.Complete r
-        r
+        let _ = cache.CreateUninitialized<'T -> string>(fun c t -> c.Value t)
+        let p = mkPrinterAux<'T>()
+        cache.Commit p
 
-and mkPrinterAux<'T> (state : RecTypeManager) : 'T -> string =
+and mkPrinterAux<'T> () : 'T -> string =
     let wrap(p : 'a -> string) = unbox<'T -> string> p
     let mkFieldPrinter (field : IShapeMember<'DeclaringType>) =
         field.Accept {
             new IMemberVisitor<'DeclaringType, string * ('DeclaringType -> string)> with
                 member __.Visit(field : ShapeMember<'DeclaringType, 'Field>) =
-                    let fp = mkPrinterCached<'Field> state
+                    let fp = mkPrinter<'Field> ()
                     field.Label, fp << field.Project
         }
 
@@ -40,7 +36,7 @@ and mkPrinterAux<'T> (state : RecTypeManager) : 'T -> string =
         s.Accept {
             new IFSharpOptionVisitor<'T -> string> with
                 member __.Visit<'a> () = // 'T = 'a option
-                    let tp = mkPrinterCached<'a> state
+                    let tp = mkPrinter<'a>()
                     wrap(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
         }
 
@@ -48,7 +44,7 @@ and mkPrinterAux<'T> (state : RecTypeManager) : 'T -> string =
         s.Accept {
             new IFSharpListVisitor<'T -> string> with
                 member __.Visit<'a> () = // 'T = 'a list
-                    let tp = mkPrinterCached<'a> state
+                    let tp = mkPrinter<'a> ()
                     wrap(fun (ts : 'a list) -> ts |> Seq.map tp |> String.concat "; " |> sprintf "[%s]")
         }
 
@@ -56,7 +52,7 @@ and mkPrinterAux<'T> (state : RecTypeManager) : 'T -> string =
         s.Accept {
             new IArrayVisitor<'T -> string> with
                 member __.Visit<'a> _ = // 'T = 'a []
-                    let tp = mkPrinterCached<'a> state
+                    let tp = mkPrinter<'a> ()
                     wrap(fun (ts : 'a []) -> ts |> Seq.map tp |> String.concat "; " |> sprintf "[|%s|]")
         }
 
@@ -64,7 +60,7 @@ and mkPrinterAux<'T> (state : RecTypeManager) : 'T -> string =
         s.Accept {
             new IFSharpSetVisitor<'T -> string> with
                 member __.Visit<'a when 'a : comparison> () =  // 'T = Set<'a>
-                    let tp = mkPrinterCached<'a> state
+                    let tp = mkPrinter<'a> ()
                     wrap(fun (s : Set<'a>) -> s |> Seq.map tp |> String.concat "; " |> sprintf "set [%s]")
         }
 
@@ -102,8 +98,19 @@ and mkPrinterAux<'T> (state : RecTypeManager) : 'T -> string =
             let printer = casePrinters.[shape.GetTag u]
             printer u
 
+    | Shape.Poco (:? ShapePoco<'T> as shape) ->
+        let propPrinters = shape.Properties |> Array.map mkFieldPrinter
+        fun (r:'T) ->
+            propPrinters
+            |> Seq.map (fun (label, ep) -> let value = ep r in sprintf "%s = %s" label value)
+            |> String.concat "; "
+            |> sprintf "{ %s }"
+
     | _ -> failwithf "unsupported type '%O'" typeof<'T>
 
+
+//---------------------------------------
+// Examples
 
 
 type Foo = { A : int ; B : string ; C : int list }

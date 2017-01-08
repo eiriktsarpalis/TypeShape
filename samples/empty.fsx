@@ -3,13 +3,20 @@
 // structural empty value generator
 
 open System
-open System.Collections.Concurrent
 open System.Collections.Generic
 open TypeShape
+open TypeShape_Utils
 
-let rec private cache = new ConcurrentDictionary<Type, obj>()
-and private mkEmptyFunc<'T> () : unit -> 'T = cache.GetOrAdd(typeof<'T>, fun _ -> aux<'T> () :> obj) :?> _
-and private aux<'T> () : unit -> 'T =  
+let rec private cache = new TypedIndex()
+and mkEmptyFunc<'T> () : unit -> 'T =
+    let mutable f = Unchecked.defaultof<unit -> 'T>
+    if cache.TryGetValue(&f) then f
+    else
+        let _ = cache.CreateUninitialized<unit -> 'T>(fun c () -> c.Value ())
+        let f = mkEmptyFuncAux<'T>()
+        cache.Commit f
+
+and private mkEmptyFuncAux<'T> () : unit -> 'T =  
     let wrap (f : unit -> 'a) = unbox<unit -> 'T> f
 
     let mkMemberInitializer (shape : IShapeWriteMember<'DeclaringType>) =
@@ -109,9 +116,13 @@ and private aux<'T> () : unit -> 'T =
 
     | _ -> failwithf "Type '%O' does not support empty values." typeof<'T>
 
+/// Generates a structural empty value for given type
 and empty<'T> = mkEmptyFunc<'T> () ()
 
-/// examples
+//-------------------------
+// examples
+
+type P = Z | S of P
 
 type Record<'T> =
     {
@@ -122,6 +133,14 @@ type Record<'T> =
         Values : (int * string) list
         Metrics : Map<string, float>
         Set : Set<string>
+        Pair : P * P
     }
 
 { empty<Record<int * string option>> with Id = "myId" ; MoneyMoney = 3.14M }
+
+
+type Tree<'T> = Empty | Node of 'T * Forest<'T>
+and Forest<'T> = Nil | Cons of Tree<'T> * Forest<'T>
+
+empty<Forest<int>>
+empty<Tree<Forest<int * int>>>

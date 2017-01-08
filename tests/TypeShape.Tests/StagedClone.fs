@@ -2,6 +2,7 @@
 module TypeShape.Tests.StagedClone
 
 open System
+open System.Runtime.Serialization
 open FSharp.Quotations
 open TypeShape
 open TypeShape_StagingExtensions
@@ -75,6 +76,19 @@ let rec stageCloner<'T> () : CloneExpr<'T> =
             let tag = shape.GetTagExpr source
             let unionCaseCloners = shape.UnionCases |> Array.map mkUnionCaseCloner
             Expr.switch tag unionCaseCloners
+
+    | Shape.ISerializable s ->
+        s.Accept { new ISerializableVisitor<CloneExpr<'T>> with
+            member __.Visit (shape : ShapeISerializable<'S>) =
+                fun (source : Expr<'S>) ->
+                    <@
+                        let sc = new StreamingContext()
+                        let si = new SerializationInfo(typeof<'S>, FormatterConverter())
+                        (%source).GetObjectData(si, sc)
+                        (% Expr.lam2 shape.CreateExpr) si sc
+                    @>
+                |> wrap
+        }
 
     | Shape.CliMutable (:? ShapeCliMutable<'T> as shape) ->
         fun source ->

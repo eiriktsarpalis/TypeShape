@@ -13,10 +13,10 @@ open FsCheck
 open TypeShape
 
 open System.Runtime.Serialization
-open TypeShape_ISerializableExtensions
 
 let check<'T>(prop : 'T -> bool) = Check.QuickThrowOnFailure prop
 let checkCloner (cloner : 'T -> 'T) = check(fun t -> t = cloner t)
+let inline refEq<'T when 'T : not struct> (x : 'T) (y : 'T) = obj.ReferenceEquals(x, y)
 
 [<NoEquality; NoComparison>]
 type NoEqNoComp = NoEqNoComp
@@ -442,9 +442,20 @@ let ``Shape F# Set`` () =
 let ``Shape ISerializable`` () =
     let accepter =
         { new ISerializableVisitor<bool> with
-            member __.Visit<'T when 'T :> ISerializable> () = typeof<'T> = typeof<exn> }
+            member __.Visit<'T when 'T :> ISerializable> (_ : ShapeISerializable<'T>) = typeof<'T> = typeof<exn> }
 
     test <@ match shapeof<exn> with Shape.ISerializable s -> s.Accept accepter | _ -> false @>
+
+    let exn = new Exception("kaboom!")
+    
+    let cloner = mkCloner<Exception>()
+    let exn' = cloner exn
+    test <@ not (refEq exn exn') && exn.Message = exn'.Message @>
+
+    let cloner' = mkStagedCloner<Exception>()
+    let exn' = cloner' exn
+    test <@ not (refEq exn exn') && exn.Message = exn'.Message @>
+
 
 [<Fact>]
 let ``Shape F# Option`` () =
@@ -584,3 +595,11 @@ let ``Shape F# list as union`` () =
 [<Fact>]
 let ``Shape F# Choice as union`` () =
     test <@ match shapeof<Choice<int,string,bool>> with Shape.FSharpUnion u -> u.UnionCases.Length = 3 | _ -> false @>
+
+
+type P = Z | S of P
+
+[<Fact>]
+let ``Should clone recursive types`` () =
+    let cloner = mkCloner<P>()
+    checkCloner cloner

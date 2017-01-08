@@ -2,11 +2,22 @@
 module TypeShape.Tests.Clone
 
 open System
+open System.Runtime.Serialization
 open TypeShape
+open TypeShape_Utils
 
 // Simple object clone implementation used to verify implementation correctness of shapes
 
-let rec mkCloner<'T> () : 'T -> 'T =
+let rec private cache = new TypedIndex()
+and mkCloner<'T> () : 'T -> 'T =
+    match cache.TryFind<'T -> 'T> () with
+    | Some c -> c
+    | None ->
+        let _ = cache.CreateUninitialized<'T -> 'T>(fun c t -> c.Value t)
+        let c = mkClonerAux<'T>()
+        cache.Commit c
+
+and mkClonerAux<'T> () : 'T -> 'T =
     let wrap(f : 'a -> 'a) = unbox<'T -> 'T> f
     let mkMemberCloner (fieldShape : IShapeWriteMember<'DeclaringType>) =
         fieldShape.Accept {
@@ -78,6 +89,16 @@ let rec mkCloner<'T> () : 'T -> 'T =
 
             target
 
+    | Shape.ISerializable s ->
+        s.Accept { new ISerializableVisitor<'T -> 'T> with
+            member __.Visit (shape : ShapeISerializable<'S>) =
+                fun (source : 'S) ->
+                    let sc = new StreamingContext()
+                    let si = new SerializationInfo(typeof<'S>, FormatterConverter())
+                    source.GetObjectData(si, sc)
+                    shape.Create(si, sc)
+                |> wrap }
+
     | Shape.CliMutable (:? ShapeCliMutable<'T> as shape) ->
         let memberCloners = shape.Properties |> Array.map mkMemberCloner
         fun source ->
@@ -95,5 +116,6 @@ let rec mkCloner<'T> () : 'T -> 'T =
                 target <- fc source target
 
             target
+                
 
     | _ -> failwithf "Unsupported type %O" typeof<'T>
