@@ -1475,7 +1475,7 @@ and ShapeISerializable<'T when 'T :> ISerializable> private () =
 #if TYPESHAPE_EMIT
         ctor.Value.Invoke(serializationInfo, streamingContext)
 #else
-        getCtorInfo.Invoke [| serializationInfo ; streamingContext |] :?> 'T
+        getCtorInfo().Invoke [| serializationInfo ; streamingContext |] :?> 'T
 #endif
 
 #if TYPESHAPE_EXPR
