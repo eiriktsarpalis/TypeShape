@@ -5,23 +5,25 @@ open TypeShape
 open TypeShape_Utils
 
 // Generic value printer with recursive type support
+let rec mkPrinter<'T> () : 'T -> string =
+    let ctx = new RecTypeManager()
+    mkPrinterCached<'T> ctx
 
-let rec private cache = new TypeCache()
-and mkPrinter<'T> () : 'T -> string =
-    match cache.TryFind<'T -> string> () with
+and mkPrinterCached<'T> (ctx : RecTypeManager) : 'T -> string =
+    match ctx.TryFind<'T -> string> () with
     | Some p -> p
     | None ->
-        let _ = cache.CreateUninitialized<'T -> string>(fun c t -> c.Value t)
-        let p = mkPrinterAux<'T>()
-        cache.Commit p
+        let _ = ctx.CreateUninitialized<'T -> string>(fun c t -> c.Value t)
+        let p = mkPrinterAux<'T> ctx
+        ctx.Complete p
 
-and mkPrinterAux<'T> () : 'T -> string =
+and mkPrinterAux<'T> (ctx : RecTypeManager) : 'T -> string =
     let wrap(p : 'a -> string) = unbox<'T -> string> p
     let mkFieldPrinter (field : IShapeMember<'DeclaringType>) =
         field.Accept {
             new IMemberVisitor<'DeclaringType, string * ('DeclaringType -> string)> with
                 member __.Visit(field : ShapeMember<'DeclaringType, 'Field>) =
-                    let fp = mkPrinter<'Field> ()
+                    let fp = mkPrinterCached<'Field> ctx
                     field.Label, fp << field.Project
         }
 
@@ -36,7 +38,7 @@ and mkPrinterAux<'T> () : 'T -> string =
         s.Accept {
             new IFSharpOptionVisitor<'T -> string> with
                 member __.Visit<'a> () = // 'T = 'a option
-                    let tp = mkPrinter<'a>()
+                    let tp = mkPrinterCached<'a> ctx
                     wrap(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
         }
 
@@ -44,7 +46,7 @@ and mkPrinterAux<'T> () : 'T -> string =
         s.Accept {
             new IFSharpListVisitor<'T -> string> with
                 member __.Visit<'a> () = // 'T = 'a list
-                    let tp = mkPrinter<'a> ()
+                    let tp = mkPrinterCached<'a> ctx
                     wrap(fun (ts : 'a list) -> ts |> Seq.map tp |> String.concat "; " |> sprintf "[%s]")
         }
 
@@ -52,7 +54,7 @@ and mkPrinterAux<'T> () : 'T -> string =
         s.Accept {
             new IArrayVisitor<'T -> string> with
                 member __.Visit<'a> _ = // 'T = 'a []
-                    let tp = mkPrinter<'a> ()
+                    let tp = mkPrinterCached<'a> ctx
                     wrap(fun (ts : 'a []) -> ts |> Seq.map tp |> String.concat "; " |> sprintf "[|%s|]")
         }
 
@@ -60,7 +62,7 @@ and mkPrinterAux<'T> () : 'T -> string =
         s.Accept {
             new IFSharpSetVisitor<'T -> string> with
                 member __.Visit<'a when 'a : comparison> () =  // 'T = Set<'a>
-                    let tp = mkPrinter<'a> ()
+                    let tp = mkPrinterCached<'a> ctx
                     wrap(fun (s : Set<'a>) -> s |> Seq.map tp |> String.concat "; " |> sprintf "set [%s]")
         }
 

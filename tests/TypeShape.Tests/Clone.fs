@@ -8,22 +8,28 @@ open TypeShape_Utils
 
 // Simple object clone implementation used to verify implementation correctness of shapes
 
-let rec private cache = new TypeCache()
-and mkCloner<'T> () : 'T -> 'T =
+let rec mkCloner<'T> () : 'T -> 'T =
     match cache.TryFind<'T -> 'T> () with
     | Some c -> c
     | None ->
-        let _ = cache.CreateUninitialized<'T -> 'T>(fun c t -> c.Value t)
-        let c = mkClonerAux<'T>()
-        cache.Commit c
+        use ctx = cache.CreateRecTypeManager()
+        mkClonerCached<'T> ctx
 
-and mkClonerAux<'T> () : 'T -> 'T =
+and private mkClonerCached<'T> (ctx : RecTypeManager) : 'T -> 'T =
+    match ctx.TryFind<'T -> 'T> () with
+    | Some c -> c
+    | None ->
+        let _ = ctx.CreateUninitialized<'T -> 'T>(fun c t -> c.Value t)
+        let c = mkClonerAux<'T> ctx
+        ctx.Complete c
+
+and private mkClonerAux<'T> (ctx : RecTypeManager) : 'T -> 'T =
     let wrap(f : 'a -> 'a) = unbox<'T -> 'T> f
     let mkMemberCloner (fieldShape : IShapeWriteMember<'DeclaringType>) =
         fieldShape.Accept {
             new IWriteMemberVisitor<'DeclaringType, 'DeclaringType -> 'DeclaringType -> 'DeclaringType> with
                 member __.Visit (shape : ShapeWriteMember<'DeclaringType, 'Field>) =
-                    let fieldCloner = mkCloner<'FieldType>()
+                    let fieldCloner = mkClonerCached<'FieldType> ctx
                     fun src tgt ->
                         let field = shape.Project src
                         let field' = fieldCloner field
@@ -46,14 +52,14 @@ and mkClonerAux<'T> () : 'T -> 'T =
                     if typeof<'t>.IsPrimitive then
                         wrap(fun (ts:'t[]) -> ts.Clone() :?> 't[])
                     else
-                        let ec = mkCloner<'t>()
+                        let ec = mkClonerCached<'t> ctx
                         wrap(Array.map ec) }
 
     | Shape.FSharpList s ->
         s.Accept {
             new IFSharpListVisitor<'T -> 'T> with
                 member __.Visit<'t> () =
-                    let ec = mkCloner<'t>()
+                    let ec = mkClonerCached<'t> ctx
                     wrap(List.map ec) }
 
     | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
@@ -119,3 +125,5 @@ and mkClonerAux<'T> () : 'T -> 'T =
                 
 
     | _ -> failwithf "Unsupported type %O" typeof<'T>
+
+and private cache : TypeCache = new TypeCache()

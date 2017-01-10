@@ -1,3 +1,6 @@
+### 2.8
+* Refactor TypeCache implementation.
+
 ### 2.7
 * Rename TypeIndex to TypeCache.
 

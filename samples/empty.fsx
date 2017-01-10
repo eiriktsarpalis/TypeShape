@@ -11,17 +11,24 @@ let rec mkEmptyFunc<'T> () : unit -> 'T =
     let mutable f = Unchecked.defaultof<unit -> 'T>
     if cache.TryGetValue(&f) then f
     else
-        let _ = cache.CreateUninitialized<unit -> 'T>(fun c () -> c.Value ())
-        let f = mkEmptyFuncAux<'T>()
-        cache.Commit f
+        use mgr = cache.CreateRecTypeManager()
+        mkEmptyFuncAux<'T> mgr
 
-and private mkEmptyFuncAux<'T> () : unit -> 'T =
+and private mkEmptyFuncCached<'T> (ctx : RecTypeManager) : unit -> 'T =
+    match ctx.TryFind<unit -> 'T>() with
+    | Some f -> f
+    | None ->
+        let _ = ctx.CreateUninitialized<unit -> 'T>(fun c () -> c.Value ())
+        let f = mkEmptyFuncAux<'T> ctx
+        ctx.Complete f
+
+and private mkEmptyFuncAux<'T> (ctx : RecTypeManager) : unit -> 'T =
     let wrap (f : unit -> 'a) = unbox<unit -> 'T> f
 
     let mkMemberInitializer (shape : IShapeWriteMember<'DeclaringType>) =
         shape.Accept { new IWriteMemberVisitor<'DeclaringType, 'DeclaringType -> 'DeclaringType> with
             member __.Visit (shape : ShapeWriteMember<'DeclaringType, 'Field>) =
-                let fe = mkEmptyFunc<'Field>()
+                let fe = mkEmptyFuncCached<'Field> ctx
                 fun inst -> shape.Inject inst (fe ())
         }
 
@@ -38,7 +45,7 @@ and private mkEmptyFuncAux<'T> () : unit -> 'T =
     | Shape.Enum s ->
         s.Accept { new IEnumVisitor<unit -> 'T> with
             member __.Visit<'t, 'u when 't : enum<'u>>() = // 'T = 't
-                let ue = mkEmptyFunc<'u>()
+                let ue = mkEmptyFuncCached<'u> ctx
                 wrap(fun () -> LanguagePrimitives.EnumOfValue<'u,'t>(ue()))
         }
 
@@ -57,13 +64,13 @@ and private mkEmptyFuncAux<'T> () : unit -> 'T =
     | Shape.FSharpOption s ->
         s.Accept { new IFSharpOptionVisitor<unit -> 'T> with
             member __.Visit<'t>() = // 'T = 't option
-                let et = mkEmptyFunc<'t>()
+                let et = mkEmptyFuncCached<'t> ctx
                 wrap(fun () -> Option<'t>.None) }
 
     | Shape.KeyValuePair s ->
         s.Accept { new IKeyValuePairVisitor<unit -> 'T> with
             member __.Visit<'k,'v>() = // 'T = KeyValuePair<'k,'v>
-                let ke,ve = mkEmptyFunc<'k>(), mkEmptyFunc<'v>()
+                let ke,ve = mkEmptyFuncCached<'k> ctx, mkEmptyFuncCached<'v> ctx
                 wrap(fun () -> new KeyValuePair<'k,'v>(ke(),ve())) }
 
     | Shape.FSharpList s ->

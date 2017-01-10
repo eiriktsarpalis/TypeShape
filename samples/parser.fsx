@@ -23,15 +23,19 @@ let (<*>) (f : Parser<'T -> 'S>) (t : Parser<'T>) : Parser<'S> =
 
 /// Generates a parser for supplied type
 let rec genParser<'T> () : Parser<'T> =
-    match cache.TryFind<Parser<'T>> () with
+    let ctx = new RecTypeManager()
+    genParserCached<'T> ctx
+    
+and private genParserCached<'T> (ctx : RecTypeManager) : Parser<'T> =
+    match ctx.TryFind<Parser<'T>>() with
     | Some p -> p
     | None ->
         // create a delayed uninitialized instance for recursive type definitions
-        let _ = cache.CreateUninitialized<Parser<'T>>(fun c s -> c.Value s)
-        let p = genParserAux<'T> ()
-        cache.Commit (spaced p)
+        let _ = ctx.CreateUninitialized<Parser<'T>>(fun c s -> c.Value s)
+        let p = genParserAux<'T> ctx
+        ctx.Complete (spaced p)
     
-and genParserAux<'T> () : Parser<'T> =
+and private genParserAux<'T> (ctx : RecTypeManager) : Parser<'T> =
     let token str = spaced (pstring str) >>% ()
     let paren p = between (pchar '(') (pchar ')') (spaced p)
     let wrap (p : Parser<'a>) = unbox<Parser<'T>>(spaced p)
@@ -39,7 +43,7 @@ and genParserAux<'T> () : Parser<'T> =
     let mkMemberParser (shape : IShapeWriteMember<'Class>) =
         shape.Accept { new IWriteMemberVisitor<'Class, Parser<'Class -> 'Class>> with
             member __.Visit (shape : ShapeWriteMember<'Class, 'Field>) =
-                let fp = genParser<'Field>()
+                let fp = genParserCached<'Field> ctx
                 fp |>> fun f dt -> shape.Inject dt f
         }
 
@@ -63,7 +67,7 @@ and genParserAux<'T> () : Parser<'T> =
         s.Accept {
             new IFSharpOptionVisitor<Parser<'T>> with
                 member __.Visit<'t> () =
-                    let tp = genParser<'t>() |>> Some
+                    let tp = genParserCached<'t> ctx |>> Some
                     let nP = stringReturn "None" None
                     let vp = attempt (paren tp) <|> tp
                     let sP = token "Some" >>. vp
@@ -74,7 +78,7 @@ and genParserAux<'T> () : Parser<'T> =
         s.Accept {
             new IFSharpListVisitor<Parser<'T>> with
                 member __.Visit<'t> () =
-                    let tp = genParser<'t>()
+                    let tp = genParserCached<'t> ctx
                     let sep = pchar ';'
                     let lp = between (pchar '[') (pchar ']') (sepBy tp sep)
                     wrap lp
@@ -84,7 +88,7 @@ and genParserAux<'T> () : Parser<'T> =
         s.Accept {
             new IArrayVisitor<Parser<'T>> with
                 member __.Visit<'t> _ =
-                    let tp = genParser<'t> ()
+                    let tp = genParserCached<'t> ctx
                     let sep = pchar ';'
                     let lp = between (pstring "[|") (pstring "|]") (sepBy tp sep)
                     wrap(lp |>> Array.ofList)
@@ -124,8 +128,6 @@ and genParserAux<'T> () : Parser<'T> =
         |> choice
 
     | _ -> failwithf "unsupported type '%O'" typeof<'T>
- 
-and private cache : TypeCache = new TypeCache()
 
 
 /// Generates a string parser for given type
