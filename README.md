@@ -65,10 +65,10 @@ let rec mkPrinter<'T> () : 'T -> string =
                     wrap(fun ts -> ts |> List.map tp |> String.concat "; " |> sprintf "[%s]")
         }
 
-    | Shape.Array s ->
+    | Shape.Array s when s.Rank = 1 ->
         s.Accept {
             new IArrayVisitor<'T -> string> with
-                member __.Visit<'a> () =
+                member __.Visit<'a> _ =
                     let tp = mkPrinter<'a> ()
                     wrap(fun ts -> ts |> Array.map tp |> String.concat "; " |> sprintf "[|%s|]")
         }
