@@ -1,3 +1,6 @@
+### 2.9
+* Bugfix in ShapeUnion.GetTag.
+
 ### 2.8
 * Refactor TypeCache implementation.
 
