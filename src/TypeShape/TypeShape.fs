@@ -1313,7 +1313,8 @@ and ShapeFSharpUnion<'U> private () =
         while notFound && i < n do
             if caseNames.[i] = caseName then
                 notFound <- false
-            i <- i + 1
+            else
+                i <- i + 1
         if notFound then raise <| KeyNotFoundException(sprintf "Union case: %A" caseName)
         i
 
