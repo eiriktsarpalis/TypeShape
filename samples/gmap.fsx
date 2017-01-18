@@ -3,6 +3,9 @@ open System
 open TypeShape
 open TypeShape_Utils
 
+// Generic map implementation that updates all occurences
+// of a given type inside a value
+
 type GMapper<'E, 'T> = ('E -> 'E) -> ('T -> 'T)
 
 let rec gmap<'E, 'T> (mapper : 'E -> 'E) : 'T -> 'T =
@@ -101,8 +104,8 @@ gmap ((+) 1) (Some [| [1 .. 10] |], 1, ("foo", 3, (5,Some 6)))
 type Person = { Name : string ; Age : int ; Address : string }
 
 let value =
-    [ { Name = "eirik" ; Age = 31 ; Address = "Dublin" } ;
-      { Name = "john" ; Age = 40; Address = "7th Avenue" } ;
+    [ { Name = "george" ; Age = 31 ; Address = "Dublin" } ;
+      { Name = "john" ; Age = 40; Address = "8th Avenue" } ;
       { Name = "Paul" ; Age = 74; Address = "England" } ]
 
 gmap (fun (s:string) -> s.ToUpper()) value
