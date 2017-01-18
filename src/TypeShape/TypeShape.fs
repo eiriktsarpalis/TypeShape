@@ -1285,7 +1285,10 @@ and ShapeFSharpUnion<'U> private () =
             Activator.CreateInstanceGeneric<ShapeFSharpUnionCase<'U>>([||],[|uci|]) 
             :?> ShapeFSharpUnionCase<'U>)
 
+#if TYPESHAPE_EMIT || TYPESHAPE_EXPR
     let tagReaderInfo = FSharpValue.PreComputeUnionTagMemberInfo(typeof<'U>, allMembers)
+#endif
+
 #if TYPESHAPE_EMIT
     let tagReader = emitUnionTagReader<'U> tagReaderInfo
 #else
