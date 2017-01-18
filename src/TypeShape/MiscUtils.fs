@@ -11,11 +11,19 @@ open System.Collections.Concurrent
 
 /// Value container that will eventually be populated
 type Cell<'T> internal (container : 'T option ref) =
-    member __.IsValueCreated = Option.isSome !container
-    member __.Value = 
-        match container.Value with
+    let mutable isCreated = false
+    let mutable value = Unchecked.defaultof<'T>
+    member __.IsValueCreated : bool = 
+        if isCreated then true else
+        match !container with
+        | None -> false
+        | Some t -> value <- t ; isCreated <- true ; true
+
+    member __.Value : 'T = 
+        if isCreated then value else
+        match !container with
         | None -> failwithf "Value for '%O' has not been initialized." typeof<'T>
-        | Some t -> t
+        | Some t -> value <- t ; isCreated <- true ; t
 
 type private RecTypePayload = { Cell : obj ; Value : obj ; IsValueSet : unit -> bool }
 
@@ -28,6 +36,26 @@ type RecTypeManager internal (parentCache : TypeCache option) =
 
     /// Attempt to look up value by type.
     /// If uninitialized rectype returns the placeholder dummy value.
+    member __.TryGetValue<'T>(result : byref<'T>) : bool =
+        let ok, payload = dict.TryGetValue typeof<'T>
+        if ok then result <- payload.Value :?> 'T ; true
+        else
+            match parentCache with
+            | None -> false
+            | Some pc -> pc.TryGetValue<'T>(&result)
+
+    /// Attempt to look up value by type.
+    /// If uninitialized rectype returns the placeholder dummy value.
+    member __.TryGetValue(t : Type, result : byref<obj>) : bool =
+        let ok, payload = dict.TryGetValue t
+        if ok then result <- payload.Value ; true
+        else
+            match parentCache with
+            | None -> false
+            | Some pc -> pc.TryGetValue(t, &result)
+
+    /// Attempt to look up value by type.
+    /// If uninitialized rectype returns the placeholder dummy value.
     member __.TryFind<'T>() =
         let ok, payload = dict.TryGetValue typeof<'T>
         if ok then Some(payload.Value :?> 'T)
@@ -35,6 +63,16 @@ type RecTypeManager internal (parentCache : TypeCache option) =
             match parentCache with
             | None -> None
             | Some pc -> pc.TryFind<'T>()
+
+    /// Attempt to look up value by type.
+    /// If uninitialized rectype returns the placeholder dummy value.
+    member __.TryFind (t : Type) =
+        let ok, payload = dict.TryGetValue t
+        if ok then Some payload.Value
+        else
+            match parentCache with
+            | None -> None
+            | Some pc -> pc.TryFind t
 
     /// <summary>
     ///     Registers an uninitialized value at the beggining of a recursive
@@ -101,9 +139,23 @@ and TypeCache() =
             false
 
     /// Try looking up cached value by type
+    member __.TryGetValue(t : Type, result : byref<obj>) : bool =
+        let mutable obj = null
+        if dict.TryGetValue(t, &obj) then
+            result <- obj ; true
+        else
+            false
+
+    /// Try looking up cached value by type
     member __.TryFind<'T>() : 'T option =
         let mutable obj = null
         if dict.TryGetValue(typeof<'T>, &obj) then Some(obj :?> 'T)
+        else None
+
+    /// Try looking up cached value by type
+    member __.TryFind(t : Type) : obj option =
+        let mutable obj = null
+        if dict.TryGetValue(t, &obj) then Some obj
         else None
 
     /// Try adding value for given type
@@ -122,3 +174,52 @@ and TypeCache() =
                 ignore(dict.TryAdd(k, v))
 
         | _ -> invalidArg "manager" "RecTypeManager does not belong to TypeCache context."
+
+
+/// Provides a binary search implementation for generic values
+type BinSearch<'T when 'T : comparison>(inputs : 'T[]) =
+    do 
+        let duplicates =
+            inputs 
+            |> Seq.groupBy id
+            |> Seq.filter(fun (_,gp) -> Seq.length gp > 1)
+            |> Seq.map fst
+            |> Seq.toArray
+
+        if duplicates.Length > 0 then
+            duplicates 
+            |> Seq.map (sprintf "%A") 
+            |> String.concat ","
+            |> sprintf "duplicate values %s found"
+            |> invalidArg "inputs"
+
+    let indices, sortedInputs =
+        inputs
+        |> Seq.mapi (fun i v -> i,v)
+        |> Seq.sortBy snd
+        |> Seq.toArray
+        |> Array.unzip
+
+    /// Gets the original input array used to form
+    /// this binary search implementation
+    member __.Values = inputs
+
+    /// Returns an integer indicating the position of the
+    /// given value in the source array, or -1 if not found.
+    member __.TryFindIndex(value : 'T) : int =
+        match sortedInputs.Length with
+        | 0 -> -1
+        | 1 -> if sortedInputs.[0] = value then 0 else -1
+        | n ->
+            let mutable found = false
+            let mutable lb, ub = 0, n - 1
+            let mutable i = 0
+
+            while not found && ub - lb >= 0 do
+                i <- (lb + ub) / 2
+                match compare value sortedInputs.[i] with
+                | 0 -> found <- true
+                | c when c < 0 -> ub <- i - 1
+                | _ -> lb <- i + 1
+
+            if found then indices.[i] else -1

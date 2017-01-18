@@ -3,6 +3,7 @@ module TypeShape.Tests.Tests
 open System
 open System.Collections.Generic
 open System.Reflection
+open System.Runtime.Serialization
 
 open FSharp.Reflection
 
@@ -11,8 +12,7 @@ open Swensen.Unquote.Assertions
 open FsCheck
 
 open TypeShape
-
-open System.Runtime.Serialization
+open TypeShape_Utils
 
 let check<'T>(prop : 'T -> bool) = Check.QuickThrowOnFailure prop
 let checkCloner (cloner : 'T -> 'T) = check(fun t -> t = cloner t)
@@ -603,3 +603,36 @@ type P = Z | S of P
 let ``Should clone recursive types`` () =
     let cloner = mkCloner<P>()
     checkCloner cloner
+
+//        let missingValues = 
+//            let set = set inputs
+//            otherValues |> Array.filter (not << set.Contains)
+
+[<Fact>]
+let ``BinSearch should report correct indices`` () =
+    let property (inputs : string []) =
+        let inputs = Array.distinct inputs
+        let binSearch = BinSearch inputs
+
+        test 
+            <@ 
+                inputs 
+                |> Seq.mapi (fun i v -> i,v)
+                |> Seq.forall (fun (i,v) -> binSearch.TryFindIndex v = i)
+            @>
+
+    Check.QuickThrowOnFailure property
+
+
+[<Fact>]
+let ``BinSearch should return -1 on non-existingValues`` () =
+    let property (inputs : Set<string>) (otherValues : Set<string>) =
+        let binSearch = BinSearch (Set.toArray inputs)
+        let missingValues = otherValues - inputs
+        test 
+            <@
+                missingValues
+                |> Seq.forall (fun v -> binSearch.TryFindIndex v = -1)
+            @>
+
+    Check.QuickThrowOnFailure property
