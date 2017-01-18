@@ -269,11 +269,11 @@ and private genPicklerAux<'T> (ctx : RecTypeManager) : JsonPickler<'T> =
                 fun (sb:StringBuilder) (t:'T) ->
                     let tag = shape.GetTag t
                     let label, printer, _ = caseInfo.[tag]
-                    printField sb "__tag" append label
+                    printField sb "__case" append label
                     printer sb t
 
             Parser =
-                jsonField "__tag" stringLiteral >>= 
+                jsonField "__case" stringLiteral >>= 
                     fun tag -> 
                         let t = shape.GetTag tag 
                         let _,_,parser = caseInfo.[t]

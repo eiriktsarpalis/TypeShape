@@ -1,82 +1,108 @@
 #r "../bin/TypeShape.dll"
 open System
 open TypeShape
+open TypeShape_Utils
 
-// inspired by but different from http://research.microsoft.com/en-us/um/people/simonpj/papers/hmap/gmap3.pdf
+type GMapper<'E, 'T> = ('E -> 'E) -> ('T -> 'T)
 
-let rec gmapQ<'T,'S,'U> (f : 'T -> 'S) : 'U -> 'S list =
-    let wrap(f : 'a -> 'S list) = unbox<'U -> 'S list> f
+let rec gmap<'E, 'T> (mapper : 'E -> 'E) : 'T -> 'T =
+    match cache.TryFind<GMapper<'E, 'T>> () with
+    | Some m -> m mapper
+    | None ->
+        use ctx = cache.CreateRecTypeManager()
+        gmapCached<'E, 'T> ctx mapper
 
-    let gmapQMember (shape : IShapeMember<'a>) =
-        shape.Accept { new IMemberVisitor<'a, 'a -> 'S list> with
-            member __.Visit (shape : ShapeMember<'a, 'f>) =
-                gmapQ<'T, 'S, 'f> f << shape.Project }
+and private gmapCached<'E, 'T> (ctx : RecTypeManager) : GMapper<'E, 'T> =
+    match ctx.TryFind<GMapper<'E, 'T>> () with
+    | Some m -> m
+    | None ->
+        let _ = ctx.CreateUninitialized<GMapper<'E, 'T>> (fun c f -> c.Value f)
+        let m = gmapAux<'E, 'T> ctx
+        ctx.Complete m
 
-    match shapeof<'U> :> TypeShape with
-    | :? TypeShape<'T> -> wrap(fun (t:'T) -> [f t])
+and private gmapAux<'E, 'T> (ctx : RecTypeManager) : GMapper<'E, 'T> =
+    let EQ (input : GMapper<'E, 'a>) : GMapper<'E, 'T> = unbox input
+
+    let gmapMember (shape : IShapeWriteMember<'Class>) =
+        shape.Accept { new IWriteMemberVisitor<'Class, ('E -> 'E) -> 'Class -> 'Class -> 'Class> with
+            member __.Visit (shape : ShapeWriteMember<'Class, 'Field>) =
+                let fMapper = gmapCached<'E, 'Field> ctx
+                fun mapper source target ->
+                    let field = shape.Project source
+                    let field' = fMapper mapper field
+                    shape.Inject target field'
+        }
+
+    match shapeof<'T> :> TypeShape with
+    | :? TypeShape<'E> -> EQ id<'E -> 'E>
+    | Shape.Primitive
+    | Shape.String
+    | Shape.Guid
+    | Shape.Decimal
+    | Shape.DateTime
+    | Shape.DateTimeOffset -> EQ (fun _ -> id<'T>)
     | Shape.FSharpOption s ->
-        s.Accept {
-            new IFSharpOptionVisitor<'U -> 'S list> with
-                member __.Visit<'a>() =
-                    let tm = gmapQ<'T,'S,'a> f
-                    wrap(function None -> [] | Some t -> tm t)
+        s.Accept { new IFSharpOptionVisitor<GMapper<'E, 'T>> with
+            member __.Visit<'t> () = // 't option = 'T
+                let em = gmapCached<'E, 't> ctx
+                EQ(fun f -> Option.map (em f))
         }
 
     | Shape.Array s when s.Rank = 1 ->
-        s.Accept {
-            new IArrayVisitor<'U -> 'S list> with
-                member __.Visit<'a> _ =
-                    let tm = gmapQ<'T, 'S, 'a> f
-                    wrap(fun (ts : 'a []) -> ts |> Seq.collect tm |> Seq.toList)
+        s.Accept { new IArrayVisitor<GMapper<'E, 'T>> with
+            member __.Visit<'t> _ = // 't [] = 'T
+                let em = gmapCached<'E, 't> ctx
+                EQ(fun f -> Array.map (em f))
         }
 
     | Shape.FSharpList s ->
-        s.Accept {
-            new IFSharpListVisitor<'U -> 'S list> with
-                member __.Visit<'a>() =
-                    let tm = gmapQ<'T,'S,'a> f
-                    wrap(fun (ts : 'a list) -> ts |> List.collect tm)
+        s.Accept { new IFSharpListVisitor<GMapper<'E, 'T>> with
+            member __.Visit<'t> () = // 't list = 'T
+                let em = gmapCached<'E, 't> ctx
+                EQ(fun f -> List.map (em f))
         }
 
-    | Shape.FSharpSet s ->
-        s.Accept {
-            new IFSharpSetVisitor<'U -> 'S list> with
-                member __.Visit<'a when 'a : comparison> () =
-                    let tm = gmapQ<'T,'S,'a> f
-                    wrap(fun (ts : Set<'a>) -> ts |> Seq.collect tm |> Seq.toList)
-        }
+    | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
+        let ems = shape.Elements |> Array.map gmapMember
+        fun mapper source ->
+            let mutable target = shape.CreateUninitialized()
+            for em in ems do target <- em mapper source target
+            target
 
-    | Shape.Tuple (:? ShapeTuple<'U> as shape) ->
-        let eMappers = shape.Elements |> Seq.map gmapQMember |> Seq.toList
-        fun (u:'U) -> eMappers |> List.collect (fun m -> m u)
+    | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
+        let fms = shape.Fields |> Array.map gmapMember
+        fun mapper source ->
+            let mutable target = shape.CreateUninitialized()
+            for fm in fms do target <- fm mapper source target
+            target
 
-    | Shape.FSharpRecord (:? ShapeFSharpRecord<'U> as shape) ->
-        let fMappers = shape.Fields |> Seq.map gmapQMember |> Seq.toList
-        fun (u:'U) -> fMappers |> List.collect (fun m -> m u)
-
-    | Shape.FSharpUnion (:? ShapeFSharpUnion<'U> as shape) ->
-        let umappers = 
+    | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
+        let caseMappers = 
             shape.UnionCases 
-            |> Array.map (fun uc -> uc.Fields |> Seq.map gmapQMember |> Seq.toList)
+            |> Array.map (fun case -> case, case.Fields |> Array.map gmapMember)
 
-        fun (u:'U) ->
-            let tag = shape.GetTag u
-            umappers.[tag] |> List.collect (fun m -> m u)
+        fun mapper source ->
+            let tag = shape.GetTag source
+            let case, mappers = caseMappers.[tag]
+            let mutable target = case.CreateUninitialized()
+            for fm in mappers do target <- fm mapper source target
+            target
+        
+    | _ -> failwithf "Unsupported type '%O'" typeof<'T>
 
-    | s -> 
-        s.Accept { new ITypeShapeVisitor<'U -> 'S list> with
-            member __.Visit<'a>() = wrap(fun (_:'a) -> []) }
-
-
-// examples
-
-gmapQ id<int> (Some 42, ([1 .. 10], set[5;6;7]))
-gmapQ id<string> (Some 42, ([1 .. 10], "42", set[5;6;7]))
+and private cache : TypeCache = new TypeCache()
 
 
-type Foo = A | B of int | C of int * string
-type Bar = { Foo : Foo ; A : int ; B : string }
+//-------------------------------
+// Examples
 
-let value = { Foo = C(2,"2") ; A = 1 ; B = "1" }
-gmapQ id<int> value
-gmapQ id<string> value
+gmap ((+) 1) (Some [| [1 .. 10] |], 1, ("foo", 3, (5,Some 6)))
+
+type Person = { Name : string ; Age : int ; Address : string }
+
+let value =
+    [ { Name = "eirik" ; Age = 31 ; Address = "Dublin" } ;
+      { Name = "john" ; Age = 40; Address = "7th Avenue" } ;
+      { Name = "Paul" ; Age = 74; Address = "England" } ]
+
+gmap (fun (s:string) -> s.ToUpper()) value
