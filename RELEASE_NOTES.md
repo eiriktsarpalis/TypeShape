@@ -1,3 +1,6 @@
+### 2.10
+* Add binary search utility.
+
 ### 2.9
 * Bugfix in ShapeUnion.GetTag.
 
