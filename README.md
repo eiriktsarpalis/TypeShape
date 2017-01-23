@@ -174,12 +174,12 @@ See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/maste
 
 ### Projects using TypeShape
 
-* [FsPickler](https://github.com/mbraceproject/FsPickler/blob/7d86cbd20ff37899ef58d5430f74376e119b7065/src/FsPickler/PicklerGeneration/PicklerGenerator.fs#L38)
-* [FSharp.AWS.DynamoDB](https://github.com/fsprojects/FSharp.AWS.DynamoDB/blob/b5cde91fae2630562188bdff6e16cda0208c330b/src/FSharp.AWS.DynamoDB/Picklers/PicklerResolver.fs#L23)
+* [FsPickler](https://github.com/mbraceproject/FsPickler/blob/c5b73fc48fa313c66eaeb8c79897253de0605d34/src/FsPickler/PicklerGeneration/PicklerGenerator.fs#L38)
+* [FSharp.AWS.DynamoDB](https://github.com/fsprojects/FSharp.AWS.DynamoDB/blob/55470a0cc8b1a54d14571f059bd2b5721f2495c7/src/FSharp.AWS.DynamoDB/Picklers/PicklerResolver.fs#L23)
 
 ### Related Work
 
-* [DataType Generic Programming in F#](http://www.staff.science.uu.nl/~swier004/publications/2015-wgp.pdf)
+* [DataType Generic Programming in F#](http://www.staff.science.uu.nl/~swier004/publications/2015-wgp.pdf), 
 * [Infers](https://github.com/Infers/Infers)
 
 ### Build Status
