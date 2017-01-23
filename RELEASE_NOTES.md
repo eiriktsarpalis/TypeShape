@@ -1,3 +1,6 @@
+### 2.11
+* Add TypeCache.GetOrAdd method.
+
 ### 2.10
 * Add binary search utility.
 
