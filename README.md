@@ -171,6 +171,7 @@ See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/maste
 * [Parser.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/samples/parser.fsx) Parser generator for common F# types using FParsec.
 * [Equality-Comparer.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/samples/equality-comparer.fsx) Equality comparer generator for common F# types.
 * [Gmap.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/samples/gmap.fsx) A gmap implementation.
+* [hashcode-staged.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/samples/hashcode-staged.fsx) Staged generic hashcode generator.
 
 ### Projects using TypeShape
 
