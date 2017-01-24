@@ -12,7 +12,7 @@ let rec mkEmptyFunc<'T> () : unit -> 'T =
     if cache.TryGetValue(&f) then f
     else
         use mgr = cache.CreateRecTypeManager()
-        mkEmptyFuncAux<'T> mgr
+        mkEmptyFuncCached<'T> mgr
 
 and private mkEmptyFuncCached<'T> (ctx : RecTypeManager) : unit -> 'T =
     match ctx.TryFind<unit -> 'T>() with
@@ -54,6 +54,13 @@ and private mkEmptyFuncAux<'T> (ctx : RecTypeManager) : unit -> 'T =
             member __.Visit<'t when 't : struct and 't :> ValueType and 't : (new : unit -> 't)>() = // 'T = 't
                 wrap(fun () -> new Nullable<'t>())
         }
+
+    | Shape.FSharpFunc s ->
+        // empty<'T -> 'S> = fun (_ : 'T) -> empty<'S>
+        s.Accept { new IFSharpFuncVisitor<unit -> 'T> with
+            member __.Visit<'Dom, 'Cod> () = // 'T = 'Cod -> 'Dom
+                let de = mkEmptyFuncAux<'Cod> ctx
+                wrap(fun () -> fun (_ : 'Dom) -> de ()) }
 
     | Shape.DefaultConstructor s ->
         s.Accept { new IDefaultConstructorVisitor<unit -> 'T> with
