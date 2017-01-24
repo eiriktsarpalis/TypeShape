@@ -5,13 +5,13 @@ open System.Reflection
 [<assembly: AssemblyTitleAttribute("TypeShape")>]
 [<assembly: AssemblyProductAttribute("TypeShape")>]
 [<assembly: AssemblyDescriptionAttribute("Practical Generic Programming in F#")>]
-[<assembly: AssemblyVersionAttribute("2.11")>]
-[<assembly: AssemblyFileVersionAttribute("2.11")>]
+[<assembly: AssemblyVersionAttribute("2.12")>]
+[<assembly: AssemblyFileVersionAttribute("2.12")>]
 do ()
 
 module internal AssemblyVersionInformation =
     let [<Literal>] AssemblyTitle = "TypeShape"
     let [<Literal>] AssemblyProduct = "TypeShape"
     let [<Literal>] AssemblyDescription = "Practical Generic Programming in F#"
-    let [<Literal>] AssemblyVersion = "2.11"
-    let [<Literal>] AssemblyFileVersion = "2.11"
+    let [<Literal>] AssemblyVersion = "2.12"
+    let [<Literal>] AssemblyFileVersion = "2.12"

@@ -1,3 +1,6 @@
+### 2.12
+* Add elemenent shape properties to collection shapes.
+
 ### 2.11
 * Add TypeCache.GetOrAdd method.
 
