@@ -61,6 +61,9 @@ type TypeShape<'T> () =
     override __.Equals o = match o with :? TypeShape<'T> -> true | _ -> false
     override __.GetHashCode() = hash typeof<'T>
 
+    static member (===) (shape1 : TypeShape, shape2 : #TypeShape) =
+        shape1 = (shape2 :> TypeShape)
+
 exception UnsupportedShape of Type:Type
     with
     override __.Message = sprintf "Unsupported TypeShape '%O'" __.Type
@@ -138,11 +141,22 @@ type TypeShape with
     ///     Creates a type shape instance for given type
     /// </summary>
     /// <param name="typ">System.Type to be resolved.</param>
-    static member Create(typ : Type) = resolveTypeShape typ
+    static member Create(typ : Type) : TypeShape = resolveTypeShape typ
+
+    /// <summary>
+    ///     Creates a type shape instance from the underlying
+    ///     type of a given value.
+    /// </summary>
+    /// <param name="obj">Non-null value to extract shape data from.</param>
+    static member FromValue(obj : obj) : TypeShape =
+        match obj with
+        | null -> raise <| ArgumentNullException()
+        | obj -> resolveTypeShape (obj.GetType())
+
     /// <summary>
     ///     Creates a type shape instance for given type
     /// </summary>
-    static member Create<'T>() = new TypeShape<'T>()
+    static member Create<'T>() : TypeShape<'T> = new TypeShape<'T>()
 
 /// Creates a type shape instance for given type
 let shapeof<'T> = TypeShape.Create<'T>()
@@ -168,10 +182,12 @@ type INullableVisitor<'R> =
     abstract Visit<'T when 'T : (new : unit -> 'T) and 'T :> ValueType and 'T : struct> : unit -> 'R
 
 type IShapeNullable =
+    abstract ElementShape : TypeShape
     abstract Accept : INullableVisitor<'R> -> 'R
 
 type private ShapeNullable<'T when 'T : (new : unit -> 'T) and 'T :> ValueType and 'T : struct> () =
     interface IShapeNullable with
+        member __.ElementShape = shapeof<'T> :> _
         member __.Accept v = v.Visit<'T> ()
 
 
@@ -349,10 +365,14 @@ type IFSharpFuncVisitor<'R> =
     abstract Visit<'Domain, 'CoDomain> : unit -> 'R
 
 type IShapeFSharpFunc =
+    abstract DomainShape : TypeShape
+    abstract CoDomainShape : TypeShape
     abstract Accept : IFSharpFuncVisitor<'R> -> 'R
 
 type private ShapeFSharpFunc<'Domain, 'CoDomain> () =
     interface IShapeFSharpFunc with
+        member __.DomainShape = shapeof<'Domain> :> _
+        member __.CoDomainShape = shapeof<'CoDomain> :> _
         member __.Accept v = v.Visit<'Domain, 'CoDomain> ()
 
 // System.Exception
@@ -379,10 +399,12 @@ type IEnumerableVisitor<'R> =
     abstract Visit<'Enum, 'T when 'Enum :> seq<'T>> : unit -> 'R
 
 type IShapeEnumerable =
+    abstract ElementShape : TypeShape
     abstract Accept : IEnumerableVisitor<'R> -> 'R
 
 type private ShapeEnumerable<'Enum, 'T when 'Enum :> seq<'T>> () =
     interface IShapeEnumerable with
+        member __.ElementShape = shapeof<'T> :> _
         member __.Accept v = v.Visit<'Enum, 'T> ()
 
 // Collection
@@ -391,10 +413,12 @@ type ICollectionVisitor<'R> =
     abstract Visit<'Collection, 'T when 'Collection :> ICollection<'T>> : unit -> 'R
 
 type IShapeCollection =
+    abstract ElementShape : TypeShape
     abstract Accept : ICollectionVisitor<'R> -> 'R
 
 type private ShapeCollection<'Collection, 'T when 'Collection :> ICollection<'T>> () =
     interface IShapeCollection with
+        member __.ElementShape = shapeof<'T> :> _
         member __.Accept v = v.Visit<'Collection, 'T> ()
 
 // KeyValuePair
@@ -417,6 +441,7 @@ type IArrayVisitor<'R> =
 type IShapeArray =
     /// Gets the rank of the array type shape
     abstract Rank : int
+    abstract ElementShape : TypeShape
     abstract Accept : IArrayVisitor<'R> -> 'R
 
 type private ShapeArray<'T>(rank : int) =
@@ -424,6 +449,7 @@ type private ShapeArray<'T>(rank : int) =
     member __.Rank = rank
     interface IShapeArray with
         member __.Rank = rank
+        member __.ElementShape = shapeof<'T> :> _
         member __.Accept v = v.Visit<'T> rank
 
 // System.Collections.List
@@ -432,10 +458,12 @@ type IResizeArrayVisitor<'R> =
     abstract Visit<'T> : unit -> 'R
 
 type IShapeResizeArray =
+    abstract ElementShape : TypeShape
     abstract Accept : IResizeArrayVisitor<'R> -> 'R
 
 type private ShapeResizeArray<'T> () =
     interface IShapeResizeArray with
+        member __.ElementShape = shapeof<'T> :> _
         member __.Accept v = v.Visit<'T> ()
 
 
@@ -457,10 +485,12 @@ type IHashSetVisitor<'R> =
     abstract Visit<'T when 'T : equality> : unit -> 'R
 
 type IShapeHashSet =
+    abstract ElementShape : TypeShape
     abstract Accept : IHashSetVisitor<'R> -> 'R
 
 type private ShapeHashSet<'T when 'T : equality> () =
     interface IShapeHashSet with
+        member __.ElementShape = shapeof<'T> :> _
         member __.Accept v = v.Visit<'T> ()
 
 // F# Set
@@ -469,10 +499,12 @@ type IFSharpSetVisitor<'R> =
     abstract Visit<'T when 'T : comparison> : unit -> 'R
 
 type IShapeFSharpSet =
+    abstract ElementShape : TypeShape
     abstract Accept : IFSharpSetVisitor<'R> -> 'R
 
 type private ShapeFSharpSet<'T when 'T : comparison> () =
     interface IShapeFSharpSet with
+        member __.ElementShape = shapeof<'T> :> _
         member __.Accept v = v.Visit<'T> ()
 
 // F# Map
@@ -490,6 +522,7 @@ type private ShapeFSharpMap<'K, 'V when 'K : comparison> () =
 // F# ref
 
 type IShapeFSharpRef =
+    abstract ElementShape : TypeShape
     abstract Accept : IFSharpRefVisitor<'R> -> 'R
 
 and IFSharpRefVisitor<'R> =
@@ -497,6 +530,7 @@ and IFSharpRefVisitor<'R> =
 
 type private ShapeFSharpRef<'T> () =
     interface IShapeFSharpRef with
+        member __.ElementShape = shapeof<'T> :> _
         member __.Accept v = v.Visit<'T> ()
 
 // F# option
@@ -505,10 +539,12 @@ type IFSharpOptionVisitor<'R> =
     abstract Visit<'T> : unit -> 'R
 
 type IShapeFSharpOption =
+    abstract ElementShape : TypeShape
     abstract Accept : IFSharpOptionVisitor<'R> -> 'R
 
 type private ShapeFSharpOption<'T> () =
     interface IShapeFSharpOption with
+        member __.ElementShape = shapeof<'T> :> _
         member __.Accept v = v.Visit<'T> ()
 
 // F# List
@@ -517,10 +553,12 @@ type IFSharpListVisitor<'R> =
     abstract Visit<'T> : unit -> 'R
 
 type IShapeFSharpList =
+    abstract ElementShape : TypeShape
     abstract Accept : IFSharpListVisitor<'R> -> 'R
 
 type private ShapeFSharpList<'T> () =
     interface IShapeFSharpList with
+        member __.ElementShape = shapeof<'T> :> _
         member __.Accept v = v.Visit<'T> ()
 
 // F# Choice`2
