@@ -174,3 +174,35 @@ let fib =
         @>
 
 [for i in 1 .. 10 -> fib i]
+
+//---------------------
+// Perf
+
+#r "../bin/Unquote.dll"
+
+let factorialExpr =
+    <@ 
+        let rec factorial n = 
+            if n = 0 then 1 
+            else n * factorial (n - 1)
+
+        factorial
+    @>
+
+let rec baselineF n = if n = 0 then 1 else n * baselineF(n - 1)
+let compiledF = run factorialExpr
+let unquoteF = Swensen.Unquote.Operators.eval factorialExpr
+
+#time "on"
+
+// Real: 00:00:00.003, CPU: 00:00:00.015, GC gen0: 0, gen1: 0, gen2: 0
+for i = 1 to 100000 do
+    let _ = baselineF 10 in ()
+
+// Real: 00:00:07.734, CPU: 00:00:07.671, GC gen0: 1874, gen1: 1, gen2: 0
+for i = 1 to 100000 do
+    let _ = unquoteF 10 in ()
+
+// Real: 00:00:00.402, CPU: 00:00:00.390, GC gen0: 113, gen1: 1, gen2: 0
+for i = 1 to 100000 do
+    let _ = compiledF 10 in ()
