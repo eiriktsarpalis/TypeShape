@@ -10,14 +10,11 @@ open TypeShape
 
 type CompiledExpr<'T> = Environment -> 'T
 
-and Environment private (index : Map<Var, obj ref list>) =
+and Environment private (index : Map<Var, obj ref>) =
     new () = new Environment(Map.empty)
-    member __.NewVar(v : Var, value : obj) =
-        let stack = defaultArg (index.TryFind v) []
-        new Environment(Map.add v (ref value :: stack) index)
-
-    member __.GetVar(v : Var) = index.[v].Head.Value
-    member __.UpdateVar(v : Var, value : obj) = index.[v].Head := value
+    member __.NewVar(v : Var, value : obj) = new Environment(Map.add v (ref value) index)
+    member __.GetVar(v : Var) = index.[v].Value
+    member __.UpdateVar(v : Var, value : obj) = index.[v] := value
 
 
 let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
@@ -30,9 +27,9 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
     | Application(func, arg) ->
         let argShape = TypeShape.Create arg.Type
         argShape.Accept { new ITypeShapeVisitor<CompiledExpr<'T>> with
-            member __.Visit<'a>() =
-                let cfunc = meaning<'a -> 'T> (cast func)
-                let carg = meaning<'a> (cast arg)
+            member __.Visit<'Arg>() =
+                let cfunc = meaning<'Arg -> 'T> (cast func)
+                let carg = meaning<'Arg> (cast arg)
                 EQ(fun env -> (cfunc env) (carg env)) }
 
     | Lambda(var, body) ->
@@ -107,14 +104,14 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
                         let cElem = meaning<'Elem> (cast e)
                         fun env t -> let e = cElem env in s.Inject t e }
 
-            let elemWriters =
+            let celems =
                 Seq.zip shape.Elements exprs
                 |> Seq.map cElem
                 |> Seq.toArray
 
             fun env ->
                 let mutable tuple = shape.CreateUninitialized()
-                for w in elemWriters do tuple <- w env tuple
+                for ce in celems do tuple <- ce env tuple
                 tuple
 
         | _ -> failwith "internal error"
