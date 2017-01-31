@@ -127,16 +127,26 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
 
         | _ -> failwith "internal error"
 
-    | LetRecursive([(fvar, body)], cont) ->
-        let fshape = TypeShape.Create fvar.Type
-        fshape.Accept { new ITypeShapeVisitor<CompiledExpr<'T>> with
-            member __.Visit<'Func>() =
-                let cbody = meaning<'Func> (cast body)
-                let ccont = meaning<'T> (cast cont)
-                EQ(fun env -> 
-                    let env' = env.NewVar(fvar, null)
-                    env'.UpdateVar(fvar, cbody env')
-                    ccont env') }
+    | LetRecursive(recBindings, cont) ->
+        let mkRecBinding (var : Var, body : Expr) =
+            let s = TypeShape.Create var.Type
+            s.Accept { new ITypeShapeVisitor<Var * (Environment -> unit)> with
+                member __.Visit<'Body>() =
+                    let cbody = meaning<'Body> (cast body)
+                    var, fun env -> env.UpdateVar(var, cbody env) }
+
+        let vars, bindings = 
+            recBindings 
+            |> Seq.map mkRecBinding 
+            |> Seq.toArray
+            |> Array.unzip
+
+        let ccont = meaning<'T> (cast cont)
+
+        fun env ->
+            let env' = (env, vars) ||> Array.fold (fun e v -> e.NewVar(v,null))
+            for binding in bindings do binding env'
+            ccont env'
 
     | _ -> failwithf "Unsupported expression %A" expr
 
@@ -174,6 +184,23 @@ let fib =
         @>
 
 [for i in 1 .. 10 -> fib i]
+
+
+let even, odd =
+    run <@
+            let rec even n =
+                if n = 0 then true
+                else odd (n - 1)
+
+            and odd n =
+                if n = 0 then false
+                else even (n - 1)
+
+            even, odd
+        @>
+
+
+[for i in 1 .. 10 -> even i ]
 
 //---------------------
 // Perf
