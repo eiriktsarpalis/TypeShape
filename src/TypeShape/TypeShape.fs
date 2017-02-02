@@ -909,7 +909,7 @@ type IShapeMember<'DeclaringType> =
 
 /// Identifies an instance member that defines
 /// a value in a class instance, typically a field or property
-and ShapeMember<'DeclaringType, 'MemberType> private (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
+and ShapeMember<'DeclaringType, 'MemberType> internal (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
     let isStructMember = isStructMember path
     let isPublicMember = isPublicMember memberInfo
 #if TYPESHAPE_EMIT
@@ -960,29 +960,11 @@ type IShapeWriteMember<'Record> =
 
 /// Identifies an instance member that defines
 /// a mutable value in a class instance, typically a field or property
-and ShapeWriteMember<'DeclaringType, 'MemberType> private (label : string, memberInfo : MemberInfo, path : MemberInfo[], 
-                                                            readOnly : ShapeMember<'DeclaringType, 'MemberType>) =
-    let isStructMember = isStructMember path
-    let isPublicMember = isPublicMember memberInfo
-#if TYPESHAPE_EMIT
-    let projectFunc = emitProjection<'DeclaringType, 'MemberType> memberInfo path
-    let injectFunc = emitInjection<'DeclaringType, 'MemberType> memberInfo path
-#endif
+and ShapeWriteMember<'DeclaringType, 'MemberType> private (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
+    inherit ShapeMember<'DeclaringType, 'MemberType>(label, memberInfo, path)
 
-    /// Human-readable member identifier
-    member __.Label = label
-    /// The actual System.Reflection.MemberInfo corresponding to member
-    member __.MemberInfo = memberInfo
-    /// True iff member is contained within a struct
-    member __.IsStructMember = isStructMember
-    /// True iff member is public
-    member __.IsPublic = isPublicMember
-    /// Projects an instance to member of given value
-    member __.Project (instance : 'DeclaringType) : 'MemberType =
 #if TYPESHAPE_EMIT
-        projectFunc.Value.Invoke instance
-#else
-        project path instance
+    let injectFunc = emitInjection<'DeclaringType, 'MemberType> memberInfo path
 #endif
 
     /// Injects a value to member of given instance
@@ -994,22 +976,11 @@ and ShapeWriteMember<'DeclaringType, 'MemberType> private (label : string, membe
 #endif
 
 #if TYPESHAPE_EXPR
-    /// Projects an instance to member of given value
-    member __.ProjectExpr (instance : Expr<'DeclaringType>) =
-        projectExpr<'DeclaringType, 'MemberType> path instance
 
     /// Injects a value to member of given instance
     member __.InjectExpr (instance : Expr<'DeclaringType>) (field : Expr<'MemberType>) =
         injectExpr path instance field
 #endif
-
-    interface IShapeMember<'DeclaringType> with
-        member s.Label = label
-        member s.MemberType = typeof<'MemberType>
-        member s.MemberInfo = memberInfo
-        member s.IsStructMember = isStructMember
-        member s.IsPublic = isPublicMember
-        member s.Accept v = v.Visit readOnly
 
     interface IShapeWriteMember<'DeclaringType> with
         member s.Accept (v : IWriteMemberVisitor<'DeclaringType, 'R>) = v.Visit s
@@ -1084,12 +1055,12 @@ module private MemberUtils2 =
 
         let tyArgs = [|typeof<'Record> ; memberType|]
         let args = [|box label; box memberInfo; box path|]
-        let readOnly = Activator.CreateInstanceGeneric<ShapeMember<_,_>>(tyArgs, args)
         if isWritableMember path then
-            Activator.CreateInstanceGeneric<ShapeWriteMember<_,_>>(tyArgs, Array.append args [|readOnly|])
+            Activator.CreateInstanceGeneric<ShapeWriteMember<_,_>>(tyArgs, args)
             :?> IShapeMember<'Record>
         else
-            readOnly :?> _
+            Activator.CreateInstanceGeneric<ShapeMember<_,_>>(tyArgs, args) 
+            :?> IShapeMember<'Record>
         
     let mkWriteMemberUntyped<'Record> (label : string) (memberInfo : MemberInfo) (path : MemberInfo[]) =
         match mkMemberUntyped<'Record> label memberInfo path with
