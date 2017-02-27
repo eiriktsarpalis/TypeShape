@@ -1,3 +1,6 @@
+### 2.13
+* Fix code generation issue.
+
 ### 2.12
 * Add elemenent shape properties to collection shapes.
 
