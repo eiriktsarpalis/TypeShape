@@ -961,6 +961,8 @@ and ShapeWriteMember<'DeclaringType, 'MemberType> private (label : string, membe
 
 #if TYPESHAPE_EMIT
     let injectFunc = emitInjection<'DeclaringType, 'MemberType> memberInfo path
+#else
+    let isStructMember = isStructMember path
 #endif
 
     /// Injects a value to member of given instance
