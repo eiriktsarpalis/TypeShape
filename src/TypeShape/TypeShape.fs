@@ -836,14 +836,10 @@ module private MemberUtils =
     let emitUninitializedCtor<'DeclaringType> (ctor : MethodBase) =
         let builder (gen : ILGenerator) =
             for p in ctor.GetParameters() do
-                match p.ParameterType with
-                | t when t.IsPrimitive -> gen.Emit OpCodes.Ldc_I4_0
-                | t when t.IsValueType -> 
-                    let l = gen.DeclareLocal t
-                    gen.Emit(OpCodes.Ldloca_S, l.LocalIndex)
-                    gen.Emit(OpCodes.Initobj, t)
-                    gen.Emit(OpCodes.Ldloc, l.LocalIndex)
-                | _ -> gen.Emit OpCodes.Ldnull
+                let lvar = gen.DeclareLocal p.ParameterType
+                gen.Emit(OpCodes.Ldloca_S, lvar.LocalIndex)
+                gen.Emit(OpCodes.Initobj, p.ParameterType)
+                gen.Emit(OpCodes.Ldloc, lvar.LocalIndex)
 
             match ctor with
             | :? ConstructorInfo as c -> gen.Emit(OpCodes.Newobj, c)
