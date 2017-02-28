@@ -31,6 +31,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{4213
 		samples\gmap.fsx = samples\gmap.fsx
 		samples\gmapQ.fsx = samples\gmapQ.fsx
 		samples\hashcode-staged.fsx = samples\hashcode-staged.fsx
+		samples\iso.fsx = samples\iso.fsx
 		samples\json-serializer.fsx = samples\json-serializer.fsx
 		samples\ksprintf.fsx = samples\ksprintf.fsx
 		samples\mock.fsx = samples\mock.fsx
