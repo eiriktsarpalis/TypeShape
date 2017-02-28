@@ -40,7 +40,7 @@ and private mkProjCached<'a, 'b> (ctx : RecTypeManager) : Proj<'a, 'b> =
 and private mkProjAux<'a, 'b> (ctx : RecTypeManager) : Proj<'a,'b> =
     let notProj() = failwithf "Type '%O' is not projectable to '%O'" typeof<'a> typeof<'b>
 
-    let mkMemberProj isUnion (candidates : IShapeWriteMember<'a>[]) (target : IShapeWriteMember<'b>) =
+    let mkMemberProj (candidates : IShapeWriteMember<'a>[]) (target : IShapeWriteMember<'b>) =
         match candidates |> Array.tryFind (fun c -> c.Label = target.Label) with
         | None -> notProj()
         | Some source ->
@@ -57,7 +57,7 @@ and private mkProjAux<'a, 'b> (ctx : RecTypeManager) : Proj<'a,'b> =
     | s, s' when s.Type = s'.Type -> Proj(unbox<'a -> 'b> (fun (a:'a) -> a))
     | Shape.FSharpRecord (:? ShapeFSharpRecord<'a> as ar), 
       Shape.FSharpRecord (:? ShapeFSharpRecord<'b> as br) ->
-        let memberProjs = br.Fields |> Array.map (mkMemberProj false ar.Fields)
+        let memberProjs = br.Fields |> Array.map (mkMemberProj ar.Fields)
         fun (a:'a) ->
             let mutable b = br.CreateUninitialized()
             for m in memberProjs do b <- m a b
@@ -69,7 +69,7 @@ and private mkProjAux<'a, 'b> (ctx : RecTypeManager) : Proj<'a,'b> =
 
         let mkUnionCaseProj (source : ShapeFSharpUnionCase<'a>) =
             match br.UnionCases |> Array.tryFind (fun candidate -> candidate.CaseInfo.Name = source.CaseInfo.Name) with
-            | Some target -> target.Fields |> Array.map (mkMemberProj true source.Fields)
+            | Some target -> target.Fields |> Array.map (mkMemberProj source.Fields)
             | None -> notProj()
 
         let unionCaseMappers = ar.UnionCases |> Array.map mkUnionCaseProj
