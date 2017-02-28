@@ -89,7 +89,7 @@ and private mkProjAux<'a, 'b> (ctx : RecTypeManager) : Proj<'a,'b> =
 
 type Foo = { A : int ; B : string option }
 
-type Foo2 = { A : int ; B : string option }
+type Foo2 = { B : string option ; A : int }
 
 type Bar = { A : int ; B : string option ; C : int }
 
@@ -105,7 +105,7 @@ project h { A = 2 ; B = Some "foo" ; C = 32 }
 // Recursive type support
 
 type Peano = Zero | Succ of pred:Peano
-type Peano' = Zero | Succ of pred:Peano'
+type Peano' = Succ of pred:Peano' | Zero
 
 let pIso = mkIso<Peano', Peano>()
 
