@@ -12,7 +12,7 @@ and Proj<'a, 'b> = Proj of ('a -> 'b)
 
 let refl = Iso(id,id)
 let sym (Iso(f,g)) = Iso(g,f)
-let trans (Iso(f,g)) (Iso(f',g')) = Iso(f' << f, g' >> g)
+let trans (Iso(f,g)) (Iso(f',g')) = Iso(f' << f, g << g')
 
 let convert1 (Iso (f,_)) x = f x
 let convert2 (Iso (_,g)) y = g y
