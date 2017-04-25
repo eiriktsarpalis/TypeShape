@@ -1,3 +1,6 @@
+### 2.15
+* Add element fields to Choice shapes.
+
 ### 2.14
 * Add element fields to Tuple shapes.
 
