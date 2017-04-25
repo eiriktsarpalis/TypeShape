@@ -1,3 +1,6 @@
+### 2.14
+* Add element fields to Tuple shapes.
+
 ### 2.13
 * Fix code generation issue.
 

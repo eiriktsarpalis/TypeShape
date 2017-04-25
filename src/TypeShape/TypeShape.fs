@@ -159,7 +159,7 @@ type TypeShape with
     static member Create<'T>() : TypeShape<'T> = new TypeShape<'T>()
 
 /// Creates a type shape instance for given type
-let shapeof<'T> = TypeShape.Create<'T>()
+let shapeof<'T> = TypeShape.Create<'T>() :> TypeShape
 
 //------------------------
 // Section: Core BCL types
@@ -187,7 +187,7 @@ type IShapeNullable =
 
 type private ShapeNullable<'T when 'T : (new : unit -> 'T) and 'T :> ValueType and 'T : struct> () =
     interface IShapeNullable with
-        member __.ElementShape = shapeof<'T> :> _
+        member __.ElementShape = shapeof<'T>
         member __.Accept v = v.Visit<'T> ()
 
 
@@ -269,10 +269,12 @@ type ITuple1Visitor<'R> =
     abstract Visit<'T> : unit -> 'R
 
 type IShapeTuple1 =
+    abstract Item1 : TypeShape
     abstract Accept : ITuple1Visitor<'R> -> 'R
 
 type private ShapeTuple1<'T> () =
     interface IShapeTuple1 with
+        member __.Item1 = shapeof<'T>
         member __.Accept v = v.Visit<'T> ()
 
 // System.Tuple`2
@@ -281,10 +283,14 @@ type ITuple2Visitor<'R> =
     abstract Visit<'T1, 'T2> : unit -> 'R
 
 type IShapeTuple2 =
+    abstract Item1 : TypeShape
+    abstract Item2 : TypeShape
     abstract Accept : ITuple2Visitor<'R> -> 'R
 
 type private ShapeTuple2<'T1, 'T2> () =
     interface IShapeTuple2 with
+        member __.Item1 = shapeof<'T1>
+        member __.Item2 = shapeof<'T2>
         member __.Accept v = v.Visit<'T1,'T2> ()
 
 // System.Tuple`3
@@ -293,10 +299,16 @@ type ITuple3Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3> : unit -> 'R
 
 type IShapeTuple3 =
+    abstract Item1 : TypeShape
+    abstract Item2 : TypeShape
+    abstract Item3 : TypeShape
     abstract Accept : ITuple3Visitor<'R> -> 'R
 
 type private ShapeTuple3<'T1, 'T2, 'T3> () =
     interface IShapeTuple3 with
+        member __.Item1 = shapeof<'T1>
+        member __.Item2 = shapeof<'T2>
+        member __.Item3 = shapeof<'T3>
         member __.Accept v = v.Visit<'T1, 'T2, 'T3> ()
 
 // System.Tuple`4
@@ -305,10 +317,18 @@ type ITuple4Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4> : unit -> 'R
 
 type IShapeTuple4 =
+    abstract Item1 : TypeShape
+    abstract Item2 : TypeShape
+    abstract Item3 : TypeShape
+    abstract Item4 : TypeShape
     abstract Accept : ITuple4Visitor<'R> -> 'R
 
 type private ShapeTuple4<'T1, 'T2, 'T3, 'T4> () =
     interface IShapeTuple4 with
+        member __.Item1 = shapeof<'T1>
+        member __.Item2 = shapeof<'T2>
+        member __.Item3 = shapeof<'T3>
+        member __.Item4 = shapeof<'T4>
         member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4> ()
 
 // System.Tuple`5
@@ -317,10 +337,20 @@ type ITuple5Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5> : unit -> 'R
 
 type IShapeTuple5 =
+    abstract Item1 : TypeShape
+    abstract Item2 : TypeShape
+    abstract Item3 : TypeShape
+    abstract Item4 : TypeShape
+    abstract Item5 : TypeShape
     abstract Accept : ITuple5Visitor<'R> -> 'R
 
 type private ShapeTuple5<'T1, 'T2, 'T3, 'T4, 'T5> () =
     interface IShapeTuple5 with
+        member __.Item1 = shapeof<'T1>
+        member __.Item2 = shapeof<'T2>
+        member __.Item3 = shapeof<'T3>
+        member __.Item4 = shapeof<'T4>
+        member __.Item5 = shapeof<'T5>
         member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5> ()
 
 // System.Tuple`6
@@ -329,10 +359,22 @@ type ITuple6Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> : unit -> 'R
 
 type IShapeTuple6 =
+    abstract Item1 : TypeShape
+    abstract Item2 : TypeShape
+    abstract Item3 : TypeShape
+    abstract Item4 : TypeShape
+    abstract Item5 : TypeShape
+    abstract Item6 : TypeShape
     abstract Accept : ITuple6Visitor<'R> -> 'R
 
 type private ShapeTuple6<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> () =
     interface IShapeTuple6 with
+        member __.Item1 = shapeof<'T1>
+        member __.Item2 = shapeof<'T2>
+        member __.Item3 = shapeof<'T3>
+        member __.Item4 = shapeof<'T4>
+        member __.Item5 = shapeof<'T5>
+        member __.Item6 = shapeof<'T6>
         member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> ()
 
 // System.Tuple`7
@@ -341,10 +383,24 @@ type ITuple7Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> : unit -> 'R
 
 type IShapeTuple7 =
+    abstract Item1 : TypeShape
+    abstract Item2 : TypeShape
+    abstract Item3 : TypeShape
+    abstract Item4 : TypeShape
+    abstract Item5 : TypeShape
+    abstract Item6 : TypeShape
+    abstract Item7 : TypeShape
     abstract Accept : ITuple7Visitor<'R> -> 'R
 
 type private ShapeTuple7<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> () =
     interface IShapeTuple7 with
+        member __.Item1 = shapeof<'T1>
+        member __.Item2 = shapeof<'T2>
+        member __.Item3 = shapeof<'T3>
+        member __.Item4 = shapeof<'T4>
+        member __.Item5 = shapeof<'T5>
+        member __.Item6 = shapeof<'T6>
+        member __.Item7 = shapeof<'T7>
         member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> ()
 
 // System.Tuple`8
@@ -353,10 +409,26 @@ type ITuple8Visitor<'R> =
     abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> : unit -> 'R
 
 type IShapeTuple8 =
+    abstract Item1 : TypeShape
+    abstract Item2 : TypeShape
+    abstract Item3 : TypeShape
+    abstract Item4 : TypeShape
+    abstract Item5 : TypeShape
+    abstract Item6 : TypeShape
+    abstract Item7 : TypeShape
+    abstract Rest : TypeShape
     abstract Accept : ITuple8Visitor<'R> -> 'R
 
 type private ShapeTuple8<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> () =
     interface IShapeTuple8 with
+        member __.Item1 = shapeof<'T1>
+        member __.Item2 = shapeof<'T2>
+        member __.Item3 = shapeof<'T3>
+        member __.Item4 = shapeof<'T4>
+        member __.Item5 = shapeof<'T5>
+        member __.Item6 = shapeof<'T6>
+        member __.Item7 = shapeof<'T7>
+        member __.Rest = shapeof<'TRest>
         member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> ()
 
 // F# functions
@@ -371,8 +443,8 @@ type IShapeFSharpFunc =
 
 type private ShapeFSharpFunc<'Domain, 'CoDomain> () =
     interface IShapeFSharpFunc with
-        member __.DomainShape = shapeof<'Domain> :> _
-        member __.CoDomainShape = shapeof<'CoDomain> :> _
+        member __.DomainShape = shapeof<'Domain>
+        member __.CoDomainShape = shapeof<'CoDomain>
         member __.Accept v = v.Visit<'Domain, 'CoDomain> ()
 
 // System.Exception
@@ -404,7 +476,7 @@ type IShapeEnumerable =
 
 type private ShapeEnumerable<'Enum, 'T when 'Enum :> seq<'T>> () =
     interface IShapeEnumerable with
-        member __.ElementShape = shapeof<'T> :> _
+        member __.ElementShape = shapeof<'T>
         member __.Accept v = v.Visit<'Enum, 'T> ()
 
 // Collection
@@ -418,7 +490,7 @@ type IShapeCollection =
 
 type private ShapeCollection<'Collection, 'T when 'Collection :> ICollection<'T>> () =
     interface IShapeCollection with
-        member __.ElementShape = shapeof<'T> :> _
+        member __.ElementShape = shapeof<'T>
         member __.Accept v = v.Visit<'Collection, 'T> ()
 
 // KeyValuePair
@@ -449,7 +521,7 @@ type private ShapeArray<'T>(rank : int) =
     member __.Rank = rank
     interface IShapeArray with
         member __.Rank = rank
-        member __.ElementShape = shapeof<'T> :> _
+        member __.ElementShape = shapeof<'T>
         member __.Accept v = v.Visit<'T> rank
 
 // System.Collections.List
@@ -463,7 +535,7 @@ type IShapeResizeArray =
 
 type private ShapeResizeArray<'T> () =
     interface IShapeResizeArray with
-        member __.ElementShape = shapeof<'T> :> _
+        member __.ElementShape = shapeof<'T>
         member __.Accept v = v.Visit<'T> ()
 
 
@@ -490,7 +562,7 @@ type IShapeHashSet =
 
 type private ShapeHashSet<'T when 'T : equality> () =
     interface IShapeHashSet with
-        member __.ElementShape = shapeof<'T> :> _
+        member __.ElementShape = shapeof<'T>
         member __.Accept v = v.Visit<'T> ()
 
 // F# Set
@@ -504,7 +576,7 @@ type IShapeFSharpSet =
 
 type private ShapeFSharpSet<'T when 'T : comparison> () =
     interface IShapeFSharpSet with
-        member __.ElementShape = shapeof<'T> :> _
+        member __.ElementShape = shapeof<'T>
         member __.Accept v = v.Visit<'T> ()
 
 // F# Map
@@ -530,7 +602,7 @@ and IFSharpRefVisitor<'R> =
 
 type private ShapeFSharpRef<'T> () =
     interface IShapeFSharpRef with
-        member __.ElementShape = shapeof<'T> :> _
+        member __.ElementShape = shapeof<'T>
         member __.Accept v = v.Visit<'T> ()
 
 // F# option
@@ -544,7 +616,7 @@ type IShapeFSharpOption =
 
 type private ShapeFSharpOption<'T> () =
     interface IShapeFSharpOption with
-        member __.ElementShape = shapeof<'T> :> _
+        member __.ElementShape = shapeof<'T>
         member __.Accept v = v.Visit<'T> ()
 
 // F# List
@@ -558,7 +630,7 @@ type IShapeFSharpList =
 
 type private ShapeFSharpList<'T> () =
     interface IShapeFSharpList with
-        member __.ElementShape = shapeof<'T> :> _
+        member __.ElementShape = shapeof<'T>
         member __.Accept v = v.Visit<'T> ()
 
 // F# Choice`2

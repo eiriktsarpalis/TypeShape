@@ -36,7 +36,7 @@ and private gmapAux<'E, 'T> (ctx : RecTypeManager) : GMapper<'E, 'T> =
                     shape.Inject target field'
         }
 
-    match shapeof<'T> :> TypeShape with
+    match shapeof<'T> with
     | :? TypeShape<'E> -> EQ id<'E -> 'E>
     | Shape.Primitive
     | Shape.String

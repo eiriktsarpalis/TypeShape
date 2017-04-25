@@ -12,7 +12,7 @@ let rec gmapQ<'T,'S,'U> (f : 'T -> 'S) : 'U -> 'S list =
             member __.Visit (shape : ShapeMember<'a, 'f>) =
                 gmapQ<'T, 'S, 'f> f << shape.Project }
 
-    match shapeof<'U> :> TypeShape with
+    match shapeof<'U> with
     | :? TypeShape<'T> -> wrap(fun (t:'T) -> [f t])
     | Shape.FSharpOption s ->
         s.Accept {
