@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.6
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape", "src\TypeShape\TypeShape.fsproj", "{8609D2FB-063F-45FE-94E2-FF251792C495}"
 EndProject
@@ -30,6 +30,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{4213
 		samples\expr.fsx = samples\expr.fsx
 		samples\gmap.fsx = samples\gmap.fsx
 		samples\gmapQ.fsx = samples\gmapQ.fsx
+		samples\gsizeof.fsx = samples\gsizeof.fsx
 		samples\hashcode-staged.fsx = samples\hashcode-staged.fsx
 		samples\iso.fsx = samples\iso.fsx
 		samples\json-serializer.fsx = samples\json-serializer.fsx

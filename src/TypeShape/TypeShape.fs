@@ -527,6 +527,21 @@ type private ShapeArray<'T>(rank : int) =
         member __.Element = shapeof<'T>
         member __.Accept v = v.Visit<'T> rank
 
+type ISystemArrayVisitor<'R> =
+    abstract Visit<'Array when 'Array :> System.Array> : unit -> 'R
+
+type IShapeSystemArray =
+    abstract Rank : int
+    abstract Element : TypeShape
+    abstract Accept : ISystemArrayVisitor<'R> -> 'R
+
+type private ShapeSystemArray<'Array when 'Array :> System.Array>(elem : Type, rank : int) =
+    interface IShapeSystemArray with
+        member __.Rank = rank
+        member __.Element = TypeShape.Create elem
+        member __.Accept v = v.Visit<'Array> ()
+    
+
 // System.Collections.List
 
 type IResizeArrayVisitor<'R> =
@@ -1886,6 +1901,15 @@ module Shape =
         | TypeShapeInfo.Array(et,rk) ->
             Activator.CreateInstanceGeneric<ShapeArray<_>>([|et|], [|box rk|])
             :?> IShapeArray
+            |> Some
+        | _ ->
+            None
+
+    let (|SystemArray|_|) (s : TypeShape) =
+        match s.ShapeInfo with
+        | TypeShapeInfo.Array(et, rk) ->
+            Activator.CreateInstanceGeneric<ShapeSystemArray<_>>([|s.Type|], [|box et; box rk|])
+            :?> IShapeSystemArray
             |> Some
         | _ ->
             None
