@@ -1398,9 +1398,10 @@ type ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
         | [||] -> [||]
         | _ ->
             let underlyingType = properties.[0].DeclaringType
-            let fields = 
-                underlyingType.GetFields(BindingFlags.NonPublic ||| BindingFlags.Instance)
-                |> Array.filter (fun f -> f.Name <> "_tag")
+            let valueFilter (f:FieldInfo) =
+                not underlyingType.IsValueType || f.Name = "item" || properties |> Array.exists (fun p -> String.Equals(f.Name, "_" + p.Name))
+            let rawFields = underlyingType.GetFields(BindingFlags.NonPublic ||| BindingFlags.Instance)
+            let fields = rawFields |> Array.filter (fun f -> f.Name <> "_tag" && valueFilter f)
 
             let mkField (fieldInfo : FieldInfo) (propertyInfo : PropertyInfo) =
                 mkWriteMemberUntyped<'Union> propertyInfo.Name propertyInfo [|fieldInfo|]
