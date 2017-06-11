@@ -1,4 +1,5 @@
 xunit
+xunit.abstractions
 xunit.extensions
 xunit.runner.visualstudio
 UnQuote
