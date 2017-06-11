@@ -1,3 +1,6 @@
+### 2.16
+* Support struct unions, records and tuples.
+
 ### 2.15
 * Add element fields to Choice shapes.
 
