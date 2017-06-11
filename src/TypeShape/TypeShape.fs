@@ -58,7 +58,7 @@ type TypeShape<'T> () =
     override __.Type = typeof<'T>
     override __.ShapeInfo = shapeInfo
     override __.Accept v = v.Visit<'T> ()
-    override __.Equals o = match o with :? TypeShape<'T> -> true | _ -> false
+    override __.Equals o = o :? TypeShape<'T>
     override __.GetHashCode() = hash typeof<'T>
 
 exception UnsupportedShape of Type:Type
@@ -67,6 +67,11 @@ exception UnsupportedShape of Type:Type
 
 [<AutoOpen>]
 module private TypeShapeImpl =
+
+    let fsharpCoreRuntimeVersion =
+        typeof<unit>.Assembly.GetName().Version
+
+    let fsharpCore41Version = Version(4,4,1,0)
 
     let allMembers =
         BindingFlags.NonPublic ||| BindingFlags.Public |||
@@ -954,10 +959,27 @@ module private MemberUtils =
     let emitInjection<'DeclaringType, 'Property> (memberInfo : MemberInfo) (path : MemberInfo []) =
         let builder (gen : ILGenerator) =
             gen.Emit OpCodes.Ldarg_0
+            let local =
+                if typeof<'DeclaringType>.IsValueType then 
+                    let local = gen.DeclareLocal typeof<'DeclaringType>
+                    gen.Emit(OpCodes.Stloc, local)
+                    gen.Emit(OpCodes.Ldloca, local)
+                    Some local
+                else
+                    None
+
             for i = 0 to path.Length - 2 do
                 match path.[i] with
-                | :? FieldInfo as f -> gen.Emit(OpCodes.Ldfld, f)
-                | :? PropertyInfo as p -> 
+                | :? FieldInfo as f -> 
+                    if f.DeclaringType.IsValueType then
+                        gen.Emit(OpCodes.Ldflda, f)
+                    else
+                        gen.Emit(OpCodes.Ldfld, f)
+
+                | :? PropertyInfo as p ->
+                    if p.DeclaringType.IsValueType then
+                        invalidOp "internal error: nested struct properties not supported."
+
                     let m = p.GetGetMethod(true)
                     if m.IsVirtual then
                         gen.EmitCall(OpCodes.Callvirt, m, null)
@@ -978,7 +1000,9 @@ module private MemberUtils =
 
             | m -> invalidMember m
 
-            gen.Emit OpCodes.Ldarg_0
+            match local with
+            | Some l -> gen.Emit(OpCodes.Ldloc, l)
+            | None -> gen.Emit OpCodes.Ldarg_0
             gen.Emit OpCodes.Ret
 
         emitDynamicMethod<Func<'DeclaringType, 'Property, 'DeclaringType>>
@@ -1007,7 +1031,11 @@ module private MemberUtils =
     /// Emits a dynamic method that gets the tag of supplied union case
     let emitUnionTagReader<'U> (tagReader : MemberInfo) =
         let builder (gen : ILGenerator) =
-            gen.Emit OpCodes.Ldarg_0
+            if typeof<'U>.IsValueType then
+                gen.Emit (OpCodes.Ldarga, 0)
+            else
+                gen.Emit OpCodes.Ldarg_0
+
             let m =
                 match tagReader with
                 | :? MethodInfo as m -> m
@@ -1338,7 +1366,8 @@ and ShapeFSharpRecord<'Record> private () =
     let ctorInfo = FSharpValue.PreComputeRecordConstructorInfo(typeof<'Record>, allMembers)
     let props = FSharpType.GetRecordFields(typeof<'Record>, allMembers)
     let fields = typeof<'Record>.GetFields(allInstanceMembers)
-    let mkRecordField (prop : PropertyInfo) (field : FieldInfo) =
+    let mkRecordField (prop : PropertyInfo) =
+        let field = fields |> Array.find (fun f -> f.Name = prop.Name + "@")
         mkWriteMemberUntyped<'Record> prop.Name prop [|field :> MemberInfo|]
 
 #if TYPESHAPE_EMIT
@@ -1347,7 +1376,9 @@ and ShapeFSharpRecord<'Record> private () =
     let ctorParams = props |> Array.map (fun p -> defaultOfUntyped p.PropertyType)
 #endif
 
-    let recordFields = Array.map2 mkRecordField props fields
+    let recordFields = Array.map mkRecordField props
+
+    member __.IsStructRecord = typeof<'Record>.IsValueType
 
     /// F# record field shapes
     member __.Fields = recordFields
@@ -1398,14 +1429,12 @@ type ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
         | [||] -> [||]
         | _ ->
             let underlyingType = properties.[0].DeclaringType
-            let fields = 
-                underlyingType.GetFields(BindingFlags.NonPublic ||| BindingFlags.Instance)
-                |> Array.filter (fun f -> f.Name <> "_tag")
+            let allFields = underlyingType.GetFields(allInstanceMembers)
+            let mkUnionField (p : PropertyInfo) =
+                let fieldInfo = allFields |> Array.find (fun f -> f.Name = "_" + p.Name || f.Name = p.Name.ToLower())
+                mkWriteMemberUntyped<'Union> p.Name p [|fieldInfo|]
 
-            let mkField (fieldInfo : FieldInfo) (propertyInfo : PropertyInfo) =
-                mkWriteMemberUntyped<'Union> propertyInfo.Name propertyInfo [|fieldInfo|]
-
-            Array.map2 mkField fields properties
+            Array.map mkUnionField properties
 
     /// Underlying FSharp.Reflection.UnionCaseInfo description
     member __.CaseInfo = uci
@@ -1455,6 +1484,8 @@ and ShapeFSharpUnion<'U> private () =
 #endif
 
     let caseNames = ucis |> Array.map (fun u -> u.CaseInfo.Name)
+
+    member __.IsStructUnion = typeof<'U>.IsValueType
 
     /// Case shapes for given union type
     member __.UnionCases = ucis
@@ -1726,7 +1757,14 @@ module Shape =
         let rec isEqualityConstraint (stack:Type list) (t:Type) =
             if stack |> List.exists ((=) t) then true // recursive paths resolve to true always
             elif FSharpType.IsUnion(t, allMembers) then 
-                if t.ContainsAttr<NoEqualityAttribute>(true) then false 
+                if t.IsValueType then
+                    t.GetProperties(allMembers)
+                    |> Seq.filter (fun p -> p.Name <> "Tag")
+                    |> Seq.map (fun p -> p.PropertyType)
+                    |> Seq.distinct
+                    |> Seq.forall (isEqualityConstraint (t :: stack))
+
+                elif t.ContainsAttr<NoEqualityAttribute>(true) then false
                 elif t.ContainsAttr<CustomEqualityAttribute>(true) then true
                 else
                     FSharpType.GetUnionCases(t, allMembers)
@@ -1772,7 +1810,14 @@ module Shape =
             if t = typeof<IntPtr> || t = typeof<UIntPtr> then true
             elif stack |> List.exists ((=) t) then true // recursive paths resolve to true always
             elif FSharpType.IsUnion(t, allMembers) then 
-                if t.ContainsAttr<NoComparisonAttribute>(true) then false 
+                if t.IsValueType then
+                    t.GetProperties(allMembers)
+                    |> Seq.filter (fun p -> p.Name <> "Tag")
+                    |> Seq.map (fun p -> p.PropertyType)
+                    |> Seq.distinct
+                    |> Seq.forall (isComparisonConstraint (t :: stack))
+
+                elif t.ContainsAttr<NoComparisonAttribute>(true) then false 
                 elif t.ContainsAttr<CustomComparisonAttribute>(true) then true
                 else
                     FSharpType.GetUnionCases(t, allMembers)
@@ -2138,6 +2183,10 @@ module Shape =
     /// Recognizes shapes that are F# unions
     let (|FSharpUnion|_|) (s : TypeShape) =
         if FSharpType.IsUnion(s.Type, allMembers) then
+            if s.Type.IsValueType && fsharpCoreRuntimeVersion < fsharpCore41Version then
+                "TypeShape error: struct unions not supported for runtime FSharp.Core versions lower than 4.1"
+                |> invalidOp
+
             Activator.CreateInstanceGeneric<ShapeFSharpUnion<_>>([|s.Type|], [||])
             :?> IShapeFSharpUnion
             |> Some

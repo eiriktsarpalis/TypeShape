@@ -604,10 +604,6 @@ let ``Should clone recursive types`` () =
     let cloner = mkCloner<P>()
     checkCloner cloner
 
-//        let missingValues = 
-//            let set = set inputs
-//            otherValues |> Array.filter (not << set.Contains)
-
 [<Fact>]
 let ``BinSearch should report correct indices`` () =
     let property (inputs : string []) =
@@ -636,3 +632,53 @@ let ``BinSearch should return -1 on non-existingValues`` () =
             @>
 
     Check.QuickThrowOnFailure property
+
+[<Struct>]
+type StructRecord = { A : int ; B : string }
+
+[<Fact>]
+let ``Should support struct records``() =
+    match shapeof<StructRecord> with
+    | Shape.FSharpRecord (:? ShapeFSharpRecord<StructRecord> as s) ->
+        test <@ s.IsStructRecord && s.Fields.Length = 2 @>
+    | _ -> raise <| InvalidCastException()
+
+    let cloner = Clone.mkCloner<StructRecord>()
+    checkCloner cloner
+
+    let scloner = mkStagedCloner<StructRecord>()
+    checkCloner scloner
+
+[<Struct>]
+type StructUnion = 
+    | SU1 of a:int
+    //| SU2 of b:int
+    | SU3
+    | SU4 of string
+    | SU5 of byte[] * int64
+    //| SU6
+
+[<Fact>]
+let ``Should support struct unions``() =
+    match shapeof<StructUnion> with
+    | Shape.FSharpUnion (:? ShapeFSharpUnion<StructUnion> as s) ->
+        test <@ s.IsStructUnion && s.UnionCases.Length = 4 (* 6 *) @>
+        let fieldTypes = s.UnionCases |> Array.map (fun c -> c.Fields |> Array.map (fun f -> f.Member.Type))
+        test <@ fieldTypes = 
+                    [|
+                        [|typeof<int>|]
+                        //[|typeof<int>|]
+                        [||]
+                        [|typeof<string>|];
+                        [|typeof<byte[]>;typeof<int64>|]
+                        //[||]
+                    |] 
+             @>
+
+    | _ -> raise <| InvalidCastException()
+
+    let cloner = Clone.mkCloner<StructUnion>()
+    checkCloner cloner
+
+    let scloner = mkStagedCloner<StructUnion>()
+    checkCloner scloner
