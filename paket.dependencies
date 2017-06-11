@@ -2,7 +2,7 @@ framework: net45
 redirects: on
 source https://nuget.org/api/v2
 
-nuget xunit ~> 2.0
+nuget xunit ~> 2.1.0
 nuget xunit.extensions
 nuget xunit.runner.console
 nuget xunit.runner.visualstudio version_in_path: true
