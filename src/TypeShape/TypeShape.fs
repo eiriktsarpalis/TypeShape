@@ -821,7 +821,7 @@ module private MemberUtils =
         | :? PropertyInfo as p -> p.PropertyType
         | m -> invalidMember m
         
-    let isWritableMember (path : MemberInfo[]) =
+    let isWriteableMember (path : MemberInfo[]) =
         path 
         |> Array.forall (fun m ->
             match m with
@@ -892,21 +892,47 @@ module private MemberUtils =
     let injectExpr (path : MemberInfo[]) 
                     (r : Expr<'TRecord>) 
                     (value : Expr<'MemberType>) =
+        
+        if typeof<'TRecord>.IsValueType then
+            // this should use Expr.AddressOf, but most quotation libs don't support it
+            let rec aux i expr =
+                if i = path.Length - 1 then
+                    match path.[i] with
+                    | :? FieldInfo as fI -> Expr.FieldSet(expr, fI, value)
+                    | :? PropertyInfo as pI -> Expr.PropertySet(expr, pI, value)
+                    | m -> invalidMember m
+                else
+                    let mkVar n t = Var(n, t, isMutable = true)
+                    match path.[i] with
+                    | :? FieldInfo as fI -> 
+                        let v = mkVar fI.Name fI.FieldType
+                        let getter = Expr.FieldGet(expr, fI)
+                        let nestedSetter = aux (i + 1) (Expr.Var v)
+                        let setter = Expr.FieldSet(expr, fI, Expr.Var v)
+                        Expr.Let(v, getter, Expr.Sequential(nestedSetter, setter))
+                    | :? PropertyInfo as pI -> 
+                        let v = mkVar pI.Name pI.PropertyType
+                        let getter = Expr.PropertyGet(expr, pI)
+                        let nestedSetter = aux (i + 1) (Expr.Var v)
+                        let setter = Expr.PropertySet(expr, pI, Expr.Var v)
+                        Expr.Let(v, getter, Expr.Sequential(nestedSetter, setter))
+                    | m -> invalidMember m
 
-        // TODO: struct tuples
-        let rec aux i expr =
-            if i = path.Length - 1 then
-                match path.[i] with
-                | :? FieldInfo as fI -> Expr.FieldSet(expr, fI, value)
-                | :? PropertyInfo as pI -> Expr.PropertySet(expr, pI, value)
-                | m -> invalidMember m
-            else
-                match path.[i] with
-                | :? FieldInfo as fI -> aux (i+1) (Expr.FieldGet(expr, fI))
-                | :? PropertyInfo as pI -> aux (i+1) (Expr.PropertyGet(expr, pI))
-                | m -> invalidMember m
+            <@ (% Expr.Cast<_>(aux 0 r)) ; %r @>
+        else
+            let rec aux i expr =
+                if i = path.Length - 1 then
+                    match path.[i] with
+                    | :? FieldInfo as fI -> Expr.FieldSet(expr, fI, value)
+                    | :? PropertyInfo as pI -> Expr.PropertySet(expr, pI, value)
+                    | m -> invalidMember m
+                else
+                    match path.[i] with
+                    | :? FieldInfo as fI -> aux (i+1) (Expr.FieldGet(expr, fI))
+                    | :? PropertyInfo as pI -> aux (i+1) (Expr.PropertyGet(expr, pI))
+                    | m -> invalidMember m
                 
-        <@ (% Expr.Cast<_>(aux 0 r)) ; %r @>
+            <@ (% Expr.Cast<_>(aux 0 r)) ; %r @>
 #endif
 
 #if TYPESHAPE_EMIT
@@ -1233,7 +1259,7 @@ module private MemberUtils2 =
 
         let tyArgs = [|typeof<'Record> ; memberType|]
         let args = [|box label; box memberInfo; box path|]
-        if isWritableMember path then
+        if isWriteableMember path then
             Activator.CreateInstanceGeneric<ShapeWriteMember<_,_>>(tyArgs, args)
             :?> IShapeMember<'Record>
         else
@@ -1266,22 +1292,39 @@ module private ShapeTupleImpl =
     type TupleInfo =
         { 
             Current : Type
-            Fields : (PropertyInfo * FieldInfo) []
+            Fields : (MemberInfo * FieldInfo) []
             Nested : (FieldInfo * TupleInfo) option
         }
 
     let rec mkTupleInfo (t : Type) =
-        let props = t.GetProperties()
-        let fields = t.GetFields(BindingFlags.NonPublic ||| BindingFlags.Instance)
-        let fs, nested =
-            if fields.Length = 8 then
-                let nestedTuple = fields.[7]
-                let nestedStruct = mkTupleInfo nestedTuple.FieldType
-                Array.zip props.[..6] fields.[..6], Some(nestedTuple, nestedStruct)
-            else
-                Array.zip props fields, None
+        if t.IsValueType then
+            let fields = t.GetFields()
+            let getField (f : FieldInfo) = f :> MemberInfo, f
+            let fs, nested =
+                if fields.Length = 8 then
+                    let nestedField = fields.[7]
+                    let nestedInfo = mkTupleInfo nestedField.FieldType
+                    Array.map getField fields.[..6], Some(nestedField, nestedInfo)
+                else
+                    Array.map getField fields, None
 
-        { Current = t ; Fields = fs ; Nested = nested }
+            { Current = t ; Fields = fs ; Nested = nested }
+        else
+            let props = t.GetProperties()
+            let fields = t.GetFields(BindingFlags.NonPublic ||| BindingFlags.Instance)
+            let getField (p : PropertyInfo) =
+                let field = fields |> Array.find(fun f -> f.Name = "m_" + p.Name)
+                p :> MemberInfo, field
+
+            let fs, nested =
+                if props.Length = 8 then
+                    let nestedField = fields.[7]
+                    let nestedInfo = mkTupleInfo nestedField.FieldType
+                    Array.map getField props.[..6], Some(nestedField, nestedInfo)
+                else
+                    Array.map getField props, None
+
+            { Current = t ; Fields = fs ; Nested = nested }
 
     let gatherTupleMembers (tI : TupleInfo) =
         let rec aux (ctx : MemberInfo list) (tI : TupleInfo) = seq {
@@ -1319,6 +1362,7 @@ and ITupleVisitor<'R> =
 /// Identifies a specific System.Tuple shape
 and ShapeTuple<'Tuple> private () =
     let tupleInfo = mkTupleInfo typeof<'Tuple>
+    let isStructTuple = typeof<'Tuple>.IsValueType
 
     let tupleElems =
         gatherTupleMembers tupleInfo
@@ -1329,23 +1373,29 @@ and ShapeTuple<'Tuple> private () =
 
     let fieldStack = gatherNestedFields tupleInfo
 
+    member __.IsStructTuple = isStructTuple
     /// Tuple element shape definitions
     member __.Elements = tupleElems
     /// Creates an uninitialized tuple instance of given type
     member __.CreateUninitialized() : 'Tuple =
-        let obj = FormatterServices.GetUninitializedObject typeof<'Tuple>
-        let mutable this = obj
-        for f in fieldStack do
-            let x = FormatterServices.GetUninitializedObject f.FieldType
-            f.SetValue(this, x)
-            this <- x
+        if isStructTuple then Unchecked.defaultof<'Tuple>
+        else
+            let obj = FormatterServices.GetUninitializedObject typeof<'Tuple>
+            let mutable this = obj
+            for f in fieldStack do
+                let x = FormatterServices.GetUninitializedObject f.FieldType
+                f.SetValue(this, x)
+                this <- x
 
-        obj :?> 'Tuple
+            obj :?> 'Tuple
 
 #if TYPESHAPE_EXPR
     member __.CreateUninitializedExpr() : Expr<'Tuple> =
-        let values = tupleElems |> Seq.map (fun e -> getDefaultValueExpr e.Member.Type) |> Seq.toList
-        Expr.Cast<'Tuple>(Expr.NewTuple(values))
+        if isStructTuple then
+            Expr.Cast<'Tuple>(Expr.DefaultValue typeof<'Tuple>)
+        else
+            let values = tupleElems |> Seq.map (fun e -> getDefaultValueExpr e.Member.Type) |> Seq.toList
+            Expr.Cast<'Tuple>(Expr.NewTuple(values))
 #endif
 
     interface IShapeTuple with
@@ -1363,6 +1413,7 @@ type IShapeFSharpRecord =
 
 /// Identifies an F# record type
 and ShapeFSharpRecord<'Record> private () =
+    let isStructRecord = typeof<'Record>.IsValueType
     let ctorInfo = FSharpValue.PreComputeRecordConstructorInfo(typeof<'Record>, allMembers)
     let props = FSharpType.GetRecordFields(typeof<'Record>, allMembers)
     let fields = typeof<'Record>.GetFields(allInstanceMembers)
@@ -1378,13 +1429,14 @@ and ShapeFSharpRecord<'Record> private () =
 
     let recordFields = Array.map mkRecordField props
 
-    member __.IsStructRecord = typeof<'Record>.IsValueType
+    member __.IsStructRecord = isStructRecord
 
     /// F# record field shapes
     member __.Fields = recordFields
 
     /// Creates an uninitialized instance for given record
     member __.CreateUninitialized() : 'Record =
+        if isStructRecord then Unchecked.defaultof<'Record> else
 #if TYPESHAPE_EMIT
         ctorf.Value.Invoke()
 #else
@@ -1393,6 +1445,7 @@ and ShapeFSharpRecord<'Record> private () =
 
 #if TYPESHAPE_EXPR
     member __.CreateUninitializedExpr() : Expr<'Record> =
+        if isStructRecord then <@ Unchecked.defaultof<'Record> @> else
         let values = props |> Seq.map (fun p -> getDefaultValueExpr p.PropertyType)
         Expr.Cast<'Record>(Expr.NewObject(ctorInfo, Seq.toList values))
 #endif
@@ -1467,6 +1520,7 @@ type IShapeFSharpUnion =
 
 /// Denotes an F# Union shape
 and ShapeFSharpUnion<'U> private () =
+    let isStructUnion = typeof<'U>.IsValueType
     let ucis = 
         FSharpType.GetUnionCases(typeof<'U>, allMembers)
         |> Array.map (fun uci -> 
@@ -1485,7 +1539,7 @@ and ShapeFSharpUnion<'U> private () =
 
     let caseNames = ucis |> Array.map (fun u -> u.CaseInfo.Name)
 
-    member __.IsStructUnion = typeof<'U>.IsValueType
+    member __.IsStructUnion = isStructUnion
 
     /// Case shapes for given union type
     member __.UnionCases = ucis

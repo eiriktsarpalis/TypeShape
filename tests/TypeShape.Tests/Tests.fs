@@ -682,3 +682,23 @@ let ``Should support struct unions``() =
 
     let scloner = mkStagedCloner<StructUnion>()
     checkCloner scloner
+
+[<Fact>]
+let ``Should support struct tuples``() =
+    let testStructTuple (stuple : 'STuple) =
+        let elems = FSharp.Reflection.FSharpType.GetTupleElements typeof<'STuple>
+        match shapeof<'STuple> with
+        | Shape.Tuple (:? ShapeTuple<'STuple> as s) ->
+            test <@ s.IsStructTuple && s.Elements |> Array.map (fun e -> e.Member.Type) = elems @>
+        | _ -> raise <| InvalidCastException()
+
+        let cloner = Clone.mkCloner<'STuple>()
+        test <@ stuple = cloner stuple @>
+
+        let scloner = mkStagedCloner<'STuple>()
+        test <@ stuple = scloner stuple @>
+
+
+    testStructTuple (struct(1,"2"))
+    testStructTuple (struct(1,"3",2,"4",5,"5",6,"7",8,"9",10))
+    testStructTuple (struct(1,"3",2,"4",5,"5",6,"7",8,"9",10,"11",12,"13",14,"15",16,"17"))
