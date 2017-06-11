@@ -1,33 +1,32 @@
 REDIRECTS: ON
-FRAMEWORK: >= NET45
+FRAMEWORK: NET45
 NUGET
   remote: https://www.nuget.org/api/v2
     FParsec (1.0.2)
-    FsCheck (2.7)
-      FSharp.Core (>= 3.1.2.5)
-    FSharp.Core (4.0.0.1)
-    Unquote (3.1.2)
-    xunit (2.1)
-      xunit.assert (2.1)
-      xunit.core (2.1)
-    xunit.abstractions (2.0)
-    xunit.assert (2.1)
-    xunit.core (2.1)
-      xunit.extensibility.core (2.1)
-      xunit.extensibility.execution (2.1)
-    xunit.extensibility.core (2.1)
-      xunit.abstractions (2.0)
-    xunit.extensibility.execution (2.1)
-      xunit.extensibility.core (2.1)
+    FsCheck (2.9)
+      FSharp.Core (>= 4.1)
+    FSharp.Core (4.1.17)
+      System.ValueTuple (>= 4.3)
+    System.ValueTuple (4.3.1)
+    Unquote (3.2)
+    xunit (2.2)
+      xunit.assert (2.2)
+      xunit.core (2.2)
+    xunit.assert (2.2)
+    xunit.core (2.2)
+      xunit.extensibility.core (2.2)
+      xunit.extensibility.execution (2.2)
+    xunit.extensibility.core (2.2)
+    xunit.extensibility.execution (2.2)
     xunit.extensions (1.9.0.1566)
       xunit (>= 1.9.0.1566)
-    xunit.runner.console (2.1)
-    xunit.runner.visualstudio (2.1.0) - version_in_path: true
+    xunit.runner.console (2.2)
+    xunit.runner.visualstudio (2.2.0) - version_in_path: true
 
 GROUP Build
 NUGET
   remote: https://www.nuget.org/api/v2
-    FAKE (4.48)
+    FAKE (4.61.3)
     FSharp.Compiler.Service (2.0.0.6)
     FSharp.Formatting (2.14.4)
       FSharp.Compiler.Service (2.0.0.6)
@@ -40,10 +39,10 @@ NUGET
     Microsoft.Net.Http (2.2.29) - framework: net10, net11, net20, net30, net35, net40, net40-full
       Microsoft.Bcl (>= 1.1.10)
       Microsoft.Bcl.Build (>= 1.0.14)
-    Octokit (0.23)
+    Octokit (0.24)
       Microsoft.Net.Http  - framework: net10, net11, net20, net30, net35, net40, net40-full
     SourceLink.Fake (1.1)
 GITHUB
   remote: fsharp/FAKE
-    modules/Octokit/Octokit.fsx (57c9057ab6aff4bbb57d7ded48b7b03ce808eb33)
+    modules/Octokit/Octokit.fsx (d86e9b5b8e7ebbb5a3d81c08d2e59518cf9d6da9)
       Octokit (>= 0.20)

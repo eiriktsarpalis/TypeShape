@@ -1,4 +1,4 @@
-framework: >= net45
+framework: net45
 redirects: on
 source https://nuget.org/api/v2
 
@@ -9,6 +9,7 @@ nuget xunit.runner.visualstudio version_in_path: true
 nuget Unquote
 nuget FsCheck
 nuget FParsec
+nuget FSharp.Core ~> 4.1.0
 
 group Build
   source https://nuget.org/api/v2
