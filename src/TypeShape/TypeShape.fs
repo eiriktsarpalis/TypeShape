@@ -2238,7 +2238,8 @@ module Shape =
     let (|FSharpUnion|_|) (s : TypeShape) =
         if FSharpType.IsUnion(s.Type, allMembers) then
             if s.Type.IsValueType && fsharpCoreRuntimeVersion < fsharpCore41Version then
-                "TypeShape error: struct unions not supported for runtime FSharp.Core versions lower than 4.1"
+                sprintf "TypeShape error: FSharp.Core Runtime %A does not support struct unions. %A or later is required"
+                    fsharpCoreRuntimeVersion fsharpCore41Version
                 |> invalidOp
 
             Activator.CreateInstanceGeneric<ShapeFSharpUnion<_>>([|s.Type|], [||])
