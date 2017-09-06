@@ -1,10 +1,12 @@
 #r "../bin/TypeShape.dll"
 #r "../bin/Unquote.dll"
+#r "../packages/FSharp.Quotations.Evaluator/lib/net40/FSharp.Quotations.Evaluator.dll"
 
 open TypeShape
 open TypeShape_StagingExtensions
 open Swensen.Unquote
 open FSharp.Quotations
+open FSharp.Quotations.Evaluator
 
 type HashExpr<'T> = Expr<'T> -> Expr<int>
 
@@ -62,9 +64,11 @@ let rec stageHasher<'T> () : HashExpr<'T> =
                     let eh = stageHasher<'t> ()
                     <@
                         let mutable agg = 0
-                        for t in %ts do
-                            let th = (% Expr.lam eh) t
+                        let mutable ts = %ts
+                        while not(List.isEmpty ts) do
+                            let th = (% Expr.lam eh) (List.head ts)
                             agg <- (% Expr.lam2 combineHash) agg th
+                            ts <- List.tail ts
 
                         agg
                     @> ) }
@@ -120,15 +124,15 @@ let rec stageHasher<'T> () : HashExpr<'T> =
     | _ -> failwithf "Unsupported shape %O" typeof<'T>
 
 let mkHashCodeExpr<'T>() = stageHasher<'T>() |> Expr.lam |> Expr.cleanup
-let mkHasher<'T> () = mkHashCodeExpr<'T>() |> eval
+let mkHasher<'T> () = mkHashCodeExpr<'T>() |> QuotationEvaluator.Evaluate
 let decompileHasher<'T> () = mkHashCodeExpr<'T>() |> decompile
 
 
 // examples
 
-let hasher = mkHasher<int list * string option>()
+let hasher1 = mkHasher<int list * string option>()
 
-hasher ([1 .. 100], Some "42")
+hasher1 ([1 .. 100], Some "42")
 
 decompileHasher<int * (string * bool)>()
 //fun t -> 
@@ -151,11 +155,11 @@ type Bar =
     | UB of foo:string
     | UC of Foo
 
-let hasher' = mkHasher<Bar>()
+let hasher2 = mkHasher<Bar list>()
 
-hasher' (UC { A = 12 ; B = "test" })
+hasher2 [UA ; UC { A = 12 ; B = "test" }; UB "string" ]
 
-decompileHasher<Bar>()
+decompileHasher<Bar list>()
 //fun t -> 
 //    let tag = t.Tag 
 //    if tag = 0 then tag 

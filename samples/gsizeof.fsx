@@ -194,7 +194,7 @@ gsizeof ()
 gsizeof (Some 2)
 gsizeof 1
 gsizeof 1L
-gsizeof "string"
+gsizeof "st"
 gsizeof [[1 .. 100]; [101 .. 200]]
 gsizeof [|1L;2L;3L|]
 gsizeof [false;true;false;true]

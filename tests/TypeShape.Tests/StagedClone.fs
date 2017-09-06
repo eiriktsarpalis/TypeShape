@@ -4,9 +4,9 @@ module TypeShape.Tests.StagedClone
 open System
 open System.Runtime.Serialization
 open FSharp.Quotations
+open Swensen.Unquote
 open TypeShape
 open TypeShape_StagingExtensions
-open Swensen.Unquote
 
 // Simple object clone implementation used to verify implementation correctness of staged shapes
 

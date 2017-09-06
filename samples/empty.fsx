@@ -44,7 +44,10 @@ and private mkEmptyFuncAux<'T> (ctx : RecTypeManager) : unit -> 'T =
     | Shape.Unit -> wrap id
     | Shape.Enum s ->
         s.Accept { new IEnumVisitor<unit -> 'T> with
-            member __.Visit<'t, 'u when 't : enum<'u>>() = // 'T = 't
+            member __.Visit<'t, 'u when 't : enum<'u>
+                                    and 't : struct
+                                    and 't :> ValueType
+                                    and 't : (new : unit -> 't)>() = // 'T = 't
                 let ue = mkEmptyFuncCached<'u> ctx
                 wrap(fun () -> LanguagePrimitives.EnumOfValue<'u,'t>(ue()))
         }

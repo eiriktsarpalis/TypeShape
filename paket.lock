@@ -1,51 +1,52 @@
 REDIRECTS: ON
-FRAMEWORK: NET45
+RESTRICTION: == net452
 NUGET
   remote: https://www.nuget.org/api/v2
-    FParsec (1.0.2)
-    FsCheck (2.9)
+    FParsec (1.0.3)
+      FSharp.Core (>= 4.0.0.1)
+    FsCheck (2.9.2)
       FSharp.Core (>= 4.1)
-    FSharp.Core (4.1.17)
-      System.ValueTuple (>= 4.3)
-    System.ValueTuple (4.3.1)
+    FSharp.Core (4.1.18)
+    FSharp.Quotations.Evaluator (1.0.7)
+    Microsoft.NETCore.Platforms (2.0)
+    NETStandard.Library (2.0)
+      Microsoft.NETCore.Platforms (>= 1.1)
+      System.Runtime.InteropServices.RuntimeInformation (>= 4.3)
+    System.Runtime.InteropServices.RuntimeInformation (4.3)
+    System.ValueTuple (4.4)
+      NETStandard.Library (>= 1.6.1)
     Unquote (3.2)
-    xunit (2.1)
-      xunit.assert (2.1)
-      xunit.core (2.1)
-    xunit.abstractions (2.0)
-    xunit.assert (2.1)
-    xunit.core (2.1)
-      xunit.extensibility.core (2.1)
-      xunit.extensibility.execution (2.1)
-    xunit.extensibility.core (2.1)
-      xunit.abstractions (2.0)
-    xunit.extensibility.execution (2.1)
-      xunit.extensibility.core (2.1)
+    xunit (2.2)
+      xunit.assert (2.2)
+      xunit.core (2.2)
+    xunit.abstractions (2.0.1)
+    xunit.assert (2.2)
+    xunit.core (2.2)
+      xunit.extensibility.core (2.2)
+      xunit.extensibility.execution (2.2)
+    xunit.extensibility.core (2.2)
+      xunit.abstractions (>= 2.0.1)
+    xunit.extensibility.execution (2.2)
+      xunit.extensibility.core (2.2)
     xunit.extensions (1.9.0.1566)
       xunit (>= 1.9.0.1566)
     xunit.runner.console (2.2)
     xunit.runner.visualstudio (2.2.0) - version_in_path: true
 
 GROUP Build
+RESTRICTION: == net45
 NUGET
   remote: https://www.nuget.org/api/v2
-    FAKE (4.61.3)
+    FAKE (4.63)
     FSharp.Compiler.Service (2.0.0.6)
     FSharp.Formatting (2.14.4)
       FSharp.Compiler.Service (2.0.0.6)
       FSharpVSPowerTools.Core (>= 2.3 < 2.4)
     FSharpVSPowerTools.Core (2.3)
       FSharp.Compiler.Service (>= 2.0.0.3)
-    Microsoft.Bcl (1.1.10) - framework: net10, net11, net20, net30, net35, net40, net40-full
-      Microsoft.Bcl.Build (>= 1.0.14)
-    Microsoft.Bcl.Build (1.0.21) - import_targets: false, framework: net10, net11, net20, net30, net35, net40, net40-full
-    Microsoft.Net.Http (2.2.29) - framework: net10, net11, net20, net30, net35, net40, net40-full
-      Microsoft.Bcl (>= 1.1.10)
-      Microsoft.Bcl.Build (>= 1.0.14)
-    Octokit (0.24)
-      Microsoft.Net.Http  - framework: net10, net11, net20, net30, net35, net40, net40-full
+    Octokit (0.26)
     SourceLink.Fake (1.1)
 GITHUB
   remote: fsharp/FAKE
-    modules/Octokit/Octokit.fsx (d86e9b5b8e7ebbb5a3d81c08d2e59518cf9d6da9)
+    modules/Octokit/Octokit.fsx (0bde6564e7a9218200cee8c74b71d67fbe66fe51)
       Octokit (>= 0.20)

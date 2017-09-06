@@ -86,11 +86,11 @@ and private mkMockerAux<'T> (ctx : RecTypeManager) : Mocker<'T> =
                             else Variadic o
 
                         match fieldShape with
-                        | Shape.FSharpOption s when s.ElementShape = mockShape -> mkVariadic()
-                        | Shape.Nullable s when s.ElementShape = mockShape -> mkVariadic()
-                        | Shape.FSharpList s when s.ElementShape = mockShape -> mkVariadic()
-                        | Shape.Array s when s.Rank = 1 && s.ElementShape = mockShape -> mkVariadic()
-                        | Shape.FSharpSet s  when s.ElementShape = mockShape -> mkVariadic()
+                        | Shape.FSharpOption s when s.Element = mockShape -> mkVariadic()
+                        | Shape.Nullable s when s.Element = mockShape -> mkVariadic()
+                        | Shape.FSharpList s when s.Element = mockShape -> mkVariadic()
+                        | Shape.Array s when s.Rank = 1 && s.Element = mockShape -> mkVariadic()
+                        | Shape.FSharpSet s  when s.Element = mockShape -> mkVariadic()
                         | _ -> invalidMock o
 
                     | None -> Empty
@@ -110,7 +110,10 @@ and private mkMockerAux<'T> (ctx : RecTypeManager) : Mocker<'T> =
     | Shape.String -> EQ(fun mv -> getPrimMock mv "")
     | Shape.Enum s ->
         s.Accept { new IEnumVisitor<Mocker<'T>> with
-            member __.Visit<'t, 'u when 't : enum<'u>>() = // 'T = 't
+            member __.Visit<'t, 'u when 't : enum<'u>
+                                    and 't : struct
+                                    and 't :> ValueType
+                                    and 't : (new : unit -> 't)>() = // 'T = 't
                 let em = mkMockerCached<'u> ctx
                 fun size mv -> 
                     match mv with

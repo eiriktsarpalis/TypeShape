@@ -1,18 +1,22 @@
-framework: net45
+framework: net452
 redirects: on
 source https://nuget.org/api/v2
 
-nuget xunit ~> 2.1.0
-nuget xunit.extensions
-nuget xunit.runner.console
-nuget xunit.runner.visualstudio version_in_path: true
-nuget xunit.abstractions
+nuget FSharp.Core ~> 4.1.0
 nuget Unquote
 nuget FsCheck
 nuget FParsec
-nuget FSharp.Core ~> 4.1.0
+nuget FSharp.Quotations.Evaluator
+nuget System.ValueTuple
+
+nuget xunit ~> 2.2.0
+nuget xunit.abstractions
+nuget xunit.extensions
+nuget xunit.runner.console ~> 2.2.0
+nuget xunit.runner.visualstudio ~> 2.2.0 version_in_path: true
 
 group Build
+  framework: net45
   source https://nuget.org/api/v2
   
   nuget SourceLink.Fake

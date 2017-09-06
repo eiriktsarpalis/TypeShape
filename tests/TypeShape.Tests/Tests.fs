@@ -85,7 +85,10 @@ let ``Shape Struct`` () =
 let ``Shape Binding Flags`` () =
     let accepter = 
         { new IEnumVisitor<bool> with 
-            member __.Visit<'T, 'U when 'T : enum<'U>>() = 
+            member __.Visit<'T, 'U when 'T : enum<'U>
+                                    and 'T : struct
+                                    and 'T :> ValueType
+                                    and 'T : (new : unit -> 'T)>() = 
                 typeof<'T> = typeof<BindingFlags> && typeof<'U> = typeof<int> }
     test <@ match shapeof<BindingFlags> with Shape.Enum e -> e.Accept accepter | _ -> false @>
 

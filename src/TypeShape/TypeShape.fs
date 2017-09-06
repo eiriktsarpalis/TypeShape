@@ -169,13 +169,19 @@ let shapeof<'T> = TypeShape.Create<'T>() :> TypeShape
 // Enum types
 
 type IEnumVisitor<'R> =
-    abstract Visit<'Enum, 'Underlying when 'Enum : enum<'Underlying>> : unit -> 'R
+    abstract Visit<'Enum, 'Underlying when 'Enum : enum<'Underlying>
+                                       and 'Enum : struct
+                                       and 'Enum :> ValueType
+                                       and 'Enum : (new : unit -> 'Enum)> : unit -> 'R
 
 type IShapeEnum =
     abstract Underlying : TypeShape
     abstract Accept : IEnumVisitor<'R> -> 'R
 
-type private ShapeEnum<'Enum, 'Underlying when 'Enum : enum<'Underlying>>() =
+type private ShapeEnum<'Enum, 'Underlying when 'Enum : enum<'Underlying>
+                                           and 'Enum : struct
+                                           and 'Enum :> ValueType
+                                           and 'Enum : (new : unit -> 'Enum)>() =
     interface IShapeEnum with
         member __.Underlying = shapeof<'Underlying>
         member __.Accept v = v.Visit<'Enum, 'Underlying> ()
@@ -880,11 +886,18 @@ module private MemberUtils =
                 member __.Visit<'T> () = <@ Unchecked.defaultof<'T> @> :> _
         }
 
+    let private castFor (m : MemberInfo) (e : Expr) =
+        if m.DeclaringType = e.Type then e
+        elif e.Type.IsAssignableFrom m.DeclaringType then
+            Expr.Coerce(e, m.DeclaringType)
+        else
+            invalidOp "TypeShape: internal error, cannot cast to member declaring type."
+
     let projectExpr<'Record, 'Member> (path : MemberInfo[]) (expr : Expr<'Record>) =
         let rec aux expr (m:MemberInfo) =
             match m with
-            | :? FieldInfo as fI -> Expr.FieldGet(expr, fI)
-            | :? PropertyInfo as pI -> Expr.PropertyGet(expr, pI)
+            | :? FieldInfo as fI -> Expr.FieldGet(castFor fI expr, fI)
+            | :? PropertyInfo as pI -> Expr.PropertyGet(castFor pI expr, pI)
             | _ -> invalidMember m
 
         Expr.Cast<'Member>(Array.fold aux (expr :> _) path) 
@@ -898,23 +911,23 @@ module private MemberUtils =
             let rec aux i expr =
                 if i = path.Length - 1 then
                     match path.[i] with
-                    | :? FieldInfo as fI -> Expr.FieldSet(expr, fI, value)
-                    | :? PropertyInfo as pI -> Expr.PropertySet(expr, pI, value)
+                    | :? FieldInfo as fI -> Expr.FieldSet(castFor fI expr, fI, value)
+                    | :? PropertyInfo as pI -> Expr.PropertySet(castFor pI expr, pI, value)
                     | m -> invalidMember m
                 else
                     let mkVar n t = Var(n, t, isMutable = true)
                     match path.[i] with
                     | :? FieldInfo as fI -> 
                         let v = mkVar fI.Name fI.FieldType
-                        let getter = Expr.FieldGet(expr, fI)
+                        let getter = Expr.FieldGet(castFor fI expr, fI)
                         let nestedSetter = aux (i + 1) (Expr.Var v)
-                        let setter = Expr.FieldSet(expr, fI, Expr.Var v)
+                        let setter = Expr.FieldSet(castFor fI expr, fI, Expr.Var v)
                         Expr.Let(v, getter, Expr.Sequential(nestedSetter, setter))
                     | :? PropertyInfo as pI -> 
                         let v = mkVar pI.Name pI.PropertyType
-                        let getter = Expr.PropertyGet(expr, pI)
+                        let getter = Expr.PropertyGet(castFor pI expr, pI)
                         let nestedSetter = aux (i + 1) (Expr.Var v)
-                        let setter = Expr.PropertySet(expr, pI, Expr.Var v)
+                        let setter = Expr.PropertySet(castFor pI expr, pI, Expr.Var v)
                         Expr.Let(v, getter, Expr.Sequential(nestedSetter, setter))
                     | m -> invalidMember m
 
@@ -923,13 +936,13 @@ module private MemberUtils =
             let rec aux i expr =
                 if i = path.Length - 1 then
                     match path.[i] with
-                    | :? FieldInfo as fI -> Expr.FieldSet(expr, fI, value)
-                    | :? PropertyInfo as pI -> Expr.PropertySet(expr, pI, value)
+                    | :? FieldInfo as fI -> Expr.FieldSet(castFor fI expr, fI, value)
+                    | :? PropertyInfo as pI -> Expr.PropertySet(castFor pI expr, pI, value)
                     | m -> invalidMember m
                 else
                     match path.[i] with
-                    | :? FieldInfo as fI -> aux (i+1) (Expr.FieldGet(expr, fI))
-                    | :? PropertyInfo as pI -> aux (i+1) (Expr.PropertyGet(expr, pI))
+                    | :? FieldInfo as fI -> aux (i+1) (Expr.FieldGet(castFor fI expr, fI))
+                    | :? PropertyInfo as pI -> aux (i+1) (Expr.PropertyGet(castFor pI expr, pI))
                     | m -> invalidMember m
                 
             <@ (% Expr.Cast<_>(aux 0 r)) ; %r @>
@@ -1289,6 +1302,7 @@ module private MemberUtils2 =
 [<AutoOpen>]
 module private ShapeTupleImpl =
 
+    [<NoEquality; NoComparison>]
     type TupleInfo =
         { 
             Current : Type
@@ -1624,6 +1638,8 @@ and ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) =
 
     /// Property shapes for C# record
     member __.Properties = properties
+    /// Gets the default constructor info defined in the type
+    member __.DefaultCtorInfo = defaultCtor
 
     interface IShapeCliMutable with
         member __.Properties = properties |> Array.map (fun p -> p :> _)
@@ -2260,7 +2276,7 @@ module Shape =
     /// Recognizes shapes that look like C# record classes
     /// They are classes with parameterless constructors and settable properties
     let (|CliMutable|_|) (s : TypeShape) =
-        match s.Type.GetConstructor(BindingFlags.Public ||| BindingFlags.Instance, null, [||], [||]) with
+        match s.Type.GetConstructor(allInstanceMembers, null, [||], [||]) with
         | null -> None
         | ctor -> 
             Activator.CreateInstanceGeneric<ShapeCliMutable<_>>([|s.Type|], [|ctor|])
