@@ -1,3 +1,6 @@
+### 2.17
+* Bugfixes and misc improvements.
+
 ### 2.16
 * Support struct unions, records and tuples.
 
