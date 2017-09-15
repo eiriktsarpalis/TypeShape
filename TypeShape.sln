@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.6
+VisualStudioVersion = 15.0.26730.15
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape", "src\TypeShape\TypeShape.fsproj", "{8609D2FB-063F-45FE-94E2-FF251792C495}"
 EndProject
@@ -24,6 +24,7 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape.Tests", "tests\Ty
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{42131FE1-A70A-46AA-9760-C9180B08B951}"
 	ProjectSection(SolutionItems) = preProject
+		samples\disposable.fsx = samples\disposable.fsx
 		samples\empty.fsx = samples\empty.fsx
 		samples\equality-comparer.fsx = samples\equality-comparer.fsx
 		samples\equality-staged.fsx = samples\equality-staged.fsx
@@ -41,6 +42,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{4213
 		samples\random.fsx = samples\random.fsx
 		samples\testing.fsx = samples\testing.fsx
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TypeShape.CSharp", "src\TypeShape.CSharp\TypeShape.CSharp.csproj", "{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -66,8 +69,19 @@ Global
 		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Release-NoEmit|Any CPU.ActiveCfg = Release-NoEmit|Any CPU
 		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}.Release-NoEmit|Any CPU.Build.0 = Release-NoEmit|Any CPU
+		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}.Debug-NoEmit|Any CPU.ActiveCfg = Debug|Any CPU
+		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}.Debug-NoEmit|Any CPU.Build.0 = Debug|Any CPU
+		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}.Release-NoEmit|Any CPU.ActiveCfg = Release|Any CPU
+		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}.Release-NoEmit|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5A544A5F-CD9E-4B69-9492-FF21A20A861C}
 	EndGlobalSection
 EndGlobal

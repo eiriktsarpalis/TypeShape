@@ -84,6 +84,7 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="TypeShape.fs" />
     <Compile Include="StagingExtensions.fs" />
+    <Compile Include="SubtypeExtensions.fs" />
     <Compile Include="MiscUtils.fs" />
     <None Include="paket.template" />
   </ItemGroup>
@@ -95,5 +96,12 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TypeShape.CSharp\TypeShape.CSharp.csproj">
+      <Name>TypeShape.CSharp</Name>
+      <Project>{2ac53438-f8df-44ed-a0bf-8ceb84a7bf18}</Project>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
 </Project>
