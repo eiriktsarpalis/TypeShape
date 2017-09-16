@@ -460,13 +460,13 @@ type private ShapeFSharpFunc<'Domain, 'CoDomain> () =
 // System.Exception
 
 type IExceptionVisitor<'R> =
-    abstract Visit<'exn when 'exn :> exn> : unit -> 'R
+    abstract Visit<'exn when 'exn :> exn and 'exn : not struct and 'exn : null> : unit -> 'R
 
 type IShapeException =
     abstract IsFSharpException : bool
     abstract Accept : IExceptionVisitor<'R> -> 'R
 
-type private ShapeException<'exn when 'exn :> exn> (isFSharpExn : bool) =
+type private ShapeException<'exn when 'exn :> exn and 'exn : not struct and 'exn : null> (isFSharpExn : bool) =
     interface IShapeException with
         member __.IsFSharpException = isFSharpExn
         member __.Accept v = v.Visit<'exn> ()

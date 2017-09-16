@@ -1,3 +1,6 @@
+### 2.19
+* Refine exception shapes
+
 ### 2.18
 * Add Subtype shapes.
 

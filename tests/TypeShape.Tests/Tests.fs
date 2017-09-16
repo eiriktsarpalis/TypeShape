@@ -357,7 +357,7 @@ let ``Shape FSharpFunc`` () =
 let ``Shape Exception`` () =
     let accepter =
         { new IExceptionVisitor<bool> with
-            member __.Visit<'exn when 'exn :> exn>() = typeof<'exn> = typeof<System.IO.FileNotFoundException> }
+            member __.Visit<'exn when 'exn :> exn and 'exn : not struct and 'exn : null>() = typeof<'exn> = typeof<System.IO.FileNotFoundException> }
     test <@ match shapeof<System.IO.FileNotFoundException> with Shape.Exception s -> s.Accept accepter | _ -> false @>
 
 [<Fact>]
