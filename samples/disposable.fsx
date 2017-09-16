@@ -36,7 +36,11 @@ and private mkDisposerAux<'T> (ctx : RecTypeManager) : 'T -> unit =
     | Shape.IDisposable s ->
         s.Accept { new ISubtypeVisitor<IDisposable, ('T -> unit)> with
             member __.Visit<'D when 'D :> IDisposable> () =
-                EQ (fun (d:'D) -> d.Dispose()) }
+                if typeof<'D>.IsValueType then
+                    fun (d:'D) -> d.Dispose()
+                else
+                    fun (d:'D) -> if not(obj.ReferenceEquals(d,null)) then d.Dispose()
+                |> EQ }
 
     | Shape.Nullable s ->
         s.Accept { new INullableVisitor<'T -> unit> with
