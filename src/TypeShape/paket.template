@@ -16,3 +16,9 @@ licenseurl https://github.com/eiriktsarpalis/TypeShape/blob/master/License.md
 projecturl https://github.com/eiriktsarpalis/TypeShape
 tags
     fsharp, f#, polytypic
+references
+	TypeShape.CSharp.dll
+    TypeShape.dll
+files
+    ../../bin/TypeShape.CSharp.dll ==> lib/net40
+    ../../bin/TypeShape.CSharp.pdb ==> lib/net40

@@ -1,3 +1,6 @@
+### 2.18
+* Add Subtype shapes.
+
 ### 2.17
 * Bugfixes and misc improvements.
 

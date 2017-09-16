@@ -4,14 +4,14 @@ using System.Reflection;
 [assembly: AssemblyTitleAttribute("TypeShape.CSharp")]
 [assembly: AssemblyProductAttribute("TypeShape")]
 [assembly: AssemblyDescriptionAttribute("Practical Generic Programming in F#")]
-[assembly: AssemblyVersionAttribute("2.17")]
-[assembly: AssemblyFileVersionAttribute("2.17")]
+[assembly: AssemblyVersionAttribute("2.18")]
+[assembly: AssemblyFileVersionAttribute("2.18")]
 namespace System {
     internal static class AssemblyVersionInformation {
         internal const System.String AssemblyTitle = "TypeShape.CSharp";
         internal const System.String AssemblyProduct = "TypeShape";
         internal const System.String AssemblyDescription = "Practical Generic Programming in F#";
-        internal const System.String AssemblyVersion = "2.17";
-        internal const System.String AssemblyFileVersion = "2.17";
+        internal const System.String AssemblyVersion = "2.18";
+        internal const System.String AssemblyFileVersion = "2.18";
     }
 }
