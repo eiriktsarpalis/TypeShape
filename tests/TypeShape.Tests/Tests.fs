@@ -705,3 +705,13 @@ let ``Should support struct tuples``() =
     testStructTuple (struct(1,"2"))
     testStructTuple (struct(1,"3",2,"4",5,"5",6,"7",8,"9",10))
     testStructTuple (struct(1,"3",2,"4",5,"5",6,"7",8,"9",10,"11",12,"13",14,"15",16,"17"))
+
+type MixedCase = | One of OneId:int
+[<Fact>]
+let ``Should support union with mixed case properties``() =
+    match shapeof<MixedCase> with
+    | Shape.FSharpUnion (:? ShapeFSharpUnion<MixedCase> as shape) ->
+        test <@ shape.UnionCases.Length = 1 @>
+        test <@ shape.UnionCases.[0].Fields.[0].Label = "OneId" @>
+    | _ -> failwith "Unexpected shape"
+    
