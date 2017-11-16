@@ -1,6 +1,6 @@
 ﻿using System;
 
-// Binding type arguments in subtype constraint currently not possible in C#,
+// Binding type arguments in subtype constraint currently not possible in F#,
 // defining those shape types in C#.
 
 namespace TypeShape
