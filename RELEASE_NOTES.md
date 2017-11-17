@@ -1,3 +1,6 @@
+### 2.20
+* Refine subtype shapes
+
 ### 2.19
 * Refine exception shapes
 
