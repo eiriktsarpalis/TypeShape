@@ -1,6 +1,9 @@
+#r "../bin/TypeShape.CSharp.dll"
 #r "../bin/TypeShape.dll"
 open System
 open TypeShape
+open TypeShape_SubtypeExtensions
+open System.IO
 
 // inspired by but different from http://research.microsoft.com/en-us/um/people/simonpj/papers/hmap/gmap3.pdf
 
@@ -14,6 +17,12 @@ let rec gmapQ<'T,'S,'U> (f : 'T -> 'S) : 'U -> 'S list =
 
     match shapeof<'U> with
     | :? TypeShape<'T> -> wrap(fun (t:'T) -> [f t])
+    | Shape.SubtypeOf (tshapeof<'T>) s ->
+        s.Accept { new ISubtypeWitnessVisitor<'T, 'U -> 'S list> with
+            member __.Visit(witness) =
+                wrap(fun u -> [f (witness.Upcast u)])
+        }
+
     | Shape.FSharpOption s ->
         s.Accept {
             new IFSharpOptionVisitor<'U -> 'S list> with
@@ -80,3 +89,14 @@ type Bar = { Foo : Foo ; A : int ; B : string }
 let value = { Foo = C(2,"2") ; A = 1 ; B = "1" }
 gmapQ id<int> value
 gmapQ id<string> value
+
+// working with subtypes
+
+let graph = 
+    [
+        Choice1Of3 (new Exception("exn"))
+        Choice2Of3 (42, Some [DateTime.Now])
+        Choice3Of3 (Uri "http://foo")
+    ]
+
+let disposables = gmapQ id<System.Runtime.Serialization.ISerializable> graph

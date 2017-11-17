@@ -108,6 +108,11 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\TypeShape.CSharp\TypeShape.CSharp.csproj">
+      <Name>TypeShape.CSharp</Name>
+      <Project>{2ac53438-f8df-44ed-a0bf-8ceb84a7bf18}</Project>
+      <Private>True</Private>
+    </ProjectReference>
     <ProjectReference Include="..\..\src\TypeShape\TypeShape.fsproj">
       <Name>TypeShape</Name>
       <Project>{8609d2fb-063f-45fe-94e2-ff251792c495}</Project>

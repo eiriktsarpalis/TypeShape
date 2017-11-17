@@ -15,5 +15,10 @@ module Shape =
         else
             None
 
+    /// Matches a shape whose type is a subtype of input shape
+    let (|SubtypeOf|_|) (baseShape : TypeShape<'TBase>) (shape : TypeShape) = 
+        ignore baseShape
+        tryCreateSubtypeShape<'TBase> shape
+
     let (|IDisposable|_|) shape = tryCreateSubtypeShape<IDisposable> shape
     let (|Stream|_|) shape = tryCreateSubtypeShape<Stream> shape

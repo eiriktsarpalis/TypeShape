@@ -163,6 +163,9 @@ type TypeShape with
 /// Creates a type shape instance for given type
 let shapeof<'T> = TypeShape.Create<'T>() :> TypeShape
 
+/// Typed variation of the shapeof operator
+let tshapeof<'T> = TypeShape.Create<'T>()
+
 //------------------------
 // Section: Core BCL types
 

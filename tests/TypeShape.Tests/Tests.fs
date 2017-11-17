@@ -12,6 +12,7 @@ open Swensen.Unquote.Assertions
 open FsCheck
 
 open TypeShape
+open TypeShape_SubtypeExtensions
 open TypeShape_Utils
 
 let check<'T>(prop : 'T -> bool) = Check.QuickThrowOnFailure prop
@@ -459,6 +460,15 @@ let ``Shape ISerializable`` () =
     let exn' = cloner' exn
     test <@ not (refEq exn exn') && exn.Message = exn'.Message @>
 
+
+[<Fact>]
+let ``Shape Subtype`` () =
+    let (|ISerializable|_|) = Shape.tryCreateSubtypeShape<ISerializable>
+    match shapeof<exn> with
+    | ISerializable s -> s.Accept {
+        new ISubtypeVisitor<ISerializable, bool> with
+            member __.Visit<'S when 'S :> ISerializable>() = test <@ typeof<'S> = typeof<exn> @> ; true }
+    | _ -> test <@ false @> ; true
 
 [<Fact>]
 let ``Shape F# Option`` () =
