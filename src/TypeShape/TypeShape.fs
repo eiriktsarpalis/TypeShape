@@ -1178,7 +1178,7 @@ type IShapeWriteMember<'Record> =
 
 /// Identifies an instance member that defines
 /// a mutable value in a class instance, typically a field or property
-and ShapeWriteMember<'DeclaringType, 'MemberType> private (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
+and [<Sealed>] ShapeWriteMember<'DeclaringType, 'MemberType> private (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
     inherit ShapeMember<'DeclaringType, 'MemberType>(label, memberInfo, path)
 
 #if TYPESHAPE_EMIT
@@ -1228,7 +1228,7 @@ and IShapeConstructor<'DeclaringType> =
     abstract Accept : IConstructorVisitor<'DeclaringType, 'R> -> 'R
 
 /// Identifies a constructor implementation shape
-and ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : ConstructorInfo, arity : int) =
+and [<Sealed>] ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : ConstructorInfo, arity : int) =
     let valueReader = 
         match arity with
         | 0 -> fun _ -> [||]
@@ -1377,7 +1377,7 @@ and ITupleVisitor<'R> =
     abstract Visit : ShapeTuple<'Tuple> -> 'R 
 
 /// Identifies a specific System.Tuple shape
-and ShapeTuple<'Tuple> private () =
+and [<Sealed>] ShapeTuple<'Tuple> private () =
     let tupleInfo = mkTupleInfo typeof<'Tuple>
     let isStructTuple = typeof<'Tuple>.IsValueType
 
@@ -1429,7 +1429,7 @@ type IShapeFSharpRecord =
     abstract Accept : IFSharpRecordVisitor<'R> -> 'R
 
 /// Identifies an F# record type
-and ShapeFSharpRecord<'Record> private () =
+and [<Sealed>] ShapeFSharpRecord<'Record> private () =
     let isStructRecord = typeof<'Record>.IsValueType
     let ctorInfo = FSharpValue.PreComputeRecordConstructorInfo(typeof<'Record>, allMembers)
     let props = FSharpType.GetRecordFields(typeof<'Record>, allMembers)
@@ -1485,7 +1485,7 @@ type IShapeFSharpUnionCase =
     abstract Fields : IShapeMember[]
 
 /// Denotes an F# union case shape
-type ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
+type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
     let properties = uci.GetFields()
     let ctorInfo = FSharpValue.PreComputeUnionConstructorInfo(uci, allMembers)
 #if TYPESHAPE_EMIT
@@ -1536,7 +1536,7 @@ type IShapeFSharpUnion =
     abstract Accept : IFSharpUnionVisitor<'R> -> 'R
 
 /// Denotes an F# Union shape
-and ShapeFSharpUnion<'U> private () =
+and [<Sealed>] ShapeFSharpUnion<'U> private () =
     let isStructUnion = typeof<'U>.IsValueType
     let ucis = 
         FSharpType.GetUnionCases(typeof<'U>, allMembers)
@@ -1614,7 +1614,7 @@ type IShapeCliMutable =
 
 /// Denotes a type that behaves like a C# record:
 /// Carries a parameterless constructor and settable properties
-and ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) =
+and [<Sealed>] ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) =
     let properties =
         typeof<'Record>.GetProperties(allInstanceMembers)
         |> Seq.filter (fun p -> p.CanRead && p.CanWrite && p.GetIndexParameters().Length = 0)
@@ -1667,7 +1667,7 @@ type IShapePoco =
     abstract Accept : IPocoVisitor<'R> -> 'R
 
 /// Denotes any .NET type that is either a class or a struct
-and ShapePoco<'Poco> private () =
+and [<Sealed>] ShapePoco<'Poco> private () =
     let isStruct = typeof<'Poco>.IsValueType
 
     let fields = 
