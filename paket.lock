@@ -59,6 +59,7 @@ GITHUB
     modules/Octokit/Octokit.fsx (0341a2e614eb2a7f34607cec914eb0ed83ce9add)
       Octokit (>= 0.20)
 GROUP Tests
+REDIRECTS: ON
 RESTRICTION: == net47
 NUGET
   remote: https://www.nuget.org/api/v2
