@@ -952,7 +952,7 @@ module private MemberUtils =
 #endif
 
 #if TYPESHAPE_EMIT
-    open System.Reflection.Emit
+    open System.Reflection.Emit        
     open System.Collections.Concurrent
 
     type private Marker = class end

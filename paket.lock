@@ -1,4 +1,45 @@
-
+REDIRECTS: ON
+RESTRICTION: == netstandard2.0
+NUGET
+  remote: https://www.nuget.org/api/v2
+    Microsoft.NETCore.Platforms (2.0.1)
+    Microsoft.NETCore.Targets (2.0)
+    System.IO (4.3)
+      Microsoft.NETCore.Platforms (>= 1.1)
+      Microsoft.NETCore.Targets (>= 1.1)
+      System.Runtime (>= 4.3)
+      System.Text.Encoding (>= 4.3)
+      System.Threading.Tasks (>= 4.3)
+    System.Reflection (4.3)
+      Microsoft.NETCore.Platforms (>= 1.1)
+      Microsoft.NETCore.Targets (>= 1.1)
+      System.IO (>= 4.3)
+      System.Reflection.Primitives (>= 4.3)
+      System.Runtime (>= 4.3)
+    System.Reflection.Emit.ILGeneration (4.3)
+      System.Reflection (>= 4.3)
+      System.Reflection.Primitives (>= 4.3)
+      System.Runtime (>= 4.3)
+    System.Reflection.Emit.Lightweight (4.3)
+      System.Reflection (>= 4.3)
+      System.Reflection.Emit.ILGeneration (>= 4.3)
+      System.Reflection.Primitives (>= 4.3)
+      System.Runtime (>= 4.3)
+    System.Reflection.Primitives (4.3)
+      Microsoft.NETCore.Platforms (>= 1.1)
+      Microsoft.NETCore.Targets (>= 1.1)
+      System.Runtime (>= 4.3)
+    System.Runtime (4.3)
+      Microsoft.NETCore.Platforms (>= 1.1)
+      Microsoft.NETCore.Targets (>= 1.1)
+    System.Text.Encoding (4.3)
+      Microsoft.NETCore.Platforms (>= 1.1)
+      Microsoft.NETCore.Targets (>= 1.1)
+      System.Runtime (>= 4.3)
+    System.Threading.Tasks (4.3)
+      Microsoft.NETCore.Platforms (>= 1.1)
+      Microsoft.NETCore.Targets (>= 1.1)
+      System.Runtime (>= 4.3)
 
 GROUP Build
 RESTRICTION: == net45

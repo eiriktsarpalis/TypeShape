@@ -1,6 +1,13 @@
+source https://nuget.org/api/v2
+framework: netstandard2.0
+redirects: on
+
+nuget System.Reflection.Emit.Lightweight
+nuget System.Reflection.Emit.ILGeneration
+
 group Tests
-  framework: net47
   source https://nuget.org/api/v2
+  framework: net47
 
   nuget FSharp.Core
   nuget System.ValueTuple
@@ -15,8 +22,8 @@ group Tests
   nuget xunit.runner.visualstudio ~> 2.2.0 version_in_path: true
 
 group Build
-  framework: net45
   source https://nuget.org/api/v2
+  framework: net45
   
   nuget SourceLink.Fake
   nuget FAKE

@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -14,7 +15,7 @@
     <Compile Include="SubtypeExtensions.fs" />
     <Compile Include="MiscUtils.fs" />
     <None Include="paket.template" />
-  </ItemGroup>  
+  </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <DefineConstants>TRACE;DEBUG;TYPESHAPE_EXPOSE;TYPESHAPE_EMIT;TYPESHAPE_EXPR</DefineConstants>
   </PropertyGroup>
@@ -24,4 +25,5 @@
   <PropertyGroup>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

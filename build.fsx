@@ -116,6 +116,10 @@ Target "CleanDocs" (fun _ ->
     CleanDirs ["docs/output"]
 )
 
+Target "Restore" (fun _ ->
+    DotNetCli.Restore id
+)
+
 // --------------------------------------------------------------------------------------
 // Build library & test project
 
@@ -343,6 +347,7 @@ Target "Default" DoNothing
 Target "Release" DoNothing
 
 "Clean"
+  ==> "Restore"
   ==> "AssemblyInfo"
   ==> "Build"
   ==> "RunTests"
