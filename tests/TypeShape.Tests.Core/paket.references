@@ -1,0 +1,5 @@
+group TestsCore
+  xunit
+  xunit.abstractions
+  FsCheck
+  UnQuote

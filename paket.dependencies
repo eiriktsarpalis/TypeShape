@@ -7,7 +7,7 @@ nuget System.Reflection.Emit.ILGeneration
 
 group Tests
   source https://nuget.org/api/v2
-  framework: net47
+  framework: net462
   redirects: on
 
   nuget FSharp.Core
@@ -22,9 +22,20 @@ group Tests
   nuget xunit.runner.console ~> 2.2.0
   nuget xunit.runner.visualstudio ~> 2.2.0 version_in_path: true
 
+group TestsCore
+  source https://nuget.org/api/v2
+  framework: netcoreapp2.0
+  redirects: on
+
+  nuget FsCheck
+  nuget Unquote
+  nuget xunit
+  nuget xunit.abstractions
+  nuget xunit.runner.console
+
 group Build
   source https://nuget.org/api/v2
-  framework: net45
+  framework: net462
     
   nuget SourceLink.Fake
   nuget FAKE

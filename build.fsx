@@ -49,6 +49,7 @@ let solutionFile  = "TypeShape.sln"
 
 // Pattern specifying assemblies to be tested using NUnit
 let testAssembly = "TypeShape.Tests.dll"
+let testAssemblyCore = "TypeShape.Tests.Core.dll"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted
@@ -125,38 +126,38 @@ Target "Restore" (fun _ ->
 
 Target "Build" (fun _ ->
     !! solutionFile
-    |> MSBuildRelease "" "Rebuild"
+    |> MSBuildRelease "./bin/" "Rebuild"
     |> ignore
 )
 
 Target "Build.NoEmit" (fun _ ->
     !! solutionFile
-    |> MSBuild "" "Rebuild" [("Configuration", "Release-NoEmit")]
+    |> MSBuild "./bin/noemit/" "Rebuild" [("Configuration", "Release-NoEmit")]
     |> ignore
 )
 
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner & kill test runner when complete
 
-Target "RunTests" (fun _ ->
-    ["bin" @@ testAssembly]
-    |> xUnit2 (fun (p : XUnit2Params) -> 
-        { p with
-            TimeOut = TimeSpan.FromMinutes 20.
-            Parallel = ParallelMode.Collections
+let private runTests noEmit = (fun _ ->
+        [(if noEmit then "bin/noemit" else "bin") @@ testAssembly]
+        |> xUnit2 (fun (p : XUnit2Params) -> 
+            { p with
+                TimeOut = TimeSpan.FromMinutes 20.
+                Parallel = ParallelMode.Collections
 
-            HtmlOutputPath = Some "xunit.html"})
+                HtmlOutputPath = Some (if noEmit then "xunit-noemit.html" else "xunit.html")})
+
+        // Runs .NET Core version of tests, manually calling XUnit's .NET Core runner because the FAKE version does not support it
+        DotNetCli.RunCommand 
+            (fun p -> { p with TimeOut = TimeSpan.FromMinutes 20. })   
+            "./packages/testscore/xunit.runner.console/tools/netcoreapp2.0/xunit.console.dll  ./bin/TypeShape.Tests.Core.dll"
+        |> ignore
 )
 
-Target "RunTests.NoEmit" (fun _ ->
-    ["bin/noemit" @@ testAssembly]
-    |> xUnit2 (fun (p : XUnit2Params) -> 
-        { p with
-            TimeOut = TimeSpan.FromMinutes 20.
-            Parallel = ParallelMode.Collections
+Target "RunTests" (runTests false)
 
-            HtmlOutputPath = Some "xunit-noemit.html"})
-)
+Target "RunTests.NoEmit" (runTests true)
 
 #if !MONO
 // --------------------------------------------------------------------------------------
