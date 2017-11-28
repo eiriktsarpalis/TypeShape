@@ -14,5 +14,14 @@
     <Compile Include="SubtypeExtensions.fs" />
     <Compile Include="MiscUtils.fs" />
     <None Include="paket.template" />
-  </ItemGroup>
+  </ItemGroup>  
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <DefineConstants>TRACE;DEBUG;TYPESHAPE_EXPOSE;TYPESHAPE_EMIT;TYPESHAPE_EXPR</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DefineConstants>TRACE;TYPESHAPE_EXPOSE;TYPESHAPE_EMIT;TYPESHAPE_EXPR</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
 </Project>

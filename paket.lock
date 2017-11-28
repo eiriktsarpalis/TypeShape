@@ -1,21 +1,34 @@
-REDIRECTS: ON
-RESTRICTION: == net452
+
+
+GROUP Build
+RESTRICTION: == net45
+NUGET
+  remote: https://www.nuget.org/api/v2
+    FAKE (4.63.2)
+    FSharp.Compiler.Service (2.0.0.6)
+    FSharp.Formatting (2.14.4)
+      FSharp.Compiler.Service (2.0.0.6)
+      FSharpVSPowerTools.Core (>= 2.3 < 2.4)
+    FSharpVSPowerTools.Core (2.3)
+      FSharp.Compiler.Service (>= 2.0.0.3)
+    Octokit (0.28)
+    SourceLink.Fake (1.1)
+GITHUB
+  remote: fsharp/FAKE
+    modules/Octokit/Octokit.fsx (0341a2e614eb2a7f34607cec914eb0ed83ce9add)
+      Octokit (>= 0.20)
+GROUP Tests
+RESTRICTION: == net47
 NUGET
   remote: https://www.nuget.org/api/v2
     FParsec (1.0.3)
       FSharp.Core (>= 4.0.0.1)
-    FsCheck (2.9.2)
+    FsCheck (2.10.4)
       FSharp.Core (>= 4.1)
-    FSharp.Core (4.1.18)
+    FSharp.Core (4.2.3)
     FSharp.Quotations.Evaluator (1.0.7)
-    Microsoft.NETCore.Platforms (2.0)
-    NETStandard.Library (2.0)
-      Microsoft.NETCore.Platforms (>= 1.1)
-      System.Runtime.InteropServices.RuntimeInformation (>= 4.3)
-    System.Runtime.InteropServices.RuntimeInformation (4.3)
     System.ValueTuple (4.4)
-      NETStandard.Library (>= 1.6.1)
-    Unquote (3.2)
+    Unquote (4.0)
     xunit (2.2)
       xunit.assert (2.2)
       xunit.core (2.2)
@@ -32,21 +45,3 @@ NUGET
       xunit (>= 1.9.0.1566)
     xunit.runner.console (2.2)
     xunit.runner.visualstudio (2.2.0) - version_in_path: true
-
-GROUP Build
-RESTRICTION: == net45
-NUGET
-  remote: https://www.nuget.org/api/v2
-    FAKE (4.63)
-    FSharp.Compiler.Service (2.0.0.6)
-    FSharp.Formatting (2.14.4)
-      FSharp.Compiler.Service (2.0.0.6)
-      FSharpVSPowerTools.Core (>= 2.3 < 2.4)
-    FSharpVSPowerTools.Core (2.3)
-      FSharp.Compiler.Service (>= 2.0.0.3)
-    Octokit (0.26)
-    SourceLink.Fake (1.1)
-GITHUB
-  remote: fsharp/FAKE
-    modules/Octokit/Octokit.fsx (0bde6564e7a9218200cee8c74b71d67fbe66fe51)
-      Octokit (>= 0.20)

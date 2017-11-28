@@ -1,19 +1,18 @@
-framework: net452
-redirects: on
-source https://nuget.org/api/v2
+group Tests
+  framework: net47
+  source https://nuget.org/api/v2
 
-nuget FSharp.Core ~> 4.1.0
-nuget Unquote
-nuget FsCheck
-nuget FParsec
-nuget FSharp.Quotations.Evaluator
-nuget System.ValueTuple
-
-nuget xunit ~> 2.2.0
-nuget xunit.abstractions
-nuget xunit.extensions
-nuget xunit.runner.console ~> 2.2.0
-nuget xunit.runner.visualstudio ~> 2.2.0 version_in_path: true
+  nuget FSharp.Core
+  nuget System.ValueTuple
+  nuget Unquote
+  nuget FParsec
+  nuget FSharp.Quotations.Evaluator
+  nuget FsCheck
+  nuget xunit ~> 2.2.0
+  nuget xunit.abstractions
+  nuget xunit.extensions
+  nuget xunit.runner.console ~> 2.2.0
+  nuget xunit.runner.visualstudio ~> 2.2.0 version_in_path: true
 
 group Build
   framework: net45
