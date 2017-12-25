@@ -109,14 +109,7 @@ let check (maxTypes : int) (maxTestsPerType : int) (predicate : IPredicate) =
 open ``Equality-comparer``
 
 // check if our equality comparer satisfies reflexivivity
-check 100 100 
-    { new IPredicate with 
-        member __.Invoke (t : 'T) =
-            let cmp = comparer<'T>
-            cmp.Equals(t,t) }
-
-
-check 100 100 
+check 1000 100 
     { new IPredicate with 
         member __.Invoke (t : 'T) =
             let cmp = comparer<'T>

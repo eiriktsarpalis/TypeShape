@@ -956,15 +956,15 @@ module private MemberUtils =
     open System.Collections.Concurrent
 
     type private Marker = class end
-    let private compileCache = new ConcurrentDictionary<MemberInfo * string, Lazy<Delegate>>()
+    let private compileCache = new ConcurrentDictionary<Type * string, Lazy<Delegate>>()
 
     /// Lazily emits a dynamic method using supplied parameters
-    let emitDynamicMethod<'Delegate when 'Delegate :> Delegate> 
-                (memberInfo : MemberInfo) (id : string) (argTypes : Type []) (returnType : Type)
+    let emitDynamicMethod<'Delegate when 'Delegate :> Delegate> (id : string) 
+                (argTypes : Type []) (returnType : Type)
                 (ilBuilder : ILGenerator -> unit) =
 
         let compile () =
-            let name = sprintf "%O-%O-%s" memberInfo.DeclaringType memberInfo id
+            let name = sprintf "%O-%s" typeof<'Delegate> id
             let dynamicMethod =
                 new DynamicMethod(name, MethodAttributes.Static ||| MethodAttributes.Public, 
                                     CallingConventions.Standard, returnType, argTypes, typeof<Marker>, 
@@ -974,11 +974,11 @@ module private MemberUtils =
             do ilBuilder ilGen
             dynamicMethod.CreateDelegate typeof<'Delegate>
 
-        let wrapper = compileCache.GetOrAdd((memberInfo, id), fun _ -> lazy(compile ()))
+        let wrapper = compileCache.GetOrAdd((typeof<'Delegate>, id), fun _ -> lazy(compile ()))
         lazy(wrapper.Value :?> 'Delegate)
 
     /// Emits a dynamic method that projects supplied member path
-    let emitProjection<'DeclaringType, 'Property> (memberInfo : MemberInfo) (path : MemberInfo []) =
+    let emitProjection<'DeclaringType, 'Property> (path : MemberInfo []) =
         let builder (gen : ILGenerator) =
             gen.Emit OpCodes.Ldarg_0
             for m in path do
@@ -994,11 +994,17 @@ module private MemberUtils =
 
             gen.Emit OpCodes.Ret
 
+        let projectionId =
+            path 
+            |> Seq.map (fun p -> p.Name)
+            |> String.concat "->"
+            |> sprintf "proj-%s"
+
         emitDynamicMethod<Func<'DeclaringType, 'Property>>
-            memberInfo "projection" [|typeof<'DeclaringType>|] typeof<'Property> builder
+            projectionId [|typeof<'DeclaringType>|] typeof<'Property> builder
 
     // Emits a dynamic method that injects a value to supplied member path
-    let emitInjection<'DeclaringType, 'Property> (memberInfo : MemberInfo) (path : MemberInfo []) =
+    let emitInjection<'DeclaringType, 'Property> (path : MemberInfo []) =
         let builder (gen : ILGenerator) =
             gen.Emit OpCodes.Ldarg_0
             let local =
@@ -1047,8 +1053,14 @@ module private MemberUtils =
             | None -> gen.Emit OpCodes.Ldarg_0
             gen.Emit OpCodes.Ret
 
+        let injectionId =
+            path 
+            |> Seq.map (fun p -> p.Name)
+            |> String.concat "->"
+            |> sprintf "inj-%s"
+
         emitDynamicMethod<Func<'DeclaringType, 'Property, 'DeclaringType>>
-            memberInfo "injection" [|typeof<'DeclaringType>; typeof<'Property>|] typeof<'DeclaringType> builder
+            injectionId [|typeof<'DeclaringType>; typeof<'Property>|] typeof<'DeclaringType> builder
 
     /// Emits a dynamic method that injects uninitialized values to supplied static method or ctor
     let emitUninitializedCtor<'DeclaringType> (ctor : MethodBase) =
@@ -1068,7 +1080,9 @@ module private MemberUtils =
 
             gen.Emit OpCodes.Ret
 
-        emitDynamicMethod<Func<'DeclaringType>> ctor "ctor" [||] typeof<'DeclaringType> builder
+        let ctorId = sprintf "ctor-%O" ctor
+
+        emitDynamicMethod<Func<'DeclaringType>> ctorId [||] typeof<'DeclaringType> builder
 
     /// Emits a dynamic method that gets the tag of supplied union case
     let emitUnionTagReader<'U> (tagReader : MemberInfo) =
@@ -1088,7 +1102,7 @@ module private MemberUtils =
             else gen.EmitCall(OpCodes.Call, m, null)
             gen.Emit OpCodes.Ret
 
-        emitDynamicMethod<Func<'U, int>> tagReader "tagReader" [|typeof<'U>|] typeof<int> builder
+        emitDynamicMethod<Func<'U, int>> "unionTagReader" [|typeof<'U>|] typeof<int> builder
 
     let emitISerializableCtor<'T when 'T :> ISerializable> (ctorInfo : ConstructorInfo) =
         let builder (gen : ILGenerator) =
@@ -1097,7 +1111,7 @@ module private MemberUtils =
             gen.Emit(OpCodes.Newobj, ctorInfo)
             gen.Emit OpCodes.Ret
 
-        emitDynamicMethod<Func<SerializationInfo, StreamingContext, 'T>> ctorInfo "ctor" 
+        emitDynamicMethod<Func<SerializationInfo, StreamingContext, 'T>> "serializableCtor" 
             [|typeof<SerializationInfo>; typeof<StreamingContext>|] typeof<'T> builder
 #endif
                 
@@ -1131,7 +1145,7 @@ and ShapeMember<'DeclaringType, 'MemberType> internal (label : string, memberInf
     let isStructMember = isStructMember path
     let isPublicMember = isPublicMember memberInfo
 #if TYPESHAPE_EMIT
-    let projectFunc = emitProjection<'DeclaringType, 'MemberType> memberInfo path
+    let projectFunc = emitProjection<'DeclaringType, 'MemberType> path
 #endif
 
     /// Human-readable member identifier
@@ -1182,7 +1196,7 @@ and [<Sealed>] ShapeWriteMember<'DeclaringType, 'MemberType> private (label : st
     inherit ShapeMember<'DeclaringType, 'MemberType>(label, memberInfo, path)
 
 #if TYPESHAPE_EMIT
-    let injectFunc = emitInjection<'DeclaringType, 'MemberType> memberInfo path
+    let injectFunc = emitInjection<'DeclaringType, 'MemberType> path
 #else
     let isStructMember = isStructMember path
 #endif
