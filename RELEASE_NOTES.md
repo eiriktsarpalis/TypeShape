@@ -1,3 +1,6 @@
+### 3.0
+* Support netstandard2.0
+
 ### 2.20
 * Refine subtype shapes
 
