@@ -1,3 +1,6 @@
+### 3.1
+* Minor Bugfix
+
 ### 3.0
 * Support netstandard2.0
 
