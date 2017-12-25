@@ -7,7 +7,7 @@ version
 authors
     Eirik Tsarpalis
 copyright
-    Copyright 2016
+    Copyright 2016-18
 releasenotes
     RELEASE NOTES
 summary
@@ -19,6 +19,19 @@ tags
 references
 	TypeShape.CSharp.dll
     TypeShape.dll
+dependencies
+  framework: net40
+    FSharp.Core >= 3.1
+  framework: netstandard2.0
+	FSharp.Core >= LOCKEDVERSION
+	System.Reflection.Emit.ILGeneration >= LOCKEDVERSION
+	System.Reflection.Emit.Lightweight  >= LOCKEDVERSION
 files
-    ../../bin/TypeShape.CSharp.dll ==> lib/net40
-    ../../bin/TypeShape.CSharp.pdb ==> lib/net40
+    ../../bin/Release/net40/TypeShape.dll ==> lib/net40
+    ../../bin/Release/net40/TypeShape.pdb ==> lib/net40
+    ../../bin/Release/net40/TypeShape.CSharp.dll ==> lib/net40
+    ../../bin/Release/net40/TypeShape.CSharp.pdb ==> lib/net40
+    ../../bin/Release/netstandard2.0/TypeShape.dll ==> lib/netstandard2.0
+    ../../bin/Release/netstandard2.0/TypeShape.pdb ==> lib/netstandard2.0
+    ../../bin/Release/netstandard2.0/TypeShape.CSharp.dll ==> lib/netstandard2.0
+    ../../bin/Release/netstandard2.0/TypeShape.CSharp.pdb ==> lib/netstandard2.0

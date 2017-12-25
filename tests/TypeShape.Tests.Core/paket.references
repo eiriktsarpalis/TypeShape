@@ -1,8 +1,6 @@
 FSharp.Core
-System.ValueTuple
 xunit
-xunit.abstractions
-xunit.extensions
 xunit.runner.visualstudio
+xunit.abstractions
 FsCheck
 UnQuote
