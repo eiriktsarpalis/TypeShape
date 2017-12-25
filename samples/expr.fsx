@@ -1,4 +1,4 @@
-#r "../bin/TypeShape.dll"
+#r "../bin/Release/net40/TypeShape.dll"
 
 open System
 open System.Collections.Generic
@@ -382,7 +382,7 @@ let even, odd =
 //---------------------
 // Perf
 
-#r "../bin/Unquote.dll"
+#r "../bin/Release/net40/Unquote.dll"
 
 let factorialExpr =
     <@ 

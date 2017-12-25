@@ -1,5 +1,5 @@
-#r "../bin/TypeShape.dll"
-#r "../bin/Unquote.dll"
+#r "../bin/Release/net40/TypeShape.dll"
+#r "../bin/Release/net40/Unquote.dll"
 
 open TypeShape
 open TypeShape_StagingExtensions

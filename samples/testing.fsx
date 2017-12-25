@@ -1,7 +1,8 @@
-#r "../bin/TypeShape.dll"
-#r "../bin/FsCheck.dll"
+#r "../bin/Release/net40/TypeShape.dll"
+#r "../bin/Release/net40/FsCheck.dll"
 
 open System
+open FSharp.Reflection
 open FsCheck
 open TypeShape
 
@@ -24,8 +25,8 @@ type TypeAlg =
     | Ref of TypeAlg
     | List of TypeAlg
     | Array of TypeAlg
-    | Tuple2 of TypeAlg * TypeAlg
-    | Tuple3 of TypeAlg * TypeAlg * TypeAlg
+    | Tuple of TypeAlg []
+    | Union of TypeAlg []
 
 /// Type Algebra pretty-printer
 let rec toString (tAlg : TypeAlg) =
@@ -39,8 +40,28 @@ let rec toString (tAlg : TypeAlg) =
     | Ref t -> sprintf "%s ref" (toString t)
     | List t -> sprintf "%s list" (toString t)
     | Array t -> sprintf "%s []" (toString t)
-    | Tuple2 (t1,t2) -> sprintf "(%s * %s)" (toString t1) (toString t2)
-    | Tuple3 (t1,t2,t3) -> sprintf "(%s * %s * %s)" (toString t1) (toString t2) (toString t3)
+    | Tuple [||] -> "unit"
+    | Tuple [|t|] -> toString t
+    | Tuple ts -> ts |> Seq.map toString |> String.concat " * " |> sprintf "(%s)"
+    | Union [||] -> "unit"
+    | Union [|t|] -> toString t
+    | Union ts -> ts |> Seq.map toString |> String.concat " + " |> sprintf "(%s)"
+
+type FSharpType with
+    static member MakeUnionType (args : Type[]) =
+        match args.Length with
+        | 0 -> typeof<unit> // strictly speaking not a nullary union, but void wouldn't suit us here
+        | 1 -> args.[0]
+        | 2 -> typedefof<Choice<_,_>>.MakeGenericType args
+        | 3 -> typedefof<Choice<_,_,_>>.MakeGenericType args
+        | 4 -> typedefof<Choice<_,_,_,_>>.MakeGenericType args
+        | 5 -> typedefof<Choice<_,_,_,_,_>>.MakeGenericType args
+        | 6 -> typedefof<Choice<_,_,_,_,_,_>>.MakeGenericType args
+        | 7 -> typedefof<Choice<_,_,_,_,_,_,_>>.MakeGenericType args
+        | _ ->
+            let first, rest = args.[..5], args.[5..]
+            let restUnion = FSharpType.MakeUnionType rest
+            FSharpType.MakeUnionType (Array.append first [|restUnion|])
 
 /// Converts a TypeAlg representation to its corresponding System.Type
 let rec toSysType (tAlg : TypeAlg) : Type =
@@ -54,8 +75,10 @@ let rec toSysType (tAlg : TypeAlg) : Type =
     | Ref ta -> typedefof<_ ref>.MakeGenericType [|toSysType ta|]
     | List ta -> typedefof<_ list>.MakeGenericType [|toSysType ta|]
     | Array ta -> (toSysType ta).MakeArrayType()
-    | Tuple2 (t1,t2) -> typedefof<_ * _>.MakeGenericType [|toSysType t1; toSysType t2|]
-    | Tuple3 (t1,t2,t3) -> typedefof<_ * _ * _>.MakeGenericType [|toSysType t1; toSysType t2; toSysType t3|]
+    | Tuple [||] -> typeof<unit>
+    | Tuple [|t|] -> toSysType t
+    | Tuple ts -> ts |> Array.map toSysType |> FSharpType.MakeTupleType
+    | Union ts -> ts |> Array.map toSysType |> FSharpType.MakeUnionType
 
 
 /// <summary>
@@ -86,7 +109,14 @@ let check (maxTypes : int) (maxTestsPerType : int) (predicate : IPredicate) =
 open ``Equality-comparer``
 
 // check if our equality comparer satisfies reflexivivity
-check 10 100 
+check 100 100 
+    { new IPredicate with 
+        member __.Invoke (t : 'T) =
+            let cmp = comparer<'T>
+            cmp.Equals(t,t) }
+
+
+check 100 100 
     { new IPredicate with 
         member __.Invoke (t : 'T) =
             let cmp = comparer<'T>

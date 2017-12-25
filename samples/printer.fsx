@@ -1,4 +1,4 @@
-#r "../bin/TypeShape.dll"
+#r "../bin/Release/net40/TypeShape.dll"
 
 open System
 open TypeShape

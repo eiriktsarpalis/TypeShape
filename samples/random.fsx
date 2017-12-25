@@ -1,5 +1,5 @@
-#r "../bin/TypeShape.dll"
-#r "../bin/FsCheck.dll"
+#r "../bin/Release/net40/TypeShape.dll"
+#r "../bin/Release/net40/FsCheck.dll"
 
 open System
 open TypeShape
@@ -151,4 +151,4 @@ type Customer() =
 //let gen = Arb.generate<Customer list> // not supported
 let gen = mkGenerator<Customer list> ()
 
-Gen.sample 3 4 gen
+Gen.sample 3 gen

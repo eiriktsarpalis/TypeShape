@@ -1,4 +1,4 @@
-#r "../bin/TypeShape.dll"
+#r "../bin/Release/net40/TypeShape.dll"
 #r "../packages/FParsec/lib/net40-client/FParsecCS.dll"
 #r "../packages/FParsec/lib/net40-client/FParsec.dll"
 
