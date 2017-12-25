@@ -1,9 +1,8 @@
-group Tests
-  FSharp.Core
-  System.ValueTuple
-  xunit
-  xunit.abstractions
-  xunit.extensions
-  xunit.runner.visualstudio
-  FsCheck
-  UnQuote
+FSharp.Core
+System.ValueTuple
+xunit
+xunit.abstractions
+xunit.extensions
+xunit.runner.visualstudio
+FsCheck
+UnQuote

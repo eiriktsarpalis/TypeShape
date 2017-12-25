@@ -1,37 +1,28 @@
 source https://nuget.org/api/v2
-framework: netstandard2.0
-redirects: on
+framework: auto-detect
+redirects: force
 
-nuget System.Reflection.Emit.Lightweight
-nuget System.Reflection.Emit.ILGeneration
+nuget FSharp.Core >= 4.2 lowest_matching: true
+nuget System.Reflection.Emit.Lightweight >= 4.0 lowest_matching: true
+nuget System.Reflection.Emit.ILGeneration >= 4.0 lowest_matching: true
 
-group Tests
+# testing dependencies; NB intentionally kept in Main group
+nuget System.ValueTuple
+nuget Unquote ~> 4.0
+nuget FParsec
+nuget FSharp.Quotations.Evaluator
+nuget FsCheck ~> 3.0 prerelease
+nuget xunit ~> 2.3.0
+nuget xunit.abstractions
+nuget xunit.extensions
+nuget xunit.runner.visualstudio ~> 2.3.0 version_in_path: true
+
+group Net40
   source https://nuget.org/api/v2
-  framework: net462
+  framework: net40
   redirects: on
 
-  nuget FSharp.Core
-  nuget System.ValueTuple
-  nuget Unquote
-  nuget FParsec
-  nuget FSharp.Quotations.Evaluator
-  nuget FsCheck
-  nuget xunit ~> 2.2.0
-  nuget xunit.abstractions
-  nuget xunit.extensions
-  nuget xunit.runner.console ~> 2.2.0
-  nuget xunit.runner.visualstudio ~> 2.2.0 version_in_path: true
-
-group TestsCore
-  source https://nuget.org/api/v2
-  framework: netcoreapp2.0
-  redirects: on
-
-  nuget FsCheck
-  nuget Unquote
-  nuget xunit
-  nuget xunit.abstractions
-  nuget xunit.runner.console
+  nuget FSharp.Core >= 3.1 lowest_matching: true
 
 group Build
   source https://nuget.org/api/v2
@@ -40,5 +31,6 @@ group Build
   nuget SourceLink.Fake
   nuget FAKE
   nuget FSharp.Formatting
+  nuget xunit.runner.console ~> 2.3.0
 
   github fsharp/FAKE modules/Octokit/Octokit.fsx

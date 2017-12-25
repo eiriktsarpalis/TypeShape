@@ -1,5 +1,6 @@
-group TestsCore
-  xunit
-  xunit.abstractions
-  FsCheck
-  UnQuote
+FSharp.Core
+xunit
+xunit.runner.visualstudio
+xunit.abstractions
+FsCheck
+UnQuote

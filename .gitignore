@@ -193,3 +193,6 @@ docs/tools/FSharp.Formatting.svclog
 
 # xunit
 xunit*.html
+
+# exclude artifacts folder
+artifacts/

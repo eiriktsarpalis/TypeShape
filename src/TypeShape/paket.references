@@ -1,2 +1,2 @@
-System.Reflection.Emit.Lightweight
-System.Reflection.Emit.ILGeneration
+group Net40
+FSharp.Core

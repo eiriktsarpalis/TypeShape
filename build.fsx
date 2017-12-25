@@ -47,9 +47,13 @@ let tags = "fsharp, reflection"
 // File system information
 let solutionFile  = "TypeShape.sln"
 
-// Pattern specifying assemblies to be tested using NUnit
-let testAssembly = "TypeShape.Tests.dll"
-let testAssemblyCore = "TypeShape.Tests.Core.dll"
+// Folder to deposit deploy artifacts
+let artifactsDir = __SOURCE_DIRECTORY__ @@ "artifacts"
+
+// Pattern specifying assemblies to be tested
+let testClassicAssemblies = "bin/Release/net40/TypeShape.Tests.dll"
+let testClassicNoEmitAssemblies = "bin/Release/net40/TypeShape.Tests.dll"
+let testCoreProjects = "tests/TypeShape.Tests.Core/*.fsproj"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted
@@ -110,7 +114,7 @@ Target "AssemblyInfo" (fun _ ->
 // Clean build results
 
 Target "Clean" (fun _ ->
-    CleanDirs ["bin"; "temp"]
+    CleanDirs ["bin/Release"; artifactsDir ; "temp"]
 )
 
 Target "CleanDocs" (fun _ ->
@@ -124,40 +128,51 @@ Target "Restore" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Build library & test project
 
-Target "Build" (fun _ ->
+
+Target "Build" DoNothing
+
+Target "Build.Emit" (fun _ ->
     !! solutionFile
-    |> MSBuildRelease "./bin/" "Rebuild"
+    |> MSBuild null "Rebuild" [("Configuration", "Release")]
     |> ignore
 )
 
 Target "Build.NoEmit" (fun _ ->
     !! solutionFile
-    |> MSBuild "./bin/noemit/" "Rebuild" [("Configuration", "Release-NoEmit")]
+    |> MSBuild null "Rebuild" [("Configuration", "Release-NoEmit")]
     |> ignore
 )
 
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner & kill test runner when complete
 
-let private runTests noEmit = (fun _ ->
-        [(if noEmit then "bin/noemit" else "bin") @@ testAssembly]
-        |> xUnit2 (fun (p : XUnit2Params) -> 
-            { p with
-                TimeOut = TimeSpan.FromMinutes 20.
-                Parallel = ParallelMode.Collections
+Target "RunTests" DoNothing
 
-                HtmlOutputPath = Some (if noEmit then "xunit-noemit.html" else "xunit.html")})
-
-        // Runs .NET Core version of tests, manually calling XUnit's .NET Core runner because the FAKE version does not support it
-        DotNetCli.RunCommand 
-            (fun p -> { p with TimeOut = TimeSpan.FromMinutes 20. })   
-            "./packages/testscore/xunit.runner.console/tools/netcoreapp2.0/xunit.console.dll  ./bin/TypeShape.Tests.Core.dll"
-        |> ignore
+Target "RunTests.NetClassic" (fun _ ->
+    !! testClassicAssemblies
+    |> xUnit2 (fun (p : XUnit2Params) -> 
+        { p with
+            TimeOut = TimeSpan.FromMinutes 20.
+            Parallel = ParallelMode.Collections })
 )
 
-Target "RunTests" (runTests false)
+Target "RunTests.NetClassic-NoEmit" (fun _ ->
+    !! testClassicNoEmitAssemblies
+    |> xUnit2 (fun (p : XUnit2Params) -> 
+        { p with
+            TimeOut = TimeSpan.FromMinutes 20.
+            Parallel = ParallelMode.Collections })
+)
 
-Target "RunTests.NoEmit" (runTests true)
+Target "RunTests.NetCore" (fun _ ->
+    for proj in !! testCoreProjects do
+        DotNetCli.Test(fun p -> { p with Project = proj ; Configuration = "Release" })
+)
+
+Target "RunTests.NetCore-NoEmit" (fun _ ->
+    for proj in !! testCoreProjects do
+        DotNetCli.Test(fun p -> { p with Project = proj ; Configuration = "Release-NoEmit" })
+)
 
 #if !MONO
 // --------------------------------------------------------------------------------------
@@ -168,6 +183,7 @@ Target "SourceLink" (fun _ ->
     let baseUrl = sprintf "%s/%s/{0}/%%var2%%" gitRaw project
     !! "src/**/*.??proj"
     -- "src/**/*.shproj"
+    -- "src/**/*Core*.??proj"
     |> Seq.iter (fun projFile ->
         let proj = VsProj.LoadRelease projFile
         SourceLink.Index proj.CompilesNotLinked proj.OutputFilePdb __SOURCE_DIRECTORY__ baseUrl
@@ -182,7 +198,7 @@ Target "SourceLink" (fun _ ->
 Target "NuGet" (fun _ ->
     Paket.Pack(fun p ->
         { p with
-            OutputPath = "bin"
+            OutputPath = artifactsDir
             Version = release.NugetVersion
             BuildPlatform = "AnyCpu"
             ReleaseNotes = toLines release.Notes})
@@ -191,7 +207,7 @@ Target "NuGet" (fun _ ->
 Target "PublishNuget" (fun _ ->
     Paket.Push(fun p ->
         { p with
-            WorkingDir = "bin" })
+            WorkingDir = artifactsDir })
 )
 
 
@@ -345,22 +361,30 @@ Target "BuildPackage" DoNothing
 // Run all targets by default. Invoke 'build <Target>' to override
 
 Target "Default" DoNothing
+Target "Bundle"  DoNothing
 Target "Release" DoNothing
 
 "Clean"
   ==> "Restore"
   ==> "AssemblyInfo"
+  ==> "Build.Emit"
+  ==> "Build.NoEmit"
   ==> "Build"
+  ==> "RunTests.NetClassic"
+  ==> "RunTests.NetClassic-NoEmit"
+  ==> "RunTests.NetCore"
+  ==> "RunTests.NetCore-NoEmit"
   ==> "RunTests"
   ==> "Default"
 
 "Default"
-  ==> "Build.NoEmit"
-  ==> "RunTests.NoEmit"
 #if !MONO
   ==> "SourceLink"
 #endif
   ==> "Nuget"
+  ==> "Bundle"
+
+"Bundle"
   ==> "PublishNuget"
   ==> "ReleaseGithub"
   ==> "Release"
