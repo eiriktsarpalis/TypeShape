@@ -1,3 +1,6 @@
+### 3.1.1
+* Tuple Shape Bugfix
+
 ### 3.1
 * Minor Bugfix
 
