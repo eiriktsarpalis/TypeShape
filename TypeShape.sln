@@ -38,6 +38,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{4213
 		samples\parser.fsx = samples\parser.fsx
 		samples\printer.fsx = samples\printer.fsx
 		samples\random.fsx = samples\random.fsx
+		samples\testing.fsx = samples\testing.fsx
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TypeShape.CSharp", "src\TypeShape.CSharp\TypeShape.CSharp.csproj", "{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}"
