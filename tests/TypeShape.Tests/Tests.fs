@@ -12,6 +12,7 @@ open Swensen.Unquote.Assertions
 open FsCheck
 
 open TypeShape
+open TypeShape.Tests.GenericTests
 open TypeShape_SubtypeExtensions
 open TypeShape_Utils
 
@@ -724,4 +725,19 @@ let ``Should support union with mixed case properties``() =
         test <@ shape.UnionCases.Length = 1 @>
         test <@ shape.UnionCases.[0].Fields.[0].Label = "OneId" @>
     | _ -> failwith "Unexpected shape"
-    
+
+[<Fact>]
+let ``Generic Clone should produde equal values`` () =
+    { new IPredicate with 
+        member __.Invoke (t : 'T) = 
+            let c = mkCloner<'T>()
+            c(t) = t }
+    |> Check.GenericPredicate false 100 10
+
+[<Fact>]
+let ``Generic Staged Clone should produde equal values`` () =
+    { new IPredicate with 
+        member __.Invoke (t : 'T) = 
+            let c = mkStagedCloner<'T>()
+            c(t) = t }
+    |> Check.GenericPredicate false 100 1

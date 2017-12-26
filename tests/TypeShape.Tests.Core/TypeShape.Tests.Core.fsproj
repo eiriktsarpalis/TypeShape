@@ -5,9 +5,10 @@
     <Configurations>Debug;Release;Debug-NoEmit;Release-NoEmit</Configurations>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../TypeShape.Tests/Clone.fs" />
-    <Compile Include="../TypeShape.Tests/StagedClone.fs" />
-    <Compile Include="../TypeShape.Tests/Tests.fs" />
+    <Compile Include="../TypeShape.Tests/Clone.fs" Link="Clone.fs" />
+    <Compile Include="../TypeShape.Tests/StagedClone.fs" Link="StagedClone.fs" />
+    <Compile Include="../TypeShape.Tests/GenericTester.fs" Link="GenericTester.fs" />
+    <Compile Include="../TypeShape.Tests/Tests.fs" Link="Tests.fs" />
     <Compile Include="Main.fs" />
     <None Include="App.config" />
     <None Include="paket.references" />

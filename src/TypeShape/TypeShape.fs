@@ -1373,7 +1373,7 @@ module private ShapeTupleImpl =
         let rec aux fs (tI : TupleInfo) =
             match tI.Nested with
             | Some (fI,n) -> aux (fI :: fs) n
-            | _ -> fs
+            | _ -> List.rev fs
 
         aux [] tI
         |> List.toArray
