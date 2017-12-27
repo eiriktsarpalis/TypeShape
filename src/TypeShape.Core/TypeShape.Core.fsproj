@@ -6,10 +6,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="..\TypeShape\Utils.fs" Link="Utils.fs" />
     <Compile Include="..\TypeShape\TypeShape.fs" Link="TypeShape.fs" />
     <Compile Include="..\TypeShape\StagingExtensions.fs" Link="StagingExtensions.fs" />
     <Compile Include="..\TypeShape\SubtypeExtensions.fs" Link="SubtypeExtensions.fs" />
-    <Compile Include="..\TypeShape\MiscUtils.fs" Link="MiscUtils.fs" />
     <None Include="paket.references" />
   </ItemGroup>
   <ItemGroup>
