@@ -168,8 +168,8 @@ type TypeAlg with
             | Record [||] -> "unit"
             | Record ts -> 
                 ts 
-                |> Seq.mapi (fun i t -> sprintf "Field%di : %s" i (aux t)) 
-                |> String.concat "; " 
+                |> Seq.mapi (fun i t -> sprintf "Field%d : %s" i (aux t)) 
+                |> String.concat " ; " 
                 |> sprintf "{ %s }"
 
         aux t
