@@ -11,10 +11,10 @@ open Xunit
 open Swensen.Unquote.Assertions
 open FsCheck
 
-open TypeShape
+open TypeShape.Core
+open TypeShape.Core.Utils
+open TypeShape.Core.SubtypeExtensions
 open TypeShape.Tests.GenericTests
-open TypeShape_SubtypeExtensions
-open TypeShape_Utils
 
 let check<'T>(prop : 'T -> bool) = Check.QuickThrowOnFailure prop
 let checkCloner (cloner : 'T -> 'T) = check(fun t -> t = cloner t)

@@ -1,9 +1,8 @@
 #r "../bin/Release/net40/TypeShape.CSharp.dll"
 #r "../bin/Release/net40/TypeShape.dll"
 open System
-open TypeShape
-open TypeShape_SubtypeExtensions
-open System.IO
+open TypeShape.Core
+open TypeShape.Core.SubtypeExtensions
 
 // inspired by but different from http://research.microsoft.com/en-us/um/people/simonpj/papers/hmap/gmap3.pdf
 

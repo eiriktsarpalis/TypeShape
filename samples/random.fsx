@@ -2,7 +2,7 @@
 #r "../bin/Release/net40/FsCheck.dll"
 
 open System
-open TypeShape
+open TypeShape.Core
 open FsCheck
 
 // Generic random value generator for FsCheck

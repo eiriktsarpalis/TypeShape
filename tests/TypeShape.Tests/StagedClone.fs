@@ -5,8 +5,8 @@ open System
 open System.Runtime.Serialization
 open FSharp.Quotations
 open Swensen.Unquote
-open TypeShape
-open TypeShape_StagingExtensions
+open TypeShape.Core
+open TypeShape.Core.StagingExtensions
 
 // Simple object clone implementation used to verify implementation correctness of staged shapes
 

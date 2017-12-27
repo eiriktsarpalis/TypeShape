@@ -6,7 +6,7 @@ open FSharp.Quotations
 open FSharp.Quotations.Patterns
 open FSharp.Quotations.DerivedPatterns
 open FSharp.Quotations.ExprShape
-open TypeShape
+open TypeShape.Core
 
 type CompiledExpr<'T> = Environment -> 'T
 

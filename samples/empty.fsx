@@ -4,8 +4,8 @@
 
 open System
 open System.Collections.Generic
-open TypeShape
-open TypeShape_Utils
+open TypeShape.Core
+open TypeShape.Core.Utils
 
 let rec mkEmptyFunc<'T> () : unit -> 'T =
     let mutable f = Unchecked.defaultof<unit -> 'T>

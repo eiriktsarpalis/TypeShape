@@ -4,9 +4,9 @@
 // structural Disposable generator
 
 open System
-open TypeShape
-open TypeShape_Utils
-open TypeShape_SubtypeExtensions
+open TypeShape.Core.
+open TypeShape.Core.Utils
+open TypeShape.Core.SubtypeExtensions
 
 let rec mkDisposer<'T> () : 'T -> unit =
     let mutable f = Unchecked.defaultof<'T -> unit>

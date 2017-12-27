@@ -1,8 +1,8 @@
 #r "../bin/Release/net40/TypeShape.dll"
 
 open System
-open TypeShape
-open TypeShape_Utils
+open TypeShape.Core
+open TypeShape.Core.Utils
 
 // Generic value printer with recursive type support
 let rec mkPrinter<'T> () : 'T -> string =

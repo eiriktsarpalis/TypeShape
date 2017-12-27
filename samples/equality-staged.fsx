@@ -1,8 +1,8 @@
 #r "../bin/Release/net40/TypeShape.dll"
 #r "../bin/Release/net40/Unquote.dll"
 
-open TypeShape
-open TypeShape_StagingExtensions
+open TypeShape.Core
+open TypeShape.Core.StagingExtensions
 open Swensen.Unquote
 open FSharp.Quotations
 

@@ -7,7 +7,7 @@
     <ProjectGuid>{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>TypeShape.CSharp</RootNamespace>
+    <RootNamespace>TypeShape.Core</RootNamespace>
     <AssemblyName>TypeShape.CSharp</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -32,6 +32,9 @@
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DocumentationFile>..\..\bin\Release\net40\TypeShape.CSharp.xml</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />

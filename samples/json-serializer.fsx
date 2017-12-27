@@ -6,8 +6,8 @@ open System
 open System.Text
 open System.Text.RegularExpressions
 open FParsec
-open TypeShape
-open TypeShape_Utils
+open TypeShape.Core
+open TypeShape.Core.Utils
 
 // Toy Json Serializer for F# values adapted from 
 // http://www.quanttec.com/fparsec/tutorial.html#parsing-json

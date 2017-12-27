@@ -1,7 +1,7 @@
 #r "../bin/Release/net40/TypeShape.dll"
 open System
-open TypeShape
-open TypeShape_Utils
+open TypeShape.Core
+open TypeShape.Core.Utils
 
 // Generic map implementation that updates all occurences
 // of a given type inside a value

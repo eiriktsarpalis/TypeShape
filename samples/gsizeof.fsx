@@ -6,8 +6,8 @@ open System
 open System.Collections.Generic
 open System.Runtime.Serialization
 
-open TypeShape
-open TypeShape_Utils
+open TypeShape.Core
+open TypeShape.Core.Utils
 
 type SizeCounter<'T> = 
     abstract Compute : ObjectIDGenerator -> Dictionary<int64, int64> -> 'T -> int64

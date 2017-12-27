@@ -1,6 +1,9 @@
 ﻿#if TYPESHAPE_EXPOSE
-module TypeShape_StagingExtensions
+module TypeShape.Core.StagingExtensions
 #else
+// NB we don't want to leak the `TypeShape` namespace
+// to the public API of the assembly
+// so we use a top-level internal module
 module internal TypeShape_StagingExtensions
 #endif
 

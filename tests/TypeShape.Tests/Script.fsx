@@ -1,3 +1,3 @@
-#r "../../bin/TypeShape.dll"
+#r "../../bin/Debug/net40/TypeShape.dll"
 open System
-open TypeShape
+open TypeShape.Core

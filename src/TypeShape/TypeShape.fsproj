@@ -82,10 +82,10 @@
   <Import Project="..\..\.paket\paket.targets" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Utils.fs" />
     <Compile Include="TypeShape.fs" />
     <Compile Include="StagingExtensions.fs" />
     <Compile Include="SubtypeExtensions.fs" />
-    <Compile Include="MiscUtils.fs" />
     <None Include="paket.template" />
     <None Include="paket.references" />
   </ItemGroup>

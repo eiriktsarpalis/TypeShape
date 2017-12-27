@@ -3,7 +3,7 @@
 // Binding type arguments in subtype constraint currently not possible in F#,
 // defining those shape types in C#.
 
-namespace TypeShape
+namespace TypeShape.Core
 {
     /// Witness type that encapsulates subtype relationship of two generic types,
     /// used to assist F# type checker does not explicitly permit such configurations

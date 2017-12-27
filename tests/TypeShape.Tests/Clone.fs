@@ -3,8 +3,8 @@ module TypeShape.Tests.Clone
 
 open System
 open System.Runtime.Serialization
-open TypeShape
-open TypeShape_Utils
+open TypeShape.Core.Utils
+open TypeShape.Core
 
 // Simple object clone implementation used to verify implementation correctness of shapes
 

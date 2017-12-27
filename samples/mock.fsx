@@ -4,8 +4,8 @@
 
 open System
 open System.Collections.Generic
-open TypeShape
-open TypeShape_Utils
+open TypeShape.Core.
+open TypeShape.Core.Utils
 
 /// Attribute used for customizing member mocks
 type MockAttribute() =

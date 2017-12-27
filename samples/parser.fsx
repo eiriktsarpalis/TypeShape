@@ -4,8 +4,8 @@
 
 open System
 open FParsec
-open TypeShape
-open TypeShape_Utils
+open TypeShape.Core
+open TypeShape.Core.Utils
 
 type Parser<'T> = Parser<'T, unit>
 

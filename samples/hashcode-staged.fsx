@@ -5,8 +5,8 @@
 open FSharp.Quotations
 open FSharp.Quotations.Evaluator
 open Swensen.Unquote
-open TypeShape
-open TypeShape_StagingExtensions
+open TypeShape.Core
+open TypeShape.Core.StagingExtensions
 
 // Rank-2 encoding of staged hashcode generator
 type StagedHashCodeGenerator =

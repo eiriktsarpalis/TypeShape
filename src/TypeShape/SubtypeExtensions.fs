@@ -1,11 +1,10 @@
-﻿module TypeShape_SubtypeExtensions
+﻿module TypeShape.Core.SubtypeExtensions
 
 open System
-
-open TypeShape
+open System.IO
+open TypeShape.Core
 
 module Shape =
-    open System.IO
 
     /// Creates a subtype shape assuming that shape :> 'TBase
     let tryCreateSubtypeShape<'TBase> (shape : TypeShape) =

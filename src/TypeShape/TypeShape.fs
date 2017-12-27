@@ -1,6 +1,10 @@
 ﻿#if TYPESHAPE_EXPOSE
-module TypeShape
+[<AutoOpen>]
+module TypeShape.Core.Core
 #else
+// NB we don't want to leak the `TypeShape` namespace
+// to the public API of the assembly
+// so we use a top-level internal module
 module internal TypeShape
 #endif
 

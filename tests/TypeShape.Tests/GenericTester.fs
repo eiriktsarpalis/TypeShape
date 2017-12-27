@@ -3,7 +3,7 @@
 open System
 open FSharp.Reflection
 open FsCheck
-open TypeShape
+open TypeShape.Core
 
 // Type algebra defining the universe of testable types
 

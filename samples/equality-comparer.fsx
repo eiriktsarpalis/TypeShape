@@ -3,7 +3,7 @@
 open System
 open System.Collections.Concurrent
 open System.Collections.Generic
-open TypeShape
+open TypeShape.Core
 
 let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
     let inline combine (h1 : int) (h2 : int) = ((h1 <<< 5) + h1) ||| h2
