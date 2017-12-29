@@ -1,11 +1,31 @@
 #r "../bin/Release/net40/TypeShape.dll"
 
 open System
-open System.Collections.Concurrent
 open System.Collections.Generic
 open TypeShape.Core
+open TypeShape.Core.Utils
 
 let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
+    let mutable f = Unchecked.defaultof<IEqualityComparer<'T>>
+    if cache.TryGetValue(&f) then f
+    else
+        use mgr = cache.CreateRecTypeManager()
+        mkEqualityComparerCached<'T> mgr
+
+and private mkEqualityComparerCached<'T> (ctx : RecTypeManager) : IEqualityComparer<'T> =
+    match ctx.TryFind<IEqualityComparer<'T>>() with
+    | Some f -> f
+    | None ->
+        let mkWrapper (c:Cell<IEqualityComparer<'T>>) =
+            { new IEqualityComparer<'T> with
+                member __.GetHashCode t = c.Value.GetHashCode t
+                member __.Equals (t, t') = c.Value.Equals(t, t') }
+
+        let _ = ctx.CreateUninitialized<IEqualityComparer<'T>> mkWrapper
+        let f = mkEqualityComparerAux<'T> ctx
+        ctx.Complete f
+
+and private mkEqualityComparerAux<'T> (ctx : RecTypeManager) : IEqualityComparer<'T> =
     let inline combine (h1 : int) (h2 : int) = ((h1 <<< 5) + h1) ||| h2
     let inline wrap (hash : 'a -> int) (cmp : 'a -> 'a -> bool) =
         { new IEqualityComparer<'a> with
@@ -16,7 +36,7 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
         let mkMemberComparer (shape : IShapeMember<'DeclaringType>) =
             shape.Accept { new IMemberVisitor<'DeclaringType, IEqualityComparer<'DeclaringType>> with
                 member __.Visit (shape : ShapeMember<'DeclaringType, 'FieldType>) =
-                    let fc = mkEqualityComparer<'FieldType>()
+                    let fc = mkEqualityComparerCached<'FieldType> ctx
                     { new IEqualityComparer<'DeclaringType> with
                         member __.Equals(d1, d2) = fc.Equals (shape.Project d1, shape.Project d2)
                         member __.GetHashCode d = fc.GetHashCode (shape.Project d) }
@@ -34,6 +54,7 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
     | Shape.Unit -> wrap (fun () -> 0) (fun () () -> true)
     | Shape.Bool -> wrap (function false -> 0 | true -> 1) (=)
     | Shape.Byte -> wrap (fun (b:byte) -> int b) (=)
+    | Shape.SByte -> wrap (fun (b:sbyte) -> int b) (=)
     | Shape.Int16 -> wrap (fun (i:int16) -> int i) (=)
     | Shape.Int32 -> wrap (fun (i:int) -> i) (=)
     | Shape.Int64 -> wrap (fun (i:int64) -> hash i) (=)
@@ -45,13 +66,26 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
     | Shape.Double -> wrap (fun (f:float) -> hash f) (=)
     | Shape.Decimal -> wrap (fun (f:decimal) -> hash f) (=)
     | Shape.DateTime -> wrap (fun (f:DateTime) -> hash f) (=)
+    | Shape.Char -> wrap (fun (c:Char) -> hash c) (=)
     | Shape.TimeSpan -> wrap (fun (f:TimeSpan) -> hash f) (=)
     | Shape.String -> wrap (fun (s:string) -> s.GetHashCode()) (=)
+    | Shape.Enum s ->
+        s.Accept { 
+            new IEnumVisitor<IEqualityComparer<'T>> with
+                member __.Visit<'e, 'u when 'e : enum<'u>
+                                        and 'e : struct
+                                        and 'e :> ValueType
+                                        and 'e : (new : unit -> 'e)>() =
+
+                    let uc = mkEqualityComparerCached<'u> ctx
+                    wrap (fun (e:'e) -> uc.GetHashCode(LanguagePrimitives.EnumToValue e))
+                         (fun (e1:'e) (e2:'e) -> uc.Equals(LanguagePrimitives.EnumToValue e1, LanguagePrimitives.EnumToValue e2)) }
+
     | Shape.FSharpOption s ->
         s.Accept {
             new IFSharpOptionVisitor<IEqualityComparer<'T>> with
                 member __.Visit<'a> () =
-                    let tc = mkEqualityComparer<'a>()
+                    let tc = mkEqualityComparerCached<'a> ctx
                     wrap (function None -> 0 | Some t -> tc.GetHashCode t)
                         (fun xo yo -> 
                             match xo with
@@ -63,7 +97,7 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
         s.Accept {
             new IFSharpListVisitor<IEqualityComparer<'T>> with
                 member __.Visit<'a> () =
-                    let tc = mkEqualityComparer<'a>()
+                    let tc = mkEqualityComparerCached<'a> ctx
                     let rec hash c (xs : 'a list) =
                         match xs with
                         | [] -> c
@@ -84,7 +118,7 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
         s.Accept {
             new IArrayVisitor<IEqualityComparer<'T>> with
                 member __.Visit<'a> _ =
-                    let tc = mkEqualityComparer<'a>()
+                    let tc = mkEqualityComparerCached<'a> ctx
                     let hash (xs : 'a []) =
                         let mutable h = 0
                         for x in xs do h <- combine h (tc.GetHashCode x)
@@ -104,11 +138,26 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
                     wrap hash equals    
         }
 
+    | Shape.KeyValuePair s ->
+        s.Accept {
+            new IKeyValuePairVisitor<IEqualityComparer<'T>> with
+                member __.Visit<'k, 'v> () =
+                    let kc = mkEqualityComparerCached<'k> ctx
+                    let vc = mkEqualityComparerCached<'v> ctx
+                    let hash (kv : KeyValuePair<'k,'v>) =
+                        combine (kc.GetHashCode kv.Key) (vc.GetHashCode kv.Value)
+
+                    let equals (kv1 : KeyValuePair<'k,'v>) (kv2 : KeyValuePair<'k,'v>) =
+                        kc.Equals(kv1.Key, kv2.Key) && vc.Equals(kv1.Value, kv2.Value)
+
+                    wrap hash equals
+        }
+
     | Shape.FSharpSet s ->
         s.Accept {
             new IFSharpSetVisitor<IEqualityComparer<'T>> with
                 member __.Visit<'T when 'T : comparison> () =
-                    let tc = mkEqualityComparer<'T> ()
+                    let tc = mkEqualityComparerCached<'T> ctx
                     let hash (s : Set<'T>) =
                         let mutable h = 0
                         for e in s do h <- combine h (tc.GetHashCode e)
@@ -125,6 +174,33 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
                                 else false
 
                             aux ()
+
+                    wrap hash equals
+        }
+
+    | Shape.FSharpMap s ->
+        s.Accept {
+            new IFSharpMapVisitor<IEqualityComparer<'T>> with
+                member __.Visit<'k, 'v when 'k : comparison> () =
+                    let kvc = mkEqualityComparerCached<KeyValuePair<'k,'v>> ctx
+
+                    let hash (s : Map<'k,'v>) =
+                        let mutable h = 0
+                        for kv in s do 
+                            h <- combine h (kvc.GetHashCode kv)
+                        h
+
+                    let equals (s : Map<'k,'v>) (s' : Map<'k,'v>) =
+                        if s.Count <> s'.Count then false else
+
+                        use e1 = (s :> seq<KeyValuePair<'k,'v>>).GetEnumerator()
+                        use e2 = (s' :> seq<KeyValuePair<'k,'v>>).GetEnumerator()
+                        let rec aux () =
+                            if not(e1.MoveNext() && e2.MoveNext()) then true
+                            elif kvc.Equals(e1.Current, e2.Current) then aux ()
+                            else false
+
+                        aux ()
 
                     wrap hash equals
         }
@@ -150,8 +226,9 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
     | _ -> failwithf "unsupported type '%O'" typeof<'T>
 
 
-let private cache = new ConcurrentDictionary<Type,obj>()
-let comparer<'T> = cache.GetOrAdd(typeof<'T>, fun _ -> mkEqualityComparer<'T>() :> obj) :?> IEqualityComparer<'T>
+and private cache : TypeCache = new TypeCache()
+
+let comparer<'T> = mkEqualityComparer<'T>()
 
 
 let c0 = comparer<int list>

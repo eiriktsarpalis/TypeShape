@@ -43,7 +43,8 @@ and private mkClonerAux<'T> (ctx : RecTypeManager) : 'T -> 'T =
     | Shape.DateTime
     | Shape.BigInt
     | Shape.Unit
-    | Shape.Decimal -> id
+    | Shape.Decimal
+    | Shape.Enum _ -> id
     | Shape.String -> wrap(function null -> null | x -> String.Copy(x))
     | Shape.Array s when s.Rank = 1 ->
         s.Accept {
@@ -61,6 +62,21 @@ and private mkClonerAux<'T> (ctx : RecTypeManager) : 'T -> 'T =
                 member __.Visit<'t> () =
                     let ec = mkClonerCached<'t> ctx
                     wrap(List.map ec) }
+
+    | Shape.FSharpSet s ->
+        s.Accept {
+            new IFSharpSetVisitor<'T -> 'T> with
+                member __.Visit<'t when 't : comparison> () =
+                    let tc = mkClonerCached<'t> ctx
+                    wrap(Set.map tc) }
+
+    | Shape.FSharpMap s ->
+        s.Accept {
+            new IFSharpMapVisitor<'T -> 'T> with
+                member __.Visit<'k, 'v when 'k : comparison> () =
+                    let kc = mkClonerCached<'k> ctx
+                    let vc = mkClonerCached<'v> ctx
+                    wrap(Map.toSeq >> Seq.map (fun (k,v) -> kc k, vc v) >> Map.ofSeq) }
 
     | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
         let memberCloners = shape.Elements |> Array.map mkMemberCloner
