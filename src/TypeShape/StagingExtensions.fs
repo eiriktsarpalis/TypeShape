@@ -12,12 +12,13 @@ open FSharp.Quotations.Patterns
 open FSharp.Quotations.DerivedPatterns
 open FSharp.Quotations.ExprShape
 
-// Rank-2 encoding of a generic staged computation
+/// Rank-2 encoding of a generic staged computation
 type StagedGenerator1 =
     abstract Generate<'T1,'R> : Expr<'T1> -> Expr<'R>
 
-//type StagedGenerator2 =
-//    abstract Generate<'T1,'T2,'R> : Expr<'T1> -> Expr<'T2> -> Expr<'R>
+/// Rank-2 encoding of a generic staged computation
+type StagedGenerator2 =
+    abstract Generate<'T1,'T2,'R> : Expr<'T1> -> Expr<'T2> -> Expr<'R>
 
 [<RequireQualifiedAccess>]
 module Expr =
@@ -203,7 +204,7 @@ module Expr =
                 // into stack and perform staged computation
                 let selfVar = Var("func", typeof<'a -> 'b>)
                 let tVar = Var("t", typeof<'a>)
-                let nestedGen = mkRecursiveGen (selfVar :: stack)
+                let nestedGen = F (mkRecursiveGen (selfVar :: stack))
 
                 // generate the staged body for the given type
                 let body = nestedGen.Generate<'a,'b> (Expr.Cast<'a> (Expr.Var tVar))
@@ -224,6 +225,46 @@ module Expr =
                 <@ (%selfExpr) %e @>
 
         and mkRecursiveGen stack : StagedGenerator1 = 
-            F { new StagedGenerator1 with member __.Generate e = aux stack e }
+            { new StagedGenerator1 with member __.Generate e = aux stack e }
+
+        mkRecursiveGen []
+
+    /// Y combinator implementation for a staged computation
+    let Y2 (F : StagedGenerator2 -> StagedGenerator2) : StagedGenerator2 =
+        let rec aux (stack : Var list) (e1 : Expr<'a>) (e2 : Expr<'b>) : Expr<'c> =
+            match stack |> List.tryFind (fun v -> v.Type = typeof<'a -> 'b -> 'c>) with
+            | None ->
+                // first time this type occurs in the stack, push fresh function variable
+                // into stack and perform staged computation
+                let selfVar = Var("func", typeof<'a -> 'b -> 'c>)
+                let tVar1 = Var("t1", typeof<'a>)
+                let tVar2 = Var("t2", typeof<'b>)
+                let nestedGen = F (mkRecursiveGen (selfVar :: stack))
+
+                // generate the staged body for the given type
+                let body = 
+                    nestedGen.Generate<'a,'b,'c> 
+                                (Expr.Cast<'a> (Expr.Var tVar1)) 
+                                (Expr.Cast<'b> (Expr.Var tVar2))
+
+                // check whether type has been called recursively in the staged expression tree
+                if body.GetFreeVars() |> Seq.exists ((=) selfVar) then
+                    // we are looking at a recursive type, wrap body inside a recursive function declaration
+                    let lambda = Expr.Lambda(tVar1, Expr.Lambda(tVar2, body))
+                    let recExpr = Expr.Cast<'a -> 'b -> 'c>(Expr.LetRecursive([selfVar, lambda], Expr.Var selfVar))
+                    <@ (%recExpr) %e1 %e2 @>
+                else
+                    // not a recursive type, just replace input variable with input expression
+                    Expr.Cast<'c>(body.Substitute(function v when v = tVar1 -> Some (e1 :> _) 
+                                                         | v when v = tVar2 -> Some (e2 :> _) 
+                                                         | _ -> None))
+
+            | Some self ->
+                // we are already inside a recursive call, just invoke the recursive function argument
+                let selfExpr = Expr.Cast<'a -> 'b -> 'c>(Expr.Var self)
+                <@ (%selfExpr) %e1 %e2 @>
+
+        and mkRecursiveGen stack : StagedGenerator2 = 
+            { new StagedGenerator2 with member __.Generate e1 e2 = aux stack e1 e2 }
 
         mkRecursiveGen []

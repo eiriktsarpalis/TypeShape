@@ -1,4 +1,4 @@
-﻿#r "../bin/Release/net40/TypeShape.dll"
+﻿#r "../bin/Debug/net40/TypeShape.dll"
 #r "../bin/Release/net40/Unquote.dll"
 #r "../packages/FSharp.Quotations.Evaluator/lib/net40/FSharp.Quotations.Evaluator.dll"
 
@@ -8,53 +8,9 @@ open Swensen.Unquote
 open TypeShape.Core
 open TypeShape.Core.StagingExtensions
 
-// Rank-2 encoding of staged hashcode generator
-type StagedHashCodeGenerator =
-    abstract Generate<'T> : Expr<'T> -> Expr<int>
-
-// Variation of the Y combinator for generic staged hashode generators
-let Y : (StagedHashCodeGenerator -> StagedHashCodeGenerator) -> StagedHashCodeGenerator =
-    fun F ->
-        let rec aux (stack : Var list) (e : Expr<'a>) : Expr<int> =
-            match stack |> List.tryFind (fun v -> v.Type = typeof<'a -> int>) with
-            | None ->
-                // first time this type occurs in the stack, push fresh function variable
-                // into stack and perform staged computation
-                let selfVar = Var("func", typeof<'a -> int>)
-                let tVar = Var("t", typeof<'a>)
-                let nestedGen = mkRecursiveGen (selfVar :: stack)
-
-                // generate the staged body for the given type
-                let body = nestedGen.Generate (Expr.Cast<'a> (Expr.Var tVar))
-
-                // check whether type has been called recursively in the staged expression tree
-                if body.GetFreeVars() |> Seq.exists ((=) selfVar) then
-                    // we are looking at a recursive type, wrap body inside a recursive function declaration
-                    let lambda = Expr.Lambda(tVar, body)
-                    let recExpr = Expr.Cast<'a -> int>(Expr.LetRecursive([selfVar, lambda], Expr.Var selfVar))
-                    <@ (%recExpr) %e @>
-                else
-                    // not a recursive type, just replace input variable with input expression
-                    Expr.Cast<_>(body.Substitute(function v when v = tVar -> Some (e :> _) | _ -> None))
-
-            | Some self ->
-                // we are already inside a recursive call, just invoke the recursive function argument
-                let selfExpr = Expr.Cast<'a -> int>(Expr.Var self)
-                <@ (%selfExpr) %e @>
-
-        and mkRecursiveGen stack : StagedHashCodeGenerator = 
-            F { new StagedHashCodeGenerator with member __.Generate e = aux stack e }
-
-        mkRecursiveGen []
-
-// The generic program itself
-
-let rec mkStagedHasher() =
-    Y (fun self -> { new StagedHashCodeGenerator with member __.Generate expr = mkStagedHasherAux self expr })
-
-and private mkStagedHasherAux<'T> (self : StagedHashCodeGenerator) (expr : Expr<'T>) : Expr<int> =
+let mkStagedHasher<'T> (self : StagedGenerator1) (expr : Expr<'T>) : Expr<int> =
     let unwrap () = unbox<Expr<'a>> expr
-    let genHash () = Expr.lam (fun e -> self.Generate<'a> e)
+    let genHash () = Expr.lam (fun e -> self.Generate<'a, int> e)
 
     let combineHash (h1 : Expr<int>) (h2 : Expr<int>) =
         <@ let h1 = %h1 in let h2 = %h2 in ((h1 <<< 5) + h1) ||| h2 @>
@@ -67,7 +23,7 @@ and private mkStagedHasherAux<'T> (self : StagedHashCodeGenerator) (expr : Expr<
 
     match shapeof<'T> with
     | Shape.Unit -> <@ 0 @>
-    | Shape.Bool -> <@ if (% unwrap() ) then 1 else 0 @>
+    | Shape.Bool -> <@ if (% unwrap()) then 1 else 0 @>
     | Shape.Int32 -> <@ (% unwrap()) @>
     | Shape.Double -> <@ hash<double> (% unwrap()) @>
     | Shape.String -> <@ hash<string> (% unwrap()) @>
@@ -111,16 +67,16 @@ and private mkStagedHasherAux<'T> (self : StagedHashCodeGenerator) (expr : Expr<
                 @> }
 
     | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
-            let mkElementHasher tuple =
-                shape.Elements
-                |> Array.map (fun e -> stageMemberHash e tuple)
-                |> Array.map (fun eh agg -> combineHash eh agg)
-                |> Expr.update ("agg", <@ 0 @>)
+        let mkElementHasher tuple =
+            shape.Elements
+            |> Array.map (fun e -> stageMemberHash e tuple)
+            |> Array.map (fun eh agg -> combineHash eh agg)
+            |> Expr.update ("agg", <@ 0 @>)
 
-            <@
-                let tuple = %expr
-                (% Expr.lam mkElementHasher) tuple
-            @>
+        <@
+            let tuple = %expr
+            (% Expr.lam mkElementHasher) tuple
+        @>
 
     | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
         let mkFieldHasher record =
@@ -135,9 +91,8 @@ and private mkStagedHasherAux<'T> (self : StagedHashCodeGenerator) (expr : Expr<
         @>
 
     | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
-        let stageUnionCaseHasher 
-            (union : Expr<'T>) (tag : Expr<int>)
-            (case : ShapeFSharpUnionCase<'T>) =
+        let stageUnionCaseHasher (union : Expr<'T>) (tag : Expr<int>)
+                                 (case : ShapeFSharpUnionCase<'T>) =
             
             case.Fields
             |> Array.map (fun c -> stageMemberHash c union)
@@ -162,7 +117,13 @@ and private mkStagedHasherAux<'T> (self : StagedHashCodeGenerator) (expr : Expr<
 // Compilation code
 
 let mkHashCodeExpr<'T> () =
-    fun e -> mkStagedHasher().Generate<'T> e
+    let F self = 
+        { new StagedGenerator1 with 
+            member __.Generate<'T,'R> (e:Expr<'T>) : Expr<'R> =
+                mkStagedHasher self e |> unbox }
+
+    let gen = Expr.Y1 F
+    gen.Generate<'T, int>
     |> Expr.lam
     |> Expr.cleanup
 
