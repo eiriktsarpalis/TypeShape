@@ -1,6 +1,7 @@
-#r "../bin/Release/net40/FsCheck.dll"
-#r "../bin/Release/net40/TypeShape.dll"
-#r "../bin/Release/net40/TypeShape.Tests.dll"
+#I "../tests/TypeShape.Tests/bin/Release/net461"
+#r "TypeShape.dll"
+#r "FsCheck.dll"
+#r "TypeShape.Tests.dll"
 
 open FsCheck
 
