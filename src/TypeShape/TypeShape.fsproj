@@ -11,6 +11,7 @@
     <Compile Include="StagingExtensions.fs" />
     <Compile Include="SubtypeExtensions.fs" />
     <None Include="paket.references" />
+    <None Include="paket.template" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TypeShape.CSharp\TypeShape.CSharp.csproj" />
