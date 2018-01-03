@@ -268,7 +268,7 @@ type Check with
 
 
     static member GenericPredicate verbose useNaN maxTypes maxTestsPerType (predicate : IPredicate) =
-        let tconf = { Config.QuickThrowOnFailure with MaxTest = maxTypes }
+        let tconf = { Config.QuickThrowOnFailure with MaxTest = maxTypes ; EndSize = 20 }
         let vconf =
             { Config.QuickThrowOnFailure with 
                 QuietOnSuccess = true ;
