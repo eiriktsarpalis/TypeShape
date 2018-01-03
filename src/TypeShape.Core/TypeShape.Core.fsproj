@@ -13,7 +13,7 @@
     <None Include="paket.references" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\TypeShape.CSharp.Core\TypeShape.CSharp.Core.csproj" />
+    <ProjectReference Include="..\TypeShape.CSharp\TypeShape.CSharp.csproj" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <DefineConstants>TRACE;DEBUG;TYPESHAPE_EXPOSE;TYPESHAPE_EMIT;TYPESHAPE_EXPR</DefineConstants>

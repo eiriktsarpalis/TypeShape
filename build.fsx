@@ -51,9 +51,10 @@ let solutionFile  = "TypeShape.sln"
 let artifactsDir = __SOURCE_DIRECTORY__ @@ "artifacts"
 
 // Pattern specifying assemblies to be tested
-let testClassicAssemblies = "bin/Release/net40/TypeShape.Tests.dll"
-let testClassicNoEmitAssemblies = "bin/Release/net40/TypeShape.Tests.dll"
-let testCoreProjects = "tests/TypeShape.Tests.Core/*.fsproj"
+let testProjects = "tests/**/*.??proj"
+//let testClassicAssemblies = "bin/Release/net40/TypeShape.Tests.dll"
+//let testClassicNoEmitAssemblies = "bin/Release/net40/TypeShape.Tests.dll"
+//let testCoreProjects = "tests/TypeShape.Tests.Core/*.fsproj"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted
@@ -146,32 +147,33 @@ Target "Build.NoEmit" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner & kill test runner when complete
 
+let runTest config (proj : string) =
+    if EnvironmentHelper.isWindows || proj.Contains "Core" then
+        DotNetCli.Test (fun c -> 
+            { c with 
+                Project = proj
+                Configuration = config })
+    else
+        // revert to classic CLI runner due to dotnet-xunit issue in mono environments
+        let projDir = Path.GetDirectoryName proj
+        let projName = Path.GetFileNameWithoutExtension proj
+        let assembly = projDir @@ "bin" @@ config @@ "net4*" @@ projName + ".dll"
+        !! assembly
+        |> xUnit2 (fun c ->
+            { c with
+                Parallel = ParallelMode.Collections
+                TimeOut = TimeSpan.FromMinutes 20. })
+
 Target "RunTests" DoNothing
 
-Target "RunTests.NetClassic" (fun _ ->
-    !! testClassicAssemblies
-    |> xUnit2 (fun (p : XUnit2Params) -> 
-        { p with
-            TimeOut = TimeSpan.FromMinutes 20.
-            Parallel = ParallelMode.Collections })
+Target "RunTests.Release" (fun _ ->
+    for proj in !! testProjects do
+        runTest "Release" proj
 )
 
-Target "RunTests.NetClassic-NoEmit" (fun _ ->
-    !! testClassicNoEmitAssemblies
-    |> xUnit2 (fun (p : XUnit2Params) -> 
-        { p with
-            TimeOut = TimeSpan.FromMinutes 20.
-            Parallel = ParallelMode.Collections })
-)
-
-Target "RunTests.NetCore" (fun _ ->
-    for proj in !! testCoreProjects do
-        DotNetCli.Test(fun p -> { p with Project = proj ; Configuration = "Release" })
-)
-
-Target "RunTests.NetCore-NoEmit" (fun _ ->
-    for proj in !! testCoreProjects do
-        DotNetCli.Test(fun p -> { p with Project = proj ; Configuration = "Release-NoEmit" })
+Target "RunTests.Release-NoEmit" (fun _ ->
+    for proj in !! testProjects do
+        runTest "Release-NoEmit" proj
 )
 
 #if !MONO
@@ -370,10 +372,8 @@ Target "Release" DoNothing
   ==> "Build.Emit"
   ==> "Build.NoEmit"
   ==> "Build"
-  ==> "RunTests.NetClassic"
-  ==> "RunTests.NetClassic-NoEmit"
-  ==> "RunTests.NetCore"
-  ==> "RunTests.NetCore-NoEmit"
+  ==> "RunTests.Release"
+  ==> "RunTests.Release-NoEmit"
   ==> "RunTests"
   ==> "Default"
 

@@ -57,7 +57,7 @@ module Expr =
     /// into embeddable trees
     let lam (f : Expr<'T> -> Expr<'S>) : Expr<'T -> 'S> =
         let var = new Var("t", typeof<'T>)
-        Expr.Lambda(var,  f (cast(Expr.Var var)))
+        Expr.Lambda(var, f (cast(Expr.Var var)))
         |> cast
 
     /// lambda abstraction for lifting staged expression computations

@@ -12,12 +12,6 @@ open TypeShape.Core.StagingExtensions
 
 // Simple object clone implementation used to verify implementation correctness of staged shapes
 
-//type CloneExpr<'T> = Expr<'T> -> Expr<'T>
-
-
-//let rec stageCloner<'T> (self : StagedGenerator1) : CloneExpr<'T> =
-
-
 let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
     let unwrap (e : Expr<'T>) = unbox<Expr<'a>> e
     let wrap(e : Expr<'a>) = unbox<Expr<'T>> e
