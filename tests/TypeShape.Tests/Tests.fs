@@ -732,7 +732,7 @@ let ``Generic Clone should produde equal values`` () =
         member __.Invoke (t : 'T) = 
             let c = mkCloner<'T>()
             c(t) = t }
-    |> Check.GenericPredicate false 30 10
+    |> Check.GenericPredicate false false 30 10
 
 [<Fact>]
 let ``Generic Staged Clone should produde equal values`` () =
@@ -740,4 +740,4 @@ let ``Generic Staged Clone should produde equal values`` () =
         member __.Invoke (t : 'T) = 
             let c = mkStagedCloner<'T>()
             c(t) = t }
-    |> Check.GenericPredicate false 30 1
+    |> Check.GenericPredicate false false 30 1

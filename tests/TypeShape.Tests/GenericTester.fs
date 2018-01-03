@@ -267,7 +267,7 @@ type Check with
         Check.One(config, runOnType)
 
 
-    static member GenericPredicate useNaN maxTypes maxTestsPerType (predicate : IPredicate) =
+    static member GenericPredicate verbose useNaN maxTypes maxTestsPerType (predicate : IPredicate) =
         let tconf = { Config.QuickThrowOnFailure with MaxTest = maxTypes }
         let vconf =
             { Config.QuickThrowOnFailure with 
@@ -278,7 +278,7 @@ type Check with
         let checker =
             { new IChecker with
                 member __.Invoke<'T when 'T : comparison> tAlg =
-                    printfn "Testing type %s" (PrettyPrint.typeAlg tAlg)
+                    if verbose then printfn "Testing type %s" (PrettyPrint.typeAlg tAlg)
                     Check.One(vconf, fun (t:'T) -> predicate.Invoke t) ; true }
 
         Check.Generic(checker, tconf)

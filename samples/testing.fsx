@@ -15,7 +15,7 @@ open TypeShape.Tests.GenericTests
 open ``Equality-comparer``
 
 // check if our equality comparer satisfies reflexivivity
-Check.GenericPredicate false 100 100 
+Check.GenericPredicate true false 100 100 
     { new IPredicate with 
         member __.Invoke (t : 'T) =
             let cmp = comparer<'T>
