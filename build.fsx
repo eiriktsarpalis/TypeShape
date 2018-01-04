@@ -175,7 +175,7 @@ Target "RunTests.Release-NoEmit" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Build a NuGet package
 
-Target "NuGet" (fun _ ->
+Target "NuGet.Bundle" (fun _ ->
     Paket.Pack(fun p ->
         { p with
             OutputPath = artifactsDir
@@ -184,12 +184,18 @@ Target "NuGet" (fun _ ->
             ReleaseNotes = toLines release.Notes})
 )
 
-Target "PublishNuget" (fun _ ->
+Target "NuGet.ValidateSourceLink" (fun _ ->
+    for nupkg in !! (artifactsDir @@ "*.nupkg") do
+        DotNetCli.RunCommand
+            (fun p -> { p with WorkingDir = __SOURCE_DIRECTORY__ @@ "tests" @@ "TypeShape.Tests.Core" } )
+            (sprintf "sourcelink test %s" nupkg)
+)
+
+Target "NuGet.Push" (fun _ ->
     Paket.Push(fun p ->
         { p with
             WorkingDir = artifactsDir })
 )
-
 
 // --------------------------------------------------------------------------------------
 // Generate the documentation
@@ -356,11 +362,12 @@ Target "Release" DoNothing
   ==> "Default"
 
 "Default"
-  ==> "Nuget"
+  ==> "NuGet.Bundle"
+  ==> "NuGet.ValidateSourceLink"
   ==> "Bundle"
 
 "Bundle"
-  ==> "PublishNuget"
+  ==> "NuGet.Push"
   ==> "ReleaseGithub"
   ==> "Release"
 

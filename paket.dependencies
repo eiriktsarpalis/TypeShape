@@ -6,6 +6,9 @@ nuget FSharp.Core >= 4.2 lowest_matching: true
 nuget System.Reflection.Emit.Lightweight >= 4.0.1 lowest_matching: true
 nuget System.Reflection.Emit.ILGeneration >= 4.0.1 lowest_matching: true
 
+nuget SourceLink.Create.CommandLine copy_local: true
+clitool dotnet-sourcelink
+
 # testing dependencies; NB intentionally kept in Main group
 nuget System.ValueTuple
 nuget System.Linq.Expressions >= 4.3 # temporarily address a paket issue

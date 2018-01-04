@@ -1,4 +1,5 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net40;netstandard2.0</TargetFrameworks>
   </PropertyGroup>
@@ -14,4 +15,5 @@
     <OutputPath>..\..\bin\Release\</OutputPath>
     <DocumentationFile>..\..\bin\Release\$(TargetFramework)\TypeShape.CSharp.xml</DocumentationFile>
   </PropertyGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
