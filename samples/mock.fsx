@@ -4,7 +4,7 @@
 
 open System
 open System.Collections.Generic
-open TypeShape.Core.
+open TypeShape.Core
 open TypeShape.Core.Utils
 
 /// Attribute used for customizing member mocks
@@ -33,18 +33,17 @@ let rec private mkMocker<'T> () : Mocker<'T> =
     let mutable mock = Unchecked.defaultof<Mocker<'T>>
     if cache.TryGetValue(&mock) then mock
     else
-        use ctx = cache.CreateRecTypeManager()
+        use ctx = cache.CreateGenerationContext()
         mkMockerCached ctx
 
-and private mkMockerCached<'T> (ctx : RecTypeManager) : Mocker<'T> =
-    match ctx.TryFind<Mocker<'T>>() with
-    | Some m -> m
-    | None ->
-        let _ = ctx.CreateUninitialized<Mocker<'T>>(fun c m -> c.Value m)
+and private mkMockerCached<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
+    match ctx.InitOrGetCachedValue<Mocker<'T>>(fun c m -> c.Value m) with
+    | Cached(value = m) -> m
+    | NotCached t ->
         let m = mkMockerAux<'T> ctx
-        ctx.Complete m
+        ctx.Commit t m
 
-and private mkMockerAux<'T> (ctx : RecTypeManager) : Mocker<'T> =
+and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
     let EQ (mocker : Mocker<'a>) : Mocker<'T> = unbox mocker
 
     let inline getPrimMock (mv : MockContext<'a>) (defaultV : 'a) =

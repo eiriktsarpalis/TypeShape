@@ -12,18 +12,17 @@ let rec gmap<'E, 'T> (mapper : 'E -> 'E) : 'T -> 'T =
     match cache.TryFind<GMapper<'E, 'T>> () with
     | Some m -> m mapper
     | None ->
-        use ctx = cache.CreateRecTypeManager()
+        use ctx = cache.CreateGenerationContext()
         gmapCached<'E, 'T> ctx mapper
 
-and private gmapCached<'E, 'T> (ctx : RecTypeManager) : GMapper<'E, 'T> =
-    match ctx.TryFind<GMapper<'E, 'T>> () with
-    | Some m -> m
-    | None ->
-        let _ = ctx.CreateUninitialized<GMapper<'E, 'T>> (fun c f -> c.Value f)
+and private gmapCached<'E, 'T> (ctx : TypeGenerationContext) : GMapper<'E, 'T> =
+    match ctx.InitOrGetCachedValue<GMapper<'E, 'T>> (fun c f -> c.Value f) with
+    | Cached(value = m) -> m
+    | NotCached t ->
         let m = gmapAux<'E, 'T> ctx
-        ctx.Complete m
+        ctx.Commit t m
 
-and private gmapAux<'E, 'T> (ctx : RecTypeManager) : GMapper<'E, 'T> =
+and private gmapAux<'E, 'T> (ctx : TypeGenerationContext) : GMapper<'E, 'T> =
     let EQ (input : GMapper<'E, 'a>) : GMapper<'E, 'T> = unbox input
 
     let gmapMember (shape : IShapeWriteMember<'Class>) =

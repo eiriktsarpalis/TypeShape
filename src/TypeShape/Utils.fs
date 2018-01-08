@@ -11,118 +11,124 @@ open System
 open System.Threading
 open System.Collections.Generic
 open System.Collections.Concurrent
+open System.Reflection
+open System.Runtime.Serialization
+#if TYPESHAPE_EMIT
+open System.Reflection.Emit
+#endif
+
+type private ICell =
+    abstract Type : Type
+    abstract IsValueCreated : bool
+    abstract Value : obj with get,set
 
 /// Value container that will eventually be populated
-type Cell<'T> internal (container : 'T option ref) =
-    let mutable isCreated = false
+type Cell<'T> internal () =
+    let mutable isValueCreated = false
     let mutable value = Unchecked.defaultof<'T>
-    member __.IsValueCreated : bool = 
-        if isCreated then true else
-        match !container with
-        | None -> false
-        | Some t -> value <- t ; isCreated <- true ; true
-
+    member __.Id = id
+    member __.IsValueCreated : bool = isValueCreated
     member __.Value : 'T = 
-        if isCreated then value else
-        match !container with
-        | None -> failwithf "Value for '%O' has not been initialized." typeof<'T>
-        | Some t -> value <- t ; isCreated <- true ; t
+        if isValueCreated then value else
+        sprintf "Value for '%O' has not been initialized." typeof<'T>
+        |> invalidOp
+
+    member internal __.Value 
+        with set t = 
+            if isValueCreated then 
+                sprintf "Value for '%O' has already been initialized" typeof<'T>
+                |> invalidOp
+            value <- t ; isValueCreated <- true
+
+    interface ICell with
+        member __.Type = typeof<'T>
+        member __.IsValueCreated = __.IsValueCreated
+        member __.Value with get () = box __.Value
+        member __.Value with set t = __.Value <- unbox t
+
+
 
 [<NoEquality; NoComparison>]
-type private RecTypePayload = { Cell : obj ; Value : obj ; IsValueSet : unit -> bool }
+type private GenPayload = { Cell : ICell ; DelayedValue : obj ; Dependencies : HashSet<Type> }
+
+[<NoEquality; NoComparison>]
+type private CachePayload = { Type : Type ; Value : obj ; Dependencies : HashSet<Type> }
+
+type GenerationToken<'T> = internal | GenerationToken
+
+[<NoEquality; NoComparison>]
+type CachedResult<'T> =
+    | Cached of value:'T * isValueCreated:bool
+    | NotCached of GenerationToken<'T>
 
 /// Helper class for generating recursive values
-type RecTypeManager internal (parentCache : TypeCache option) = 
-    let dict = new ConcurrentDictionary<Type, RecTypePayload>()
+type TypeGenerationContext internal (parentCache : TypeCache option) =
+    let id = let g = Guid.NewGuid() in g.ToString()
+    let stack = new Stack<Type>()
+    let dict = new Dictionary<Type, GenPayload>()
 
-    new () = new RecTypeManager(None)
+    let mutable isDisposed = false
+    let mutable isAcquired = 0
+    let acquire() =
+        if isDisposed then raise <| ObjectDisposedException("TypeGenerationContext")
+        if Interlocked.CompareExchange(&isAcquired, 1, 0) = 0 then
+            { new IDisposable with member __.Dispose() = isAcquired <- 0 }
+        else invalidOp "Multi-threaded usage of TypeGenerationContext not supported."
+
+    let registerDependency (child : Type) =
+        if stack.Count > 0 then
+            let parent = stack.Peek()
+            let pcell = dict.[parent]
+            let _ = pcell.Dependencies.Add child
+            ()
+
+    new () = new TypeGenerationContext(None)
+
+    member internal __.Id = id
     member internal __.ParentCache = parentCache
 
-    /// Attempt to look up value by type.
-    /// If uninitialized rectype returns the placeholder dummy value.
-    member __.TryGetValue<'T>(result : byref<'T>) : bool =
-        let ok, payload = dict.TryGetValue typeof<'T>
-        if ok then result <- payload.Value :?> 'T ; true
-        else
-            match parentCache with
-            | None -> false
-            | Some pc -> pc.TryGetValue<'T>(&result)
-
-    /// Attempt to look up value by type.
-    /// If uninitialized rectype returns the placeholder dummy value.
-    member __.TryGetValue(t : Type, result : byref<obj>) : bool =
-        let ok, payload = dict.TryGetValue t
-        if ok then result <- payload.Value ; true
-        else
-            match parentCache with
-            | None -> false
-            | Some pc -> pc.TryGetValue(t, &result)
-
-    /// Attempt to look up value by type.
-    /// If uninitialized rectype returns the placeholder dummy value.
-    member __.TryFind<'T>() =
-        let ok, payload = dict.TryGetValue typeof<'T>
-        if ok then Some(payload.Value :?> 'T)
-        else
-            match parentCache with
-            | None -> None
-            | Some pc -> pc.TryFind<'T>()
-
-    /// Attempt to look up value by type.
-    /// If uninitialized rectype returns the placeholder dummy value.
-    member __.TryFind (t : Type) =
-        let ok, payload = dict.TryGetValue t
-        if ok then Some payload.Value
-        else
-            match parentCache with
-            | None -> None
-            | Some pc -> pc.TryFind t
-
     /// <summary>
-    ///     Registers an uninitialized value at the beggining of a recursive
-    ///     value definition. Returns a dummy value that can be referenced within a
-    ///     recursive flow. Only delayable values can be recursive.
+    ///     Registers an uninitialized value for given type or returns 
+    ///     a cached value if already computed.
     /// </summary>
-    /// <param name="delay">Provides delay wrapping for supplied type.</param>
-    member __.CreateUninitialized<'T>(delay : Cell<'T> -> 'T) : 'T =
-        let create _ =
-            let container = ref None
-            let dummy = delay (Cell container)
-            { Cell = container ; Value = dummy ; IsValueSet = fun () -> Option.isSome !container }
-
-        let payload = dict.GetOrAdd(typeof<'T>, create)
-        payload.Value :?> 'T
-
-    /// Registers a value to the type index. Any uninitialized references 
-    /// to this type will be updated to point to this value.
-    member __.Complete<'T>(value : 'T) : 'T =
-        let create _ =
-            { Cell = ref (Some value) ; Value = value ; IsValueSet = fun () -> true }
-
-        let update _ (payload : RecTypePayload) =
-            if payload.IsValueSet() then payload 
+    /// <param name="delay">Delay function used for defining recursive values.</param>
+    member __.InitOrGetCachedValue<'T>(delay : Cell<'T> -> 'T) : CachedResult<'T> =
+        use _d = acquire()
+        registerDependency typeof<'T>
+        let mutable t = Unchecked.defaultof<'T>
+        match parentCache with
+        | Some c when c.TryGetValue(&t) -> Cached(t, true)
+        | _ ->
+            let ok,found = dict.TryGetValue typeof<'T>
+            if ok then
+                if found.Cell.IsValueCreated then 
+                    Cached(found.Cell.Value :?> 'T, isValueCreated = true)
+                else 
+                    Cached(found.DelayedValue :?> 'T, isValueCreated = false)
             else
-                lock payload.Cell (fun () ->
-                    if payload.IsValueSet() then payload
-                    else
-                        payload.Cell :?> 'T option ref := Some value
-                        { payload with Value = value })
+                let cell = new Cell<'T>()
+                let delayed = delay cell
+                let p = { Cell = cell ; DelayedValue = delayed ; Dependencies = HashSet() }
+                stack.Push typeof<'T>
+                dict.Add(typeof<'T>, p)
+                NotCached GenerationToken
 
-        let payload = dict.AddOrUpdate(typeof<'T>, create, update)
-        payload.Value :?> 'T
+    /// Commits computed value to the generator.
+    member __.Commit<'T> (token : GenerationToken<'T>) (value : 'T) : 'T =
+        use _d = acquire()
+        if stack.Count = 0 || stack.Pop() <> typeof<'T> then invalidOp "TypeGenerationContext: unexpected commit operation"
+        let p = dict.[typeof<'T>]
+        p.Cell.Value <- value
+        value
 
     member internal __.GetGeneratedValues() =
-        let hasIncompleteValues = ref false
-        let values =
-            dict
-            |> Seq.map (function 
-                KeyValue(t, payload) ->
-                    if not <| payload.IsValueSet() 
-                    then hasIncompleteValues := true
-                    (t, payload.Value))
-            |> Seq.toArray
+        use _d = acquire()
+        isDisposed <- true
+        if stack.Count > 0 then [||] else
 
-        if !hasIncompleteValues then [||] else values
+        dict 
+        |> Seq.map (function KeyValue(_,v) -> v.Cell.Type, v.Cell.Value, Seq.toArray v.Dependencies) 
+        |> Seq.toArray
 
     interface IDisposable with
         member __.Dispose() =
@@ -131,78 +137,126 @@ type RecTypeManager internal (parentCache : TypeCache option) =
             | None -> ()
 
 /// Thread-safe cache of values indexed by type.
-and TypeCache internal (dict : ConcurrentDictionary<Type, obj>) =
+and TypeCache private (cache : ConcurrentDictionary<Type, CachePayload>) =
+    let generators = new ConcurrentDictionary<string, unit>()
+
+    let lockObj = new obj()
+    let withLockedCache f =
+        lock lockObj (fun () ->
+            while generators.Count > 0 do Thread.SpinWait 20
+            f ())
+
+    let awaitUnlock() = lock lockObj id
+
+    let clone (cache : ConcurrentDictionary<Type, CachePayload>) =
+        cache
+        |> Seq.map (fun kv ->
+            let payload = kv.Value
+            let payload2 = { payload with Dependencies = HashSet(payload.Dependencies) }
+            KeyValuePair(kv.Key, payload2))
+        |> ConcurrentDictionary
+
+    let rec cleanup (ts : Type list) =
+        match ts with
+        | [] -> ()
+        | t :: rest ->
+            let ok, p = cache.TryGetValue t
+            if ok then
+                let _ = cache.TryRemove t
+                cleanup (Seq.toList p.Dependencies @ rest)
+            else
+                cleanup rest
 
     new () = TypeCache(new ConcurrentDictionary<_,_>())
 
     /// Total number of items in cache
-    member __.Count = dict.Count
+    member __.Count = cache.Count
     /// Checks whether the supplied type is contained in cache
-    member __.ContainsKey<'T>() = dict.ContainsKey typeof<'T>
+    member __.ContainsKey<'T>() = cache.ContainsKey typeof<'T>
     /// Checks whether the supplied type is contained in cache
-    member __.ContainsKey(t : Type) = dict.ContainsKey t
+    member __.ContainsKey(t : Type) = cache.ContainsKey t
     /// Gets all types registered in the cache
-    member __.Keys = dict.Keys
+    member __.Keys = cache.Keys |> Seq.map id
     /// Gets all values registered in the cache
-    member __.Values = dict.Values
+    member __.Values = cache.Values |> Seq.map (fun p -> p.Value)
 
     /// Try looking up cached value by type
     member __.TryGetValue<'T>(result : byref<'T>) : bool =
-        let mutable obj = null
-        if dict.TryGetValue(typeof<'T>, &obj) then
-            result <- obj :?> 'T ; true
+        let mutable p = Unchecked.defaultof<_>
+        if cache.TryGetValue(typeof<'T>, &p) then
+            result <- p.Value :?> 'T ; true
         else
             false
 
     /// Try looking up cached value by type
     member __.TryGetValue(t : Type, result : byref<obj>) : bool =
-        let mutable obj = null
-        if dict.TryGetValue(t, &obj) then
-            result <- obj ; true
+        let mutable p = Unchecked.defaultof<_>
+        if cache.TryGetValue(t, &p) then
+            result <- p.Value ; true
         else
             false
 
     /// Try looking up cached value by type
     member __.TryFind<'T>() : 'T option =
-        let mutable obj = null
-        if dict.TryGetValue(typeof<'T>, &obj) then Some(obj :?> 'T)
+        let mutable p = Unchecked.defaultof<_>
+        if cache.TryGetValue(typeof<'T>, &p) then Some(p.Value :?> 'T)
         else None
 
     /// Try looking up cached value by type
     member __.TryFind(t : Type) : obj option =
-        let mutable obj = null
-        if dict.TryGetValue(t, &obj) then Some obj
+        let mutable p = Unchecked.defaultof<_>
+        if cache.TryGetValue(t, &p) then Some p.Value
         else None
 
-    /// Try adding value for given type
-    member __.TryAdd<'T>(value : 'T) = dict.TryAdd(typeof<'T>, value)
+    /// Removes given type and any dependencies from cache
+    /// This will clean up any dependencies on that type too.
+    member __.Remove(t : Type) =
+        fun () -> cleanup [t]
+        |> withLockedCache
 
     /// Forces update for value of given type
-    member __.ForceAdd<'T>(value : 'T) = dict.[typeof<'T>] <- value
+    /// This will clean up any dependencies on that type too.
+    member __.ForceAdd<'T>(value : 'T) =
+        fun () ->
+            cleanup [typeof<'T>]
+            cache.[typeof<'T>] <- { Type = typeof<'T> ; Value = value ; Dependencies = HashSet() }
+        |> withLockedCache
 
-    /// Gets or adds value for given type using supplied factory.
-    /// Uses optimistic concurrency
-    member __.GetOrAdd<'T>(factory : unit -> 'T) : 'T =
-        dict.GetOrAdd(typeof<'T>, fun _ -> factory() :> obj) :?> 'T
-
-    /// Creates a RecTypeManager that is bound to the current cache.
+    /// Creates a TypeGenerationContext that is bound to the current cache.
     /// Values generated by the manager can be committed back to the
     /// cache once completed.
-    member __.CreateRecTypeManager() = new RecTypeManager(Some __)
+    member __.CreateGenerationContext() = 
+        do awaitUnlock()
+        let generator = new TypeGenerationContext(Some __)
+        generators.[generator.Id] <- ()
+        generator
 
-    /// Commits the generates state by a completed RecTypeManager instance.
-    member __.Commit(manager : RecTypeManager) =
-        match manager.ParentCache with
-        | Some pc when pc = __ ->
-            for k,v in manager.GetGeneratedValues() do 
-                ignore(dict.TryAdd(k, v))
+    /// Commits the generates state by a completed TypeGenerationContext instance.
+    member __.Commit(ctx : TypeGenerationContext) =
+        if not <| generators.ContainsKey ctx.Id then
+            invalidArg "ctx" "TypeGenerationContext does not belong to TypeCache context."
 
-        | _ -> invalidArg "manager" "RecTypeManager does not belong to TypeCache context."
+        let values = ctx.GetGeneratedValues()
+
+        for t,v,_ in values do
+            let _ = cache.GetOrAdd(t, fun t -> { Type = t ; Value = v ; Dependencies = HashSet() })
+            ()
+
+        for t,_,deps in values do
+            for d in deps do
+                let p = cache.[d]
+                let _ = lock p.Dependencies (fun () -> p.Dependencies.Add t)
+                ()
+                        
+        let _ = generators.TryRemove(ctx.Id)
+        ()
 
     /// Creates a clone of the current cache items
-    member __.Clone() =
-        let dict2 = new ConcurrentDictionary<Type, obj>(dict)
-        new TypeCache(dict2)
+    member __.Clone() = 
+        fun () -> new TypeCache(clone cache)
+        |> withLockedCache
+
+//-------------------------------------------------------------
 
 /// Provides a binary search implementation for generic values
 type BinSearch<'T when 'T : comparison>(inputs : 'T[]) =
@@ -251,3 +305,121 @@ type BinSearch<'T when 'T : comparison>(inputs : 'T[]) =
                 | _ -> lb <- i + 1
 
             if found then indices.[i] else -1
+
+
+//--------------------------------------------------------------
+
+type private ShallowObjectCopier<'T> private () =
+    static let copier : Lazy<Action<'T, 'T>> = lazy(
+        let t = typeof<'T>
+        if not t.IsClass then invalidArg t.FullName "unsupported type"
+
+        let rec gatherFields (t:Type) = seq {
+            match t.BaseType with
+            | null -> ()
+            | bt -> yield! gatherFields bt
+
+            let flags = BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic
+            yield! t.GetFields flags
+        }
+
+        let fields = gatherFields t |> Seq.toArray
+
+#if TYPESHAPE_EMIT
+        let voidType = Type.GetType "System.Void"
+        let dynamicMethod =
+            new DynamicMethod("shallowCopy", MethodAttributes.Static ||| MethodAttributes.Public, 
+                                CallingConventions.Standard, voidType, [|t;t|], typeof<ShallowObjectCopier<'T>>, 
+                                skipVisibility = true)
+
+        let ilGen = dynamicMethod.GetILGenerator()
+        for f in fields do
+            ilGen.Emit OpCodes.Ldarg_1
+            ilGen.Emit OpCodes.Ldarg_0
+            ilGen.Emit(OpCodes.Ldfld, f)
+            ilGen.Emit(OpCodes.Stfld, f)
+
+        ilGen.Emit OpCodes.Ret
+        dynamicMethod.CreateDelegate(typeof<Action<'T,'T>>) :?> Action<'T,'T>
+#else
+        new Action<'T,'T>(fun src dst ->
+            for f in fields do
+                let v = f.GetValue(src)
+                f.SetValue(dst, v))
+#endif
+        )
+
+    static member Copy (source : 'T) (target : 'T) = copier.Value.Invoke(source, target)
+
+/// Helper methods used for constructing cyclic values
+type RecursiveValueHelper =
+    /// Creates an uninitialized value for given type
+    static member CreateUninitializedValue<'T>() : 'T =
+        System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof<'T>) :?> 'T
+
+    /// performs a shallow copy of field contents from one object to another
+    static member ShallowCopy<'T when 'T : not struct>(source : 'T) (target : 'T) =
+        ShallowObjectCopier.Copy source target
+
+/// Helper class for detecting cycles in a traversed object graph
+type ObjectStack() =
+    let idGen = new ObjectIDGenerator()
+    let objStack = new Stack<int64>()
+
+    let mutable firstTime = true
+    let mutable isCycle = false
+    let mutable objId = -1L
+
+    member __.Depth = objStack.Count
+
+    /// Id of the last object pushed to the stack
+    member __.ObjectId = objId
+    /// Indicates whether the last object was pushed to the stack for the first time
+    member __.IsFirstTime = firstTime
+    /// Indicates whether the current value already exists in the stack
+    member __.IsCycle = isCycle
+
+    member __.Push<'T when 'T : not struct>(t : 'T) : unit =
+        let id = idGen.GetId(t, &firstTime)
+        isCycle <- objStack.Contains id
+        objStack.Push id
+        objId <- id
+
+    member __.Pop() : unit = 
+        let _ = objStack.Pop()
+        objId <- -1L
+        isCycle <- false
+        firstTime <- true
+
+/// Helper class for re-constructing cyclic object graphs
+type ObjectCache() =
+    let dict = new Dictionary<int64, obj> ()
+    let cyclicValues = new HashSet<int64>()
+    /// Returns true if cache has value for given id
+    member __.HasValue(id:int64) = dict.ContainsKey id
+    /// Gets cached value of given id
+    member __.GetValue<'T when 'T : not struct>(id:int64) = dict.[id] :?> 'T
+    /// Attempts to get cached value of given id
+    member __.TryGetValue<'T when 'T : not struct>(id:int64, value:byref<'T>) : bool =
+        let mutable r = null
+        if dict.TryGetValue(id, &r) then value <- r :?> 'T ; true
+        else false
+
+    /// Adds given value to cache or fixes up existing uninitialized object
+    /// by performing a shallow copy on its fields.
+    member __.AddValue<'T when 'T : not struct>(id:int64, value:'T) : 'T =
+        if cyclicValues.Contains id then
+            let target = dict.[id] :?> 'T
+            ShallowObjectCopier.Copy value target
+            let _ = cyclicValues.Remove id
+            target
+        else
+            dict.[id] <- value
+            value
+
+    /// Creates an uninitialized value for given id and 
+    /// specified concrete type and appends it to the cache.
+    member __.CreateUninitializedInstance<'T when 'T : not struct>(id:int64, underlyingType : Type) : 'T =
+        let t = System.Runtime.Serialization.FormatterServices.GetUninitializedObject(underlyingType) :?> 'T
+        dict.Add(id, t) ; cyclicValues.Add id |> ignore
+        t

@@ -1819,6 +1819,10 @@ module Shape =
     let (|Unit|_|) s = test<unit> s
     let (|FSharpUnit|_|) s = test<unit> s
     let (|ByteArray|_|) s = test<byte []> s
+
+    /// Recognizes abstract type shapes
+    let (|Abstract|_|) (s:TypeShape) = 
+        if s.Type.IsAbstract then SomeU else None
     
     /// Recognizes any type that is a System.Nullable instance
     let (|Nullable|_|) (s : TypeShape) =
@@ -2297,6 +2301,7 @@ module Shape =
     /// Recognizes shapes that look like C# record classes
     /// They are classes with parameterless constructors and settable properties
     let (|CliMutable|_|) (s : TypeShape) =
+        if s.Type.IsAbstract then None else
         match s.Type.GetConstructor(allInstanceMembers, null, [||], [||]) with
         | null -> None
         | ctor -> 

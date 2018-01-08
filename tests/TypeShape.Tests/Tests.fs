@@ -727,17 +727,43 @@ let ``Should support union with mixed case properties``() =
     | _ -> failwith "Unexpected shape"
 
 [<Fact>]
-let ``Generic Clone should produde equal values`` () =
-    { new IPredicate with 
-        member __.Invoke (t : 'T) = 
-            let c = mkCloner<'T>()
-            c(t) = t }
-    |> Check.GenericPredicate false false 100 10
+let ``Clone should support cyclic object graphs``() =
+    let cyclicArray =
+        let xs = Array.zeroCreate<obj> 10
+        for i = 0 to xs.Length - 1 do xs.[i] <- box xs
+        xs
 
-[<Fact>]
-let ``Generic Staged Clone should produde equal values`` () =
-    { new IPredicate with 
-        member __.Invoke (t : 'T) = 
-            let c = mkStagedCloner<'T>()
-            c(t) = t }
-    |> Check.GenericPredicate false false 100 1
+    let clonedArray = clone cyclicArray
+
+    test <@ obj.ReferenceEquals(clonedArray, cyclicArray) |> not @>
+    test <@ clonedArray |> Array.forall (fun x -> obj.ReferenceEquals(x,clonedArray)) @>
+
+
+module GenericClone =
+
+    [<Fact>]
+    let ``Generic Clone should produde equal values`` () =
+        { new IPredicate with 
+            member __.Invoke (t : 'T) = t = clone(t) }
+        |> Check.GenericPredicate false false 100 10
+
+module GenericCloneStaged =
+
+    [<Fact>]
+    let ``Generic Staged Clone should produde equal values`` () =
+        { new IPredicate with 
+            member __.Invoke (t : 'T) = 
+                let c = mkStagedCloner<'T>()
+                c(t) = t }
+        |> Check.GenericPredicate false false 100 1
+
+module GenericEmpty =
+
+    open TypeShape.Empty
+
+    [<Fact>]
+    let ``Empty should always produce equal values`` () =
+        { new IPredicate with 
+            member __.Invoke (t : 'T) = 
+                empty<'T> = empty<'T> }
+        |> Check.GenericPredicate false false 100 10

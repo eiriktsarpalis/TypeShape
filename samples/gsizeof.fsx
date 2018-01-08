@@ -16,21 +16,21 @@ let rec mkSizeCounter<'T> () : SizeCounter<'T> =
     let mutable f = Unchecked.defaultof<SizeCounter<'T>>
     if cache.TryGetValue(&f) then f
     else
-        use mgr = cache.CreateRecTypeManager()
+        use mgr = cache.CreateGenerationContext()
         mkCounterCached<'T> mgr
 
-and private mkCounterCached<'T> (ctx : RecTypeManager) : SizeCounter<'T> =
-    match ctx.TryFind<SizeCounter<'T>>() with
-    | Some f -> f
-    | None ->
-        let _ = ctx.CreateUninitialized<SizeCounter<'T>>(fun c -> 
-                    { new SizeCounter<'T> with 
-                        member __.Compute g d t = c.Value.Compute g d t })
+and private mkCounterCached<'T> (ctx : TypeGenerationContext) : SizeCounter<'T> =
+    let delayCounter (c:Cell<SizeCounter<'T>>) =
+        { new SizeCounter<'T> with 
+            member __.Compute g d t = c.Value.Compute g d t }
 
+    match ctx.InitOrGetCachedValue<SizeCounter<'T>> delayCounter with
+    | Cached(value = f) -> f
+    | NotCached t ->
         let f = mkCounterAux<'T> ctx
-        ctx.Complete f
+        ctx.Commit t f
 
-and private mkCounterAux<'T> (ctx : RecTypeManager) : SizeCounter<'T> =
+and private mkCounterAux<'T> (ctx : TypeGenerationContext) : SizeCounter<'T> =
     let EQ(sc : SizeCounter<'a>) = unbox<SizeCounter<'T>> sc
     let inline wrap (f : _ -> _ -> 'a -> _) = 
         let sc = { new SizeCounter<'a> with member __.Compute g d t = f g d t }

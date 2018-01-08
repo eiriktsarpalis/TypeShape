@@ -23,19 +23,17 @@ let (<*>) (f : Parser<'T -> 'S>) (t : Parser<'T>) : Parser<'S> =
 
 /// Generates a parser for supplied type
 let rec genParser<'T> () : Parser<'T> =
-    let ctx = new RecTypeManager()
+    let ctx = new TypeGenerationContext()
     genParserCached<'T> ctx
     
-and private genParserCached<'T> (ctx : RecTypeManager) : Parser<'T> =
-    match ctx.TryFind<Parser<'T>>() with
-    | Some p -> p
-    | None ->
-        // create a delayed uninitialized instance for recursive type definitions
-        let _ = ctx.CreateUninitialized<Parser<'T>>(fun c s -> c.Value s)
+and private genParserCached<'T> (ctx : TypeGenerationContext) : Parser<'T> =
+    match ctx.InitOrGetCachedValue<Parser<'T>>(fun c s -> c.Value s) with
+    | Cached(value = p) -> p
+    | NotCached t ->
         let p = genParserAux<'T> ctx
-        ctx.Complete (spaced p)
+        ctx.Commit t (spaced p)
     
-and private genParserAux<'T> (ctx : RecTypeManager) : Parser<'T> =
+and private genParserAux<'T> (ctx : TypeGenerationContext) : Parser<'T> =
     let token str = spaced (pstring str) >>% ()
     let paren p = between (pchar '(') (pchar ')') (spaced p)
     let wrap (p : Parser<'a>) = unbox<Parser<'T>>(spaced p)

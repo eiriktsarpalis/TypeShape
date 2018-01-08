@@ -382,7 +382,7 @@ let even, odd =
 //---------------------
 // Perf
 
-#r "../bin/Release/net40/Unquote.dll"
+#r "../packages/Unquote/lib/net45/Unquote.dll"
 
 let factorialExpr =
     <@ 

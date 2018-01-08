@@ -1,5 +1,5 @@
 #r "../bin/Release/net40/TypeShape.dll"
-#r "../bin/Release/net40/FsCheck.dll"
+#r "../packages/FsCheck/lib/net452/FsCheck.dll"
 
 open System
 open TypeShape.Core

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2010
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape", "src\TypeShape\TypeShape.fsproj", "{8609D2FB-063F-45FE-94E2-FF251792C495}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TypeShape", "src\TypeShape\TypeShape.fsproj", "{8609D2FB-063F-45FE-94E2-FF251792C495}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{5BA09F57-003D-4663-869C-CEE98253AD1F}"
 	ProjectSection(SolutionItems) = preProject
@@ -18,12 +18,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{5BA0
 		RELEASE_NOTES.md = RELEASE_NOTES.md
 	EndProjectSection
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape.Tests", "tests\TypeShape.Tests\TypeShape.Tests.fsproj", "{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TypeShape.Tests", "tests\TypeShape.Tests\TypeShape.Tests.fsproj", "{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{42131FE1-A70A-46AA-9760-C9180B08B951}"
 	ProjectSection(SolutionItems) = preProject
 		samples\disposable.fsx = samples\disposable.fsx
-		samples\empty.fsx = samples\empty.fsx
 		samples\equality-comparer.fsx = samples\equality-comparer.fsx
 		samples\equality-staged.fsx = samples\equality-staged.fsx
 		samples\expr.fsx = samples\expr.fsx
@@ -33,7 +32,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{4213
 		samples\hashcode-staged.fsx = samples\hashcode-staged.fsx
 		samples\iso.fsx = samples\iso.fsx
 		samples\json-serializer.fsx = samples\json-serializer.fsx
-		samples\ksprintf.fsx = samples\ksprintf.fsx
 		samples\mock.fsx = samples\mock.fsx
 		samples\parser.fsx = samples\parser.fsx
 		samples\printer.fsx = samples\printer.fsx
@@ -41,7 +39,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{4213
 		samples\testing.fsx = samples\testing.fsx
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TypeShape.CSharp", "src\TypeShape.CSharp\TypeShape.CSharp.csproj", "{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TypeShape.CSharp", "src\TypeShape.CSharp\TypeShape.CSharp.csproj", "{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{B2C69EAD-8F2A-4B13-AE09-3BE6E2A2EC40}"
 EndProject

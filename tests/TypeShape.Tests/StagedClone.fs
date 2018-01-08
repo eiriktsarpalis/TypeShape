@@ -131,7 +131,7 @@ let mkCloneExpr<'T> () : Expr<'T -> 'T> =
     | Some e -> e
     | None ->
         let e = mkCloneExprInner()
-        let _ = cache.TryAdd e
+        let _ = cache.ForceAdd e
         e
 
 let mkStagedCloner<'T> () = mkCloneExpr<'T>() |> eval

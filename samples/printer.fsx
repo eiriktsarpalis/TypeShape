@@ -6,18 +6,17 @@ open TypeShape.Core.Utils
 
 // Generic value printer with recursive type support
 let rec mkPrinter<'T> () : 'T -> string =
-    let ctx = new RecTypeManager()
+    let ctx = new TypeGenerationContext()
     mkPrinterCached<'T> ctx
 
-and mkPrinterCached<'T> (ctx : RecTypeManager) : 'T -> string =
-    match ctx.TryFind<'T -> string> () with
-    | Some p -> p
-    | None ->
-        let _ = ctx.CreateUninitialized<'T -> string>(fun c t -> c.Value t)
+and mkPrinterCached<'T> (ctx : TypeGenerationContext) : 'T -> string =
+    match ctx.InitOrGetCachedValue<'T -> string> (fun c t -> c.Value t) with
+    | Cached(value = p) -> p
+    | NotCached t ->
         let p = mkPrinterAux<'T> ctx
-        ctx.Complete p
+        ctx.Commit t p
 
-and mkPrinterAux<'T> (ctx : RecTypeManager) : 'T -> string =
+and mkPrinterAux<'T> (ctx : TypeGenerationContext) : 'T -> string =
     let wrap(p : 'a -> string) = unbox<'T -> string> p
     let mkFieldPrinter (field : IShapeMember<'DeclaringType>) =
         field.Accept {

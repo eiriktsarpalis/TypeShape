@@ -100,27 +100,24 @@ module ParserImpl =
     let jsonField label parser = spaced (pstring (escapeStr label)) >>. pchar ':' >>. spaced parser
 
 
-
-
 /// Generates a json pickler for supplied type
 let rec genPickler<'T> () : JsonPickler<'T> =
-    let ctx = new RecTypeManager()
+    let ctx = new TypeGenerationContext()
     genPicklerCached<'T> ctx
     
-and private genPicklerCached<'T> (ctx : RecTypeManager) : JsonPickler<'T> =
-    match ctx.TryFind<JsonPickler<'T>>() with
-    | Some p -> p
-    | None ->
-        // create a delayed uninitialized instance for recursive type definitions
-        let delay (c : Cell<JsonPickler<'T>>) : JsonPickler<'T> =
-            { Parser = fun s -> c.Value.Parser s ;
-              Printer = fun sb -> c.Value.Printer sb }
+and private genPicklerCached<'T> (ctx : TypeGenerationContext) : JsonPickler<'T> =
+    // create a delayed uninitialized instance for recursive type definitions
+    let delay (c : Cell<JsonPickler<'T>>) : JsonPickler<'T> =
+        { Parser = fun s -> c.Value.Parser s ;
+          Printer = fun sb -> c.Value.Printer sb }
 
-        let _ = ctx.CreateUninitialized<JsonPickler<'T>>(delay)
+    match ctx.InitOrGetCachedValue<JsonPickler<'T>> delay with
+    | Cached(value = f) -> f
+    | NotCached t ->
         let p = genPicklerAux<'T> ctx
-        ctx.Complete p
+        ctx.Commit t p
     
-and private genPicklerAux<'T> (ctx : RecTypeManager) : JsonPickler<'T> =
+and private genPicklerAux<'T> (ctx : TypeGenerationContext) : JsonPickler<'T> =
     let mkPickler
         (printer : StringBuilder -> 'a -> unit)
         (parser : Parser<'a>) : JsonPickler<'T> =

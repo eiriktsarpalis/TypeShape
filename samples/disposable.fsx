@@ -4,7 +4,7 @@
 // structural Disposable generator
 
 open System
-open TypeShape.Core.
+open TypeShape.Core
 open TypeShape.Core.Utils
 open TypeShape.Core.SubtypeExtensions
 
@@ -12,18 +12,17 @@ let rec mkDisposer<'T> () : 'T -> unit =
     let mutable f = Unchecked.defaultof<'T -> unit>
     if cache.TryGetValue(&f) then f
     else
-        use mgr = cache.CreateRecTypeManager()
+        use mgr = cache.CreateGenerationContext()
         mkDisposerCached<'T> mgr
 
-and private mkDisposerCached<'T> (ctx : RecTypeManager) : 'T -> unit =
-    match ctx.TryFind<'T -> unit>() with
-    | Some f -> f
-    | None ->
-        let _ = ctx.CreateUninitialized<'T -> unit>(fun c t -> c.Value t)
+and private mkDisposerCached<'T> (ctx : TypeGenerationContext) : 'T -> unit =
+    match ctx.InitOrGetCachedValue<'T -> unit>(fun c t -> c.Value t) with
+    | Cached(value = f) -> f
+    | NotCached t ->
         let f = mkDisposerAux<'T> ctx
-        ctx.Complete f
+        ctx.Commit t f
 
-and private mkDisposerAux<'T> (ctx : RecTypeManager) : 'T -> unit =
+and private mkDisposerAux<'T> (ctx : TypeGenerationContext) : 'T -> unit =
     let EQ (f : 'a -> unit) = unbox<'T -> unit> f
 
     let mkMemberDisposer (shape : IShapeWriteMember<'DeclaringType>) =

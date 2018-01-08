@@ -9,23 +9,21 @@ let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
     let mutable f = Unchecked.defaultof<IEqualityComparer<'T>>
     if cache.TryGetValue(&f) then f
     else
-        use mgr = cache.CreateRecTypeManager()
+        use mgr = cache.CreateGenerationContext()
         mkEqualityComparerCached<'T> mgr
 
-and private mkEqualityComparerCached<'T> (ctx : RecTypeManager) : IEqualityComparer<'T> =
-    match ctx.TryFind<IEqualityComparer<'T>>() with
-    | Some f -> f
-    | None ->
-        let mkWrapper (c:Cell<IEqualityComparer<'T>>) =
-            { new IEqualityComparer<'T> with
-                member __.GetHashCode t = c.Value.GetHashCode t
-                member __.Equals (t, t') = c.Value.Equals(t, t') }
-
-        let _ = ctx.CreateUninitialized<IEqualityComparer<'T>> mkWrapper
+and private mkEqualityComparerCached<'T> (ctx : TypeGenerationContext) : IEqualityComparer<'T> =
+    let delay (c:Cell<IEqualityComparer<'T>>) =
+        { new IEqualityComparer<'T> with
+            member __.GetHashCode t = c.Value.GetHashCode t
+            member __.Equals (t, t') = c.Value.Equals(t, t') }
+    match ctx.InitOrGetCachedValue<IEqualityComparer<'T>> delay with
+    | Cached(value = f) -> f
+    | NotCached t ->
         let f = mkEqualityComparerAux<'T> ctx
-        ctx.Complete f
+        ctx.Commit t f
 
-and private mkEqualityComparerAux<'T> (ctx : RecTypeManager) : IEqualityComparer<'T> =
+and private mkEqualityComparerAux<'T> (ctx : TypeGenerationContext) : IEqualityComparer<'T> =
     let inline combine (h1 : int) (h2 : int) = ((h1 <<< 5) + h1) ||| h2
     let inline wrap (hash : 'a -> int) (cmp : 'a -> 'a -> bool) =
         { new IEqualityComparer<'a> with

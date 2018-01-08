@@ -26,18 +26,17 @@ let rec mkIso<'a, 'b> () : Iso<'a, 'b> =
     Iso(f,g)
 
 and mkProj<'a, 'b> () : Proj<'a, 'b> =
-    use ctx = new RecTypeManager()
+    use ctx = new TypeGenerationContext()
     mkProjCached<'a, 'b> ctx
 
-and private mkProjCached<'a, 'b> (ctx : RecTypeManager) : Proj<'a, 'b> =
-    match ctx.TryFind<Proj<'a, 'b>>() with
-    | Some r -> r
-    | None ->
-        let _ = ctx.CreateUninitialized<Proj<'a, 'b>> (fun c -> Proj(fun a -> let (Proj c) = c.Value in c a))
+and private mkProjCached<'a, 'b> (ctx : TypeGenerationContext) : Proj<'a, 'b> =
+    match ctx.InitOrGetCachedValue<Proj<'a, 'b>>(fun c -> Proj(fun a -> let (Proj c) = c.Value in c a)) with
+    | Cached(value = r) -> r
+    | NotCached t ->
         let p = mkProjAux<'a, 'b> ctx
-        ctx.Complete p
+        ctx.Commit t p
 
-and private mkProjAux<'a, 'b> (ctx : RecTypeManager) : Proj<'a,'b> =
+and private mkProjAux<'a, 'b> (ctx : TypeGenerationContext) : Proj<'a,'b> =
     let notProj() = failwithf "Type '%O' is not projectable to '%O'" typeof<'a> typeof<'b>
 
     let mkMemberProj (candidates : IShapeWriteMember<'a>[]) (target : IShapeWriteMember<'b>) =

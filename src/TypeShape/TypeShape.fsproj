@@ -6,10 +6,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="Utils.fs" />
     <Compile Include="TypeShape.fs" />
     <Compile Include="StagingExtensions.fs" />
     <Compile Include="SubtypeExtensions.fs" />
+    <Compile Include="Utils.fs" />
+    <Compile Include="Applications\Empty.fs" />
     <None Include="paket.references" />
     <None Include="paket.template" />
   </ItemGroup>
