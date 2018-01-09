@@ -739,6 +739,14 @@ let ``Clone should support cyclic object graphs``() =
     test <@ clonedArray |> Array.forall (fun x -> obj.ReferenceEquals(x,clonedArray)) @>
 
 
+// Bug https://github.com/eiriktsarpalis/TypeShape/issues/14
+type NamedDUData = NamedDUData of AA: string
+
+[<Fact>]
+let ``Should successfully work on union shapes with uppercase labels``() =
+    let x = NamedDUData(AA = "foo")
+    test <@ clone x = x @>
+
 module GenericClone =
 
     [<Fact>]

@@ -11,6 +11,7 @@
     <Compile Include="Tests.fs" />
     <None Include="App.config" />
     <None Include="paket.references" />
+    <None Include="Script.fsx" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\TypeShape\TypeShape.fsproj" />
