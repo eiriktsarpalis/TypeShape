@@ -3,5 +3,6 @@ xunit
 xunit.runner.visualstudio
 xunit.abstractions
 FsCheck
-UnQuote
+FsCheck.XUnit
+Unquote
 dotnet-sourcelink

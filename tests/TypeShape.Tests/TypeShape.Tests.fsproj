@@ -9,6 +9,7 @@
     <Compile Include="StagedClone.fs" />
     <Compile Include="GenericTester.fs" />
     <Compile Include="Tests.fs" />
+    <Compile Include="EventSumTests.fs" />
     <None Include="App.config" />
     <None Include="paket.references" />
     <None Include="Script.fsx" />

@@ -9,6 +9,7 @@
     <Compile Include="../TypeShape.Tests/StagedClone.fs" Link="StagedClone.fs" />
     <Compile Include="../TypeShape.Tests/GenericTester.fs" Link="GenericTester.fs" />
     <Compile Include="../TypeShape.Tests/Tests.fs" Link="Tests.fs" />
+    <Compile Include="../TypeShape.Tests/EventSumTests.fs" Link="EventSumTests.fs" />
     <Compile Include="Main.fs" />
     <None Include="App.config" />
     <None Include="paket.references" />

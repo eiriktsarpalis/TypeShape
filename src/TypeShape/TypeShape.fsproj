@@ -11,6 +11,7 @@
     <Compile Include="SubtypeExtensions.fs" />
     <Compile Include="Utils.fs" />
     <Compile Include="Applications\Empty.fs" />
+    <Compile Include="Applications\EventSum.fs" />
     <None Include="paket.references" />
     <None Include="paket.template" />
   </ItemGroup>

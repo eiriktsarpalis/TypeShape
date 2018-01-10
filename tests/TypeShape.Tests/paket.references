@@ -5,4 +5,5 @@ xunit.abstractions
 xunit.extensions
 xunit.runner.visualstudio
 FsCheck
-UnQuote
+FsCheck.Xunit
+Unquote

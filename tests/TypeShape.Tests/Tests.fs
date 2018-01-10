@@ -14,6 +14,7 @@ open FsCheck
 open TypeShape.Core
 open TypeShape.Core.Utils
 open TypeShape.Core.SubtypeExtensions
+open TypeShape.Empty
 open TypeShape.Tests.GenericTests
 
 let check<'T>(prop : 'T -> bool) = Check.QuickThrowOnFailure prop
@@ -747,6 +748,21 @@ let ``Should successfully work on union shapes with uppercase labels``() =
     let x = NamedDUData(AA = "foo")
     test <@ clone x = x @>
 
+
+type Empty<'T> = Empty of 'T
+
+[<Fact>]
+let ``Empty should update definitions on new registrations`` () =
+    TypeShape.Empty.register (fun () -> Empty 42)
+    TypeShape.Empty.register (fun () -> Empty "string")
+
+    test <@ empty<Empty<int> * Empty<string>> = (Empty 42, Empty "string") @>
+
+    TypeShape.Empty.register (fun () -> Empty -1)
+    TypeShape.Empty.register (fun () -> Empty "otherString")
+
+    test <@ empty<Empty<int> * Empty<string>> = (Empty -1, Empty "otherString") @>
+
 module GenericClone =
 
     [<Fact>]
@@ -766,8 +782,6 @@ module GenericCloneStaged =
         |> Check.GenericPredicate false false 100 1
 
 module GenericEmpty =
-
-    open TypeShape.Empty
 
     [<Fact>]
     let ``Empty should always produce equal values`` () =
