@@ -3,9 +3,6 @@ framework: auto-detect
 redirects: force
 
 nuget FSharp.Core >= 4.2 lowest_matching: true
-nuget System.Reflection.Emit.Lightweight >= 4.0.1 lowest_matching: true
-nuget System.Reflection.Emit.ILGeneration >= 4.0.1 lowest_matching: true
-
 nuget SourceLink.Create.CommandLine copy_local: true
 clitool dotnet-sourcelink
 
