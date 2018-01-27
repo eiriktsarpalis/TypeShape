@@ -1,8 +1,8 @@
-source https://nuget.org/api/v2
+source https://api.nuget.org/v3/index.json
 framework: auto-detect
 redirects: force
 
-nuget FSharp.Core >= 4.2 lowest_matching: true
+nuget FSharp.Core >= 4.3 lowest_matching: true
 nuget SourceLink.Create.CommandLine copy_local: true
 clitool dotnet-sourcelink
 
