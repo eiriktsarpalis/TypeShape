@@ -15,6 +15,7 @@
     <None Include="Script.fsx" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\TypeShape.CSharp\TypeShape.CSharp.csproj" />
     <ProjectReference Include="..\..\src\TypeShape\TypeShape.fsproj" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
