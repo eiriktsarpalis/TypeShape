@@ -10,6 +10,7 @@
     <Compile Include="..\TypeShape\TypeShape.fs" Link="TypeShape.fs" />
     <Compile Include="..\TypeShape\StagingExtensions.fs" Link="StagingExtensions.fs" />
     <Compile Include="..\TypeShape\SubtypeExtensions.fs" Link="SubtypeExtensions.fs" />
+    <Compile Include="..\TypeShape\Applications\Combinators.fs" Link="Applications\Combinators.fs" />
     <Compile Include="..\TypeShape\Applications\Empty.fs" Link="Applications\Empty.fs" />
     <Compile Include="..\TypeShape\Applications\EventSum.fs" Link="Applications\EventSum.fs" />
     <None Include="paket.references" />

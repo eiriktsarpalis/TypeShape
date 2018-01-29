@@ -126,7 +126,7 @@ module Implementation =
 
     // FsCheck Generators
     type NoNaNFloats private () =
-        static member Single = 
+        static member Single =
             Arb.Default.Float32()
             |> Arb.filter (not << Single.IsNaN)
 

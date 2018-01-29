@@ -11,6 +11,7 @@ open Xunit
 open Swensen.Unquote.Assertions
 open FsCheck
 
+open TypeShape
 open TypeShape.Core
 open TypeShape.Core.Utils
 open TypeShape.Core.SubtypeExtensions
@@ -20,6 +21,9 @@ open TypeShape.Tests.GenericTests
 let check<'T>(prop : 'T -> bool) = Check.QuickThrowOnFailure prop
 let checkCloner (cloner : 'T -> 'T) = check(fun t -> t = cloner t)
 let inline refEq<'T when 'T : not struct> (x : 'T) (y : 'T) = obj.ReferenceEquals(x, y)
+
+type Cycle = Cycle of Cycle
+with static member Instance = let rec c = Cycle c in c
 
 [<NoEquality; NoComparison>]
 type NoEqNoComp = NoEqNoComp
@@ -789,3 +793,23 @@ module GenericEmpty =
             member __.Invoke (t : 'T) = 
                 empty<'T> = empty<'T> }
         |> Check.GenericPredicate false false 100 10
+
+module GenericFold =
+
+    [<Fact>]
+    let ``Generic summation`` () =
+        check<int list list> (fun xs ->
+            let expected = xs |> Seq.concat |> Seq.sum
+            let actual = Generic.sumBy id (Some [|xs|])
+            expected = actual)
+
+    [<Fact>]
+    let ``Generic fold should support generic types`` () =
+        { new IPredicate with 
+            member __.Invoke (t : 'T) = 
+                Generic.fold (fun c _ -> c + 1) 0 t >= 0 }
+        |> Check.GenericPredicate false false 100 10
+
+    [<Fact>]
+    let ``Generic fold should support generic cyclic objects`` () =
+        test <@ Generic.fold (fun c _ -> c + 1) 0 Cycle.Instance = 1 @>

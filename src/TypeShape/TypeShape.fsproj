@@ -10,6 +10,7 @@
     <Compile Include="StagingExtensions.fs" />
     <Compile Include="SubtypeExtensions.fs" />
     <Compile Include="Utils.fs" />
+    <Compile Include="Applications\Combinators.fs" />
     <Compile Include="Applications\Empty.fs" />
     <Compile Include="Applications\EventSum.fs" />
     <None Include="paket.references" />

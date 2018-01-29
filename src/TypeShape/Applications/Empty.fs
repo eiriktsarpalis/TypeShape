@@ -52,7 +52,7 @@ and private mkEmptyFuncAux<'T> (ctx : TypeGenerationContext) : bool -> 'T =
 
     | Shape.Nullable s ->
         s.Accept { new INullableVisitor<bool -> 'T> with
-            member __.Visit<'t when 't : struct and 't :> ValueType and 't : (new : unit -> 't)>() = // 'T = 't
+            member __.Visit<'t when 't : struct and 't :> ValueType and 't : (new : unit -> 't)>() = // 'T = Nullable<'t>
                 let em = mkEmptyFuncCached<'t> ctx
                 EQ(fun max -> if max then Nullable(em true) else Nullable()) }
 
