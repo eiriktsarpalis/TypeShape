@@ -259,6 +259,7 @@ and TypeCache private (cache : ConcurrentDictionary<Type, CachePayload>) =
 //-------------------------------------------------------------
 
 /// Provides a binary search implementation for generic values
+[<Sealed>]
 type BinSearch<'T when 'T : comparison>(inputs : 'T[]) =
     do 
         let duplicates =
@@ -362,13 +363,22 @@ type RecursiveValueHelper =
         ShallowObjectCopier.Copy source target
 
 /// Helper class for detecting cycles in a traversed object graph
+[<Sealed>]
 type ObjectStack() =
-    let idGen = new ObjectIDGenerator()
+    let mutable idGen = new ObjectIDGenerator()
     let objStack = new Stack<int64>()
 
     let mutable firstTime = true
     let mutable isCycle = false
     let mutable objId = -1L
+
+    /// Resets state for given stack instance
+    member __.Reset() =
+        idGen <- new ObjectIDGenerator()
+        objStack.Clear()
+        firstTime <- true
+        isCycle <- false
+        objId <- -1L
 
     member __.Depth = objStack.Count
 
@@ -392,6 +402,7 @@ type ObjectStack() =
         firstTime <- true
 
 /// Helper class for re-constructing cyclic object graphs
+[<Sealed>]
 type ObjectCache() =
     let dict = new Dictionary<int64, obj> ()
     let cyclicValues = new HashSet<int64>()
@@ -423,3 +434,7 @@ type ObjectCache() =
         let t = System.Runtime.Serialization.FormatterServices.GetUninitializedObject(underlyingType) :?> 'T
         dict.Add(id, t) ; cyclicValues.Add id |> ignore
         t
+
+    /// Resets state for cache instance
+    member __.Reset() =
+        dict.Clear() ; cyclicValues.Clear()

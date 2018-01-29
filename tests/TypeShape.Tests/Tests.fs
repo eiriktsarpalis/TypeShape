@@ -794,7 +794,21 @@ module GenericEmpty =
                 empty<'T> = empty<'T> }
         |> Check.GenericPredicate false false 100 10
 
-module GenericFold =
+module ``Generic Combinators`` =
+
+    [<Fact>]
+    let ``Generic map should work as expected`` () =
+        check<int list list>(fun xs ->
+            let expected = xs |> List.map (List.map ((+) 1))
+            let actual = Generic.map ((+) 1) xs
+            expected = actual)
+
+    [<Fact>]
+    let ``Generic map should support generic types`` () =
+        { new IPredicate with 
+            member __.Invoke (t : 'T) = 
+                let _ = Generic.map ((+) 1) t in true }
+        |> Check.GenericPredicate false false 100 10
 
     [<Fact>]
     let ``Generic summation`` () =

@@ -11,7 +11,7 @@ module private GIterator =
 
     type Iterator<'Element, 'Graph> = ObjectStack -> ('Element -> unit) -> 'Graph -> unit
 
-    let private cache = new TypeCache()
+    let cache = new TypeCache()
 
     let rec mkIterator<'E, 'T> () : Iterator<'E,'T> =
         let mutable f = Unchecked.defaultof<Iterator<'E,'T>>
@@ -143,8 +143,164 @@ module private GIterator =
 
         | _ -> (fun _ _ _ -> ())
 
+module private GMapper =
+
+    type Mapper<'Element, 'Graph> = ObjectStack -> ObjectCache -> ('Element -> 'Element) -> 'Graph -> 'Graph
+
+    let cache = new TypeCache()
+
+    let rec mkMapper<'E, 'T> () : Mapper<'E,'T> =
+        let mutable f = Unchecked.defaultof<Mapper<'E,'T>>
+        if cache.TryGetValue<Mapper<'E,'T>>(&f) then f else
+        use ctx = cache.CreateGenerationContext()
+        mkMapperCached<'E, 'T> ctx
+
+    and mkMapperCached<'E, 'T> (ctx : TypeGenerationContext) : Mapper<'E,'T> =
+        match ctx.InitOrGetCachedValue<Mapper<'E,'T>> (fun c s t -> c.Value s t) with
+        | Cached(value = v) -> v
+        | NotCached t ->
+            let mapper = mkMapperImpl<'E, 'T> ctx
+            ctx.Commit t mapper
+
+    and mkMapperImpl<'E, 'T> (ctx : TypeGenerationContext) : Mapper<'E, 'T> =
+        let inline wrap (mapper:Mapper<'E,'a>) : Mapper<'E,'T> =
+            if typeof<'a>.IsValueType then mapper
+            else
+                fun s (c:ObjectCache) f t ->
+                    match t :> obj with
+                    | null -> t
+                    | o ->
+
+                    s.Push o
+                    let t' =
+                        let id = s.ObjectId
+                        let mutable o' : obj = null
+                        if c.TryGetValue(id, &o') then o'
+                        elif s.IsCycle then
+                            c.CreateUninitializedInstance<obj>(id, o.GetType())
+                        else
+                            let t' = mapper s c f t
+                            c.AddValue(id, t' :> obj)
+
+                    s.Pop()
+                    t' :?> 'a
+            |> unbox
+
+        let mkMemberMapper (shape : IShapeWriteMember<'T>) =
+            shape.Accept { new IWriteMemberVisitor<'T, ObjectStack -> ObjectCache -> ('E -> 'E) -> 'T -> 'T -> 'T> with
+                member __.Visit (shape : ShapeWriteMember<'T, 'F>) =
+                    let fMapper = mkMapperCached<'E, 'F> ctx
+                    fun s c f src tgt ->
+                        let srcField = shape.Project src
+                        let tgtField = fMapper s c f srcField 
+                        shape.Inject tgt tgtField }
+
+        match shapeof<'T> with
+        | :? TypeShape<'E> -> wrap(fun _ _ f (t:'E) -> f t)
+        | Shape.Enum s ->
+            s.Accept { new IEnumVisitor<Mapper<'E,'T>> with
+                member __.Visit<'t, 'u when 't : enum<'u>
+                                        and 't : struct
+                                        and 't :> ValueType
+                                        and 't : (new : unit -> 't)>() =
+                    let um = mkMapperCached<'E,'u> ctx
+                    fun s c f (t:'t) -> 
+                        let u = LanguagePrimitives.EnumToValue t
+                        let u' = um s c f u 
+                        LanguagePrimitives.EnumOfValue u'
+                    |> wrap }
+
+        | Shape.Nullable s ->
+            s.Accept { new INullableVisitor<Mapper<'E,'T>> with
+                member __.Visit<'t when 't : struct 
+                                    and 't :> ValueType 
+                                    and 't : (new : unit -> 't)>() =
+                    let tm = mkMapperCached<'E,'t> ctx
+                    wrap(fun s c f (n:Nullable<'t>) -> if n.HasValue then Nullable(tm s c f n.Value) else n) }
+
+        | Shape.FSharpOption s ->
+            s.Accept {
+                new IFSharpOptionVisitor<Mapper<'E,'T>> with
+                    member __.Visit<'t>() =
+                        let em = mkMapperCached<'E, 't> ctx
+                        fun s c f tOpt ->
+                            match tOpt with
+                            | None -> None
+                            | Some t -> Some(em s c f t)
+                        |> wrap }
+
+        | Shape.Array s ->
+            s.Accept {
+                new IArrayVisitor<Mapper<'E,'T>> with
+                    member __.Visit<'t> rk =
+                        let em = mkMapperCached<'E, 't> ctx
+                        match rk with
+                        | 1 -> wrap(fun s c f (ts : 't[]) -> ts |> Array.map (em s c f))
+                        | 2 -> wrap(fun s c f (ts : 't[,]) -> ts |> Array2D.map (em s c f))
+                        | 3 -> wrap(fun s c f (ts : 't[,,]) -> ts |> Array3D.map (em s c f))
+                        | _ -> failwithf "Rank-%d arrays not supported" rk
+            }
+
+        | Shape.FSharpList s ->
+            s.Accept {
+                new IFSharpListVisitor<Mapper<'E,'T>> with
+                    member __.Visit<'t>() =
+                        let em = mkMapperCached<'E, 't> ctx
+                        wrap(fun s c f (ts : 't list) -> ts |> List.map (em s c f))
+            }
+
+        | Shape.FSharpSet s ->
+            s.Accept {
+                new IFSharpSetVisitor<Mapper<'E,'T>> with
+                    member __.Visit<'t when 't : comparison> () =
+                        let em = mkMapperCached<'E, 't> ctx
+                        wrap(fun s c f ts -> ts |> Set.map (em s c f))
+            }
+
+        | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
+            let eMappers = shape.Elements |> Array.map mkMemberMapper
+            fun s c f src -> 
+                let mutable tgt = shape.CreateUninitialized()
+                for em in eMappers do tgt <- em s c f src tgt
+                tgt
+
+        | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
+            let fMappers = shape.Fields |> Array.map mkMemberMapper
+            fun s c f src ->
+                let mutable tgt = shape.CreateUninitialized()
+                for fm in fMappers do tgt <- fm s c f src tgt
+                tgt
+
+        | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
+            let fMapperss = shape.UnionCases |> Array.map (fun uc -> uc.Fields |> Array.map mkMemberMapper)
+            fun s c f src ->
+                let tag = shape.GetTag src
+                let case = shape.UnionCases.[tag]
+                let mutable tgt = case.CreateUninitialized()
+                for fm in fMapperss.[tag] do tgt <- fm s c f src tgt
+                tgt
+
+        | Shape.CliMutable (:? ShapeCliMutable<'T> as shape) ->
+            let pMappers = shape.Properties |> Array.map mkMemberMapper
+            fun s c f src -> 
+                let mutable tgt = shape.CreateUninitialized()
+                for pm in pMappers do tgt <- pm s c f src tgt
+                tgt
+
+        | _ -> (fun _ _ _ t -> t)
+
 [<RequireQualifiedAccess>]
 module Generic =
+
+    /// <summary>
+    /// Generic map combinator. Calls the mapper function on every instance
+    /// of type 'a structurally within the source type 'T using depth-first
+    /// traversal. Cyclic objects are supported.
+    /// </summary>
+    /// <param name="mapper">Mapping operation to perform on every instance of type 'a.</param>
+    /// <param name="source">Source type to be traversed for instances of type 'a.</param>
+    let map (mapper : 'a -> 'a) (source : 'T) : 'T =
+        GMapper.mkMapper<'a,'T>() (new ObjectStack()) (new ObjectCache()) mapper source
 
     /// <summary>
     /// Generic iter combinator. Calls the action function on every instance
@@ -178,6 +334,28 @@ module Generic =
         let count = ref LanguagePrimitives.GenericZero<'Num>
         iter (fun a -> count := !count + projection a) source
         !count
+
+    /// <summary>
+    /// Generic forall combinator. Returns true iff all instances of type 'a
+    /// structurally within the source 'T satisfy the user-provided predicate.
+    /// </summary>
+    /// <param name="predicate">Forall predicate.</param>
+    /// <param name="source">Source type to traverse.</param>
+    let forall (predicate : 'a -> bool) (source : 'T) : bool =
+        let mutable result = ref true
+        iter (fun a -> result := !result && predicate a) source
+        !result
+
+    /// <summary>
+    /// Generic exists combinator. Returns true iff at least one instance of type 'a
+    /// structurally within the source 'T satisfies the user-provided predicate.
+    /// </summary>
+    /// <param name="predicate">Exists predicate.</param>
+    /// <param name="source">Source type to traverse.</param>
+    let exists (predicate : 'a -> bool) (source : 'T) : bool =
+        let mutable result = ref false
+        iter (fun a -> result := !result || predicate a) source
+        !result
 
     /// <summary>
     /// Generic collect combinator. Accumulates a collection of values based on mappings

@@ -45,6 +45,16 @@ namespace TypeShape.Core
                 return false;
             }
         }
+
+        /// <summary>
+        ///     Unsafe downcast
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public TSubtype Downcast(TBase value)
+        {
+            return (TSubtype)value;
+        }
     }
 
     /// <summary>
