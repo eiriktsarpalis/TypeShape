@@ -1,3 +1,7 @@
+### 4.0.0
+* Namespace refactorings.
+* Provide "empty", "EventSum" and combinator implementations.
+
 ### 3.1.1
 * Tuple Shape Bugfix
 
