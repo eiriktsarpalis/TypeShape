@@ -33,6 +33,8 @@ and mkPrinterAux<'T> (ctx : TypeGenerationContext) : 'T -> string =
     | Shape.Int32 -> wrap(sprintf "%d")
     | Shape.Int64 -> wrap(fun (b:int64) -> sprintf "%dL" b)
     | Shape.String -> wrap(sprintf "\"%s\"")
+    | Shape.DateTime       -> wrap (fun (b:DateTime      ) -> sprintf "DateTime (%i, %i, %i, %i, %i, %i, %i)" b.Year b.Month b.Day b.Hour b.Minute b.Second b.Millisecond)
+    | Shape.DateTimeOffset -> wrap (fun (b:DateTimeOffset) -> sprintf "DateTimeOffset (%i, %i, %i, %i, %i, %i, %i, TimeSpan.FromMinutes %i.)" b.Year b.Month b.Day b.Hour b.Minute b.Second b.Millisecond b.Offset.Minutes)    
     | Shape.FSharpOption s ->
         s.Accept {
             new IFSharpOptionVisitor<'T -> string> with
