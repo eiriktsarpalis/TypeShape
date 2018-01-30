@@ -42,16 +42,16 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-NoEmit|AnyCPU'">
     <WarningLevel>5</WarningLevel>
-    <OutputPath>..\..\bin\Debug\</OutputPath>
-    <DocumentationFile>..\..\bin\Debug\net40\TypeShape.XML</DocumentationFile>
+    <OutputPath>..\..\bin\Debug-NoEmit\</OutputPath>
+    <DocumentationFile>..\..\bin\Debug-NoEmit\net40\TypeShape.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <OutputPath>..\..\bin\Release\</OutputPath>
     <DocumentationFile>..\..\bin\Release\net40\TypeShape.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-NoEmit|AnyCPU'">
-    <OutputPath>..\..\bin\Release\</OutputPath>
-    <DocumentationFile>..\..\bin\Release\net40\TypeShape.XML</DocumentationFile>
+    <OutputPath>..\..\bin\Release-NoEmit\</OutputPath>
+    <DocumentationFile>..\..\bin\Release-NoEmit\net40\TypeShape.XML</DocumentationFile>
   </PropertyGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

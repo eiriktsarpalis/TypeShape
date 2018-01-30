@@ -30,9 +30,13 @@ excludeddependencies
 files
     ../../bin/Release/net40/TypeShape.dll ==> lib/net40
     ../../bin/Release/net40/TypeShape.pdb ==> lib/net40
+	../../bin/Release/net40/TypeShape.xml ==> lib/net40
     ../../bin/Release/net40/TypeShape.CSharp.dll ==> lib/net40
     ../../bin/Release/net40/TypeShape.CSharp.pdb ==> lib/net40
+	../../bin/Release/net40/TypeShape.CSharp.xml ==> lib/net40
     ../../bin/Release/netstandard2.0/TypeShape.dll ==> lib/netstandard2.0
     ../../bin/Release/netstandard2.0/TypeShape.pdb ==> lib/netstandard2.0
+	../../bin/Release/netstandard2.0/TypeShape.xml ==> lib/netstandard2.0
     ../../bin/Release/netstandard2.0/TypeShape.CSharp.dll ==> lib/netstandard2.0
     ../../bin/Release/netstandard2.0/TypeShape.CSharp.pdb ==> lib/netstandard2.0
+	../../bin/Release/netstandard2.0/TypeShape.CSharp.xml ==> lib/netstandard2.0
