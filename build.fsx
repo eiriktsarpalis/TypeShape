@@ -128,17 +128,13 @@ Target "Restore" (fun _ ->
 
 Target "Build" DoNothing
 
-Target "Build.Emit" (fun _ ->
+let buildWithConfiguration config =
     !! solutionFile
-    |> MSBuild null "Rebuild" [("Configuration", "Release")]
-    |> ignore
-)
+    |> MSBuild null "Rebuild" [("Configuration", config) ; ("SourceLinkCreate", "true")]
+    |> ignore  
 
-Target "Build.NoEmit" (fun _ ->
-    !! solutionFile
-    |> MSBuild null "Rebuild" [("Configuration", "Release-NoEmit")]
-    |> ignore
-)
+Target "Build.Emit" (fun _ -> buildWithConfiguration "Release")
+Target "Build.NoEmit" (fun _ -> buildWithConfiguration "Release-NoEmit")
 
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner & kill test runner when complete
