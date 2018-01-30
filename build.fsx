@@ -48,9 +48,6 @@ let artifactsDir = __SOURCE_DIRECTORY__ @@ "artifacts"
 
 // Pattern specifying assemblies to be tested
 let testProjects = "tests/**/*.??proj"
-//let testClassicAssemblies = "bin/Release/net40/TypeShape.Tests.dll"
-//let testClassicNoEmitAssemblies = "bin/Release/net40/TypeShape.Tests.dll"
-//let testCoreProjects = "tests/TypeShape.Tests.Core/*.fsproj"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted
