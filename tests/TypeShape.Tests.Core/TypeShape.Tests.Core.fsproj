@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\TypeShape.Core\TypeShape.Core.fsproj" />
+    <ProjectReference Include="..\..\src\TypeShape.CSharp\TypeShape.CSharp.csproj" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <DefineConstants>TRACE;DEBUG</DefineConstants>
