@@ -8,12 +8,12 @@
     <AssemblyName>TypeShape.CSharp</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>..\..\bin\Debug\</OutputPath>
-    <DocumentationFile>..\..\bin\Debug\$(TargetFramework)\TypeShape.CSharp.xml</DocumentationFile>
+    <OutputPath>bin\Debug\$(TargetFramework)\</OutputPath>
+    <DocumentationFile>bin\Debug\$(TargetFramework)\TypeShape.CSharp.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>..\..\bin\Release\</OutputPath>
-    <DocumentationFile>..\..\bin\Release\$(TargetFramework)\TypeShape.CSharp.xml</DocumentationFile>
+    <OutputPath>bin\Release\$(TargetFramework)\</OutputPath>
+    <DocumentationFile>bin\Release\$(TargetFramework)\TypeShape.CSharp.xml</DocumentationFile>
   </PropertyGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
