@@ -108,8 +108,7 @@ Target "AssemblyInfo" (fun _ ->
 // Clean build results
 
 Target "Clean" (fun _ ->
-    CleanDirs (!! "bin/Release*")
-    CleanDirs [ artifactsDir ; "temp" ]
+    CleanDirs [ "bin" ; artifactsDir ; "temp" ]
 )
 
 Target "CleanDocs" (fun _ ->
