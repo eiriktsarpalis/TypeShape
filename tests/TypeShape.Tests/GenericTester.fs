@@ -134,6 +134,19 @@ module Implementation =
             Arb.Default.Float()
             |> Arb.filter (not << Double.IsNaN)
 
+
+    type Config with
+        static member CreateTypeConfig(maxTypes : int, ?maxSize : int) =
+            { Config.QuickThrowOnFailure with 
+                MaxTest = maxTypes ; 
+                EndSize = defaultArg maxSize 20 }
+
+        static member CreateValueConfig(useNaN : bool, maxTests : int) =
+            { Config.QuickThrowOnFailure with 
+                QuietOnSuccess = true ;
+                MaxTest = maxTests ; 
+                Arbitrary = if useNaN then [] else [typeof<NoNaNFloats>] }
+
     module PrettyPrint =
 
         let rec typeAlg tAlg =
@@ -233,52 +246,109 @@ module Implementation =
             | Peano -> typeof<Peano>
 
 
+    type TypeAlg with
+        member tAlg.TypeShape : TypeShape =
+            let sysType = Mapper.typeAlg tAlg
+            TypeShape.Create sysType
+
+        member tAlg.Accept (v:ITypeShapeVisitor<'R>) : 'R =
+            tAlg.TypeShape.Accept v
+
+        member tAlg.Accept (v:IComparisonVisitor<'R>) : 'R =
+            match tAlg.TypeShape with
+            | Shape.Comparison s -> s.Accept v
+            | s -> failwithf "internal error: type %O does not support comparison" s.Type
+
+
 open Implementation
 
 
 //------------------------------------------------------------------------------
 // Runner Implementation
 
-type IChecker =
+type Checker =
     abstract Invoke<'T when 'T : comparison> : TypeAlg -> bool
 
-type IPredicate =
+type Predicate =
     abstract Invoke<'T when 'T : comparison> : 'T -> bool
+
+type Predicate2 =
+    abstract Invoke<'T when 'T : comparison> : 'T -> 'T -> bool
+
+type Predicate3 =
+    abstract Invoke<'T when 'T : comparison> : 'T -> 'T -> 'T -> bool
 
 type Check with
     /// <summary>
     ///    Generic type checker that runs the checker interface through randomly generated types.
     /// </summary>
-    /// <param name="checker">Generic checker interface</param>
-    /// <param name="config">FsCheck configuration for type-level random generation</param>
-    static member Generic (checker : IChecker, ?config : Config) =
+    /// <param name="checker">Generic checker interface.</param>
+    /// <param name="config">FsCheck configuration for type-level random generation.</param>
+    /// <param name="verbose">Output every random type that is being tested. Defaults to false.</param>
+    static member Generic (checker : Checker, ?config : Config, ?verbose : bool) =
         let config = defaultArg config Config.QuickThrowOnFailure
+        let verbose = defaultArg verbose false
         let runOnType (tAlg : TypeAlg) =
-            let sysType = Mapper.typeAlg tAlg
-            match TypeShape.Create sysType with
-            | Shape.Comparison s ->
-                s.Accept {
-                    new IComparisonVisitor<bool> with
-                        member __.Visit<'T when 'T : comparison>() =
-                            checker.Invoke<'T> tAlg }
-
-            | s -> failwithf "internal error: type %O does not support comparison" s.Type
+            tAlg.Accept {  new IComparisonVisitor<bool> with
+                member __.Visit<'T when 'T : comparison>() =
+                    if verbose then printfn "Testing type %s" (PrettyPrint.typeAlg tAlg)
+                    checker.Invoke<'T> tAlg }
     
-        Check.One(config, runOnType)
+        Check.One<TypeAlg -> bool>(config, runOnType)
 
-
-    static member GenericPredicate verbose useNaN maxTypes maxTestsPerType (predicate : IPredicate) =
-        let tconf = { Config.QuickThrowOnFailure with MaxTest = maxTypes ; EndSize = 20 }
-        let vconf =
-            { Config.QuickThrowOnFailure with 
-                QuietOnSuccess = true ;
-                MaxTest = maxTestsPerType ; 
-                Arbitrary = if useNaN then [] else [typeof<NoNaNFloats>] }
+    /// <summary>
+    ///     Runs a property test given provided generic predicate.
+    /// </summary>
+    /// <param name="verbose">Print tested type information to console.</param>
+    /// <param name="useNaN">Generate NaNs when the random information contains floats.</param>
+    /// <param name="maxTypes">Maximum number of randomly generated types.</param>
+    /// <param name="maxTestsPerType">Maximum number of randomly generated values per type.</param>
+    /// <param name="predicate">Predicate to check.</param>
+    static member GenericPredicate verbose useNaN maxTypes maxTestsPerType (predicate : Predicate) =
+        let tconf = Config.CreateTypeConfig(maxTypes)
+        let vconf = Config.CreateValueConfig(useNaN, maxTestsPerType)
 
         let checker =
-            { new IChecker with
+            { new Checker with
                 member __.Invoke<'T when 'T : comparison> tAlg =
-                    if verbose then printfn "Testing type %s" (PrettyPrint.typeAlg tAlg)
-                    Check.One(vconf, fun (t:'T) -> predicate.Invoke t) ; true }
+                    Check.One<'T -> bool>(vconf, predicate.Invoke) ; true }
 
-        Check.Generic(checker, tconf)
+        Check.Generic(checker, tconf, verbose = verbose)
+
+    /// <summary>
+    ///     Runs a property test given provided generic predicate.
+    /// </summary>
+    /// <param name="verbose">Print tested type information to console.</param>
+    /// <param name="useNaN">Generate NaNs when the random information contains floats.</param>
+    /// <param name="maxTypes">Maximum number of randomly generated types.</param>
+    /// <param name="maxTestsPerType">Maximum number of randomly generated values per type.</param>
+    /// <param name="predicate">Predicate to check.</param>
+    static member GenericPredicate2 verbose useNaN maxTypes maxTestsPerType (predicate2 : Predicate2) =
+        let tconf = Config.CreateTypeConfig(maxTypes)
+        let vconf = Config.CreateValueConfig(useNaN, maxTestsPerType)
+
+        let checker =
+            { new Checker with
+                member __.Invoke<'T when 'T : comparison> tAlg =
+                    Check.One<'T * 'T -> bool>(vconf, fun (t1,t2) -> predicate2.Invoke t1 t2) ; true }
+
+        Check.Generic(checker, tconf, verbose = verbose)
+
+    /// <summary>
+    ///     Runs a property test given provided generic predicate.
+    /// </summary>
+    /// <param name="verbose">Print tested type information to console.</param>
+    /// <param name="useNaN">Generate NaNs when the random information contains floats.</param>
+    /// <param name="maxTypes">Maximum number of randomly generated types.</param>
+    /// <param name="maxTestsPerType">Maximum number of randomly generated values per type.</param>
+    /// <param name="predicate">Predicate to check.</param>
+    static member GenericPredicate3 verbose useNaN maxTypes maxTestsPerType (predicate3 : Predicate3) =
+        let tconf = Config.CreateTypeConfig(maxTypes)
+        let vconf = Config.CreateValueConfig(useNaN, maxTestsPerType)
+
+        let checker =
+            { new Checker with
+                member __.Invoke<'T when 'T : comparison> tAlg =
+                    Check.One<'T * 'T * 'T -> bool>(vconf, fun (t1,t2,t3) -> predicate3.Invoke t1 t2 t3) ; true }
+
+        Check.Generic(checker, tconf, verbose = verbose)

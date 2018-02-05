@@ -771,7 +771,7 @@ module GenericClone =
 
     [<Fact>]
     let ``Generic Clone should produde equal values`` () =
-        { new IPredicate with 
+        { new Predicate with 
             member __.Invoke (t : 'T) = t = clone(t) }
         |> Check.GenericPredicate false false 100 10
 
@@ -779,7 +779,7 @@ module GenericCloneStaged =
 
     [<Fact>]
     let ``Generic Staged Clone should produde equal values`` () =
-        { new IPredicate with 
+        { new Predicate with 
             member __.Invoke (t : 'T) = 
                 let c = mkStagedCloner<'T>()
                 c(t) = t }
@@ -789,7 +789,7 @@ module GenericEmpty =
 
     [<Fact>]
     let ``Empty should always produce equal values`` () =
-        { new IPredicate with 
+        { new Predicate with 
             member __.Invoke (t : 'T) = 
                 empty<'T> = empty<'T> }
         |> Check.GenericPredicate false false 100 10
@@ -805,7 +805,7 @@ module ``Generic Combinators`` =
 
     [<Fact>]
     let ``Generic map should support generic types`` () =
-        { new IPredicate with 
+        { new Predicate with 
             member __.Invoke (t : 'T) = 
                 let _ = Generic.map ((+) 1) t in true }
         |> Check.GenericPredicate false false 100 10
@@ -819,7 +819,7 @@ module ``Generic Combinators`` =
 
     [<Fact>]
     let ``Generic fold should support generic types`` () =
-        { new IPredicate with 
+        { new Predicate with 
             member __.Invoke (t : 'T) = 
                 Generic.fold (fun c _ -> c + 1) 0 t >= 0 }
         |> Check.GenericPredicate false false 100 10
