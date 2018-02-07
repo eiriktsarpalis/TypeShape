@@ -315,6 +315,7 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
         let cvalue = meaningUntyped value
         EQ(fun env ->
             let obj = match cobj with Some co -> co env | None -> null
+            let value = cvalue env
             fI.SetValue(obj, value))
 
     | _ -> failwithf "Unsupported expression %A" expr
