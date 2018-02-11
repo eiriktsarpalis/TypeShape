@@ -1,24 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net40</TargetFramework>
+    <TargetFrameworks>net40;netstandard2.0</TargetFrameworks>
     <Configurations>Debug;Release;Debug-NoEmit;Release-NoEmit</Configurations>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AssemblyName>TypeShape</AssemblyName>
   </PropertyGroup>
-  <ItemGroup>
-    <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="TypeShape.fs" />
-    <Compile Include="StagingExtensions.fs" />
-    <Compile Include="SubtypeExtensions.fs" />
-    <Compile Include="Utils.fs" />
-    <Compile Include="Applications\Combinators.fs" />
-    <Compile Include="Applications\Empty.fs" />
-    <Compile Include="Applications\EventSum.fs" />
-    <None Include="paket.references" />
-    <None Include="paket.template" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\TypeShape.CSharp\TypeShape.CSharp.csproj" />
-  </ItemGroup>
+  
+  <PropertyGroup>
+    <WarningLevel>5</WarningLevel>
+    <OutputPath>..\..\bin\$(Configuration)\</OutputPath>
+    <DocumentationFile>..\..\bin\$(Configuration)\$(Platform)\TypeShape.XML</DocumentationFile>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <DefineConstants>TRACE;DEBUG;TYPESHAPE_EXPOSE;TYPESHAPE_EMIT;TYPESHAPE_EXPR</DefineConstants>
   </PropertyGroup>
@@ -31,27 +24,28 @@
   <PropertyGroup Condition="'$(Configuration)'=='Release-NoEmit'">
     <DefineConstants>TRACE;TYPESHAPE_EXPOSE;TYPESHAPE_EXPR</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <AssemblyName>TypeShape</AssemblyName>
+  <PropertyGroup Condition="'$(Platform)'=='netstandard2.0'">
+    <DefineConstants>NETSTANDARD2_0</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <WarningLevel>5</WarningLevel>
-    <OutputPath>..\..\bin\Debug\</OutputPath>
-    <DocumentationFile>..\..\bin\Debug\net40\TypeShape.XML</DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-NoEmit|AnyCPU'">
-    <WarningLevel>5</WarningLevel>
-    <OutputPath>..\..\bin\Debug-NoEmit\</OutputPath>
-    <DocumentationFile>..\..\bin\Debug-NoEmit\net40\TypeShape.XML</DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>..\..\bin\Release\</OutputPath>
-    <DocumentationFile>..\..\bin\Release\net40\TypeShape.XML</DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-NoEmit|AnyCPU'">
-    <OutputPath>..\..\bin\Release-NoEmit\</OutputPath>
-    <DocumentationFile>..\..\bin\Release-NoEmit\net40\TypeShape.XML</DocumentationFile>
-  </PropertyGroup>
+  
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="TypeShape.fs" />
+    <Compile Include="StagingExtensions.fs" />
+    <Compile Include="SubtypeExtensions.fs" />
+    <Compile Include="Utils.fs" />
+    <Compile Include="Applications\Combinators.fs" />
+    <Compile Include="Applications\Empty.fs" />
+    <Compile Include="Applications\EventSum.fs" />
+    <None Include="paket.references" />
+    <None Include="paket.template" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\TypeShape.CSharp\TypeShape.CSharp.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Platform)'!='netstandard2.0'">
+    <PackageReference Include="FSharp.Core" Version="3.1.2" />
+  </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

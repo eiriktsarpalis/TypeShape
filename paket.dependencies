@@ -1,7 +1,10 @@
 source https://api.nuget.org/v3/index.json
-framework: auto-detect
+framework: netstandard2.0, netcoreapp2.0, net461
 redirects: force
 
+# NB TypeShape project has conditional PackageReference 
+# fixed to 3.1.2 for net40 builds. This is to address
+# paket.references constraints
 nuget FSharp.Core >= 4.3.2 lowest_matching: true
 nuget System.Reflection.Emit.Lightweight >= 4.3 lowest_matching: true
 
@@ -20,13 +23,6 @@ nuget xunit.runner.visualstudio ~> 2.3.0 version_in_path: true
 
 nuget FParsec
 nuget FSharp.Quotations.Evaluator
-
-group Legacy
-  source https://api.nuget.org/v3/index.json
-  framework: net40
-  redirects: on
-
-  nuget FSharp.Core >= 3.1 lowest_matching: true
 
 group Build
   source https://api.nuget.org/v3/index.json
