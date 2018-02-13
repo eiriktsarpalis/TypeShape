@@ -17,8 +17,6 @@ nuget Unquote ~> 4.0
 nuget FsCheck ~> 3.0 prerelease
 nuget FsCheck.XUnit
 nuget xunit ~> 2.3.0
-nuget xunit.abstractions
-nuget xunit.extensions
 nuget xunit.runner.visualstudio ~> 2.3.0 version_in_path: true
 
 nuget FParsec

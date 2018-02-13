@@ -43,8 +43,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{B2C69EAD-8F2
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{5572A9F7-C4EB-45BF-8FCF-FC07E99FB92C}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TypeShape.Tests.Core", "tests\TypeShape.Tests.Core\TypeShape.Tests.Core.fsproj", "{075C3F29-C9E7-408C-8055-B830D53A72E2}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{07CC7F29-5EF1-45CF-BB8C-BC1D96498E7E}"
 	ProjectSection(SolutionItems) = preProject
 		.paket\paket.bootstrapper.exe = .paket\paket.bootstrapper.exe
@@ -86,14 +84,6 @@ Global
 		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}.Release-NoEmit|Any CPU.ActiveCfg = Release|Any CPU
 		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}.Release-NoEmit|Any CPU.Build.0 = Release|Any CPU
-		{075C3F29-C9E7-408C-8055-B830D53A72E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{075C3F29-C9E7-408C-8055-B830D53A72E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{075C3F29-C9E7-408C-8055-B830D53A72E2}.Debug-NoEmit|Any CPU.ActiveCfg = Debug|Any CPU
-		{075C3F29-C9E7-408C-8055-B830D53A72E2}.Debug-NoEmit|Any CPU.Build.0 = Debug|Any CPU
-		{075C3F29-C9E7-408C-8055-B830D53A72E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{075C3F29-C9E7-408C-8055-B830D53A72E2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{075C3F29-C9E7-408C-8055-B830D53A72E2}.Release-NoEmit|Any CPU.ActiveCfg = Release-NoEmit|Any CPU
-		{075C3F29-C9E7-408C-8055-B830D53A72E2}.Release-NoEmit|Any CPU.Build.0 = Release-NoEmit|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -102,7 +92,6 @@ Global
 		{8609D2FB-063F-45FE-94E2-FF251792C495} = {B2C69EAD-8F2A-4B13-AE09-3BE6E2A2EC40}
 		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC} = {5572A9F7-C4EB-45BF-8FCF-FC07E99FB92C}
 		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18} = {B2C69EAD-8F2A-4B13-AE09-3BE6E2A2EC40}
-		{075C3F29-C9E7-408C-8055-B830D53A72E2} = {5572A9F7-C4EB-45BF-8FCF-FC07E99FB92C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5A544A5F-CD9E-4B69-9492-FF21A20A861C}
