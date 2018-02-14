@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net40</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
     <Configurations>Debug;Release;Debug-NoEmit;Release-NoEmit</Configurations>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AssemblyName>TypeShape</AssemblyName>
@@ -44,7 +44,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TypeShape.CSharp\TypeShape.CSharp.csproj" />
   </ItemGroup>
-  <ItemGroup Condition="'$(Platform)'=='net40'">
+  <ItemGroup Condition="'$(Platform)'=='net45'">
     <PackageReference Include="FSharp.Core" Version="3.1.2" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
