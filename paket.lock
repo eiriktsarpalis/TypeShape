@@ -647,3 +647,8 @@ GITHUB
   remote: fsharp/FAKE
     modules/Octokit/Octokit.fsx (43d68ede74f15158defc18fab7745c142972a8cf)
       Octokit (>= 0.20)
+GROUP Legacy
+RESTRICTION: == net45
+NUGET
+  remote: https://api.nuget.org/v3/index.json
+    FSharp.Core (3.1.2)

@@ -9,8 +9,8 @@
   
   <PropertyGroup>
     <WarningLevel>5</WarningLevel>
-    <OutputPath>..\..\bin\$(Configuration)\</OutputPath>
-    <DocumentationFile>..\..\bin\$(Configuration)\$(Framework)\TypeShape.XML</DocumentationFile>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <DocumentationFile>bin\$(Configuration)\$(Framework)\TypeShape.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <DefineConstants>TRACE;DEBUG;TYPESHAPE_EXPOSE;TYPESHAPE_EMIT;TYPESHAPE_EXPR</DefineConstants>
@@ -43,9 +43,6 @@
   
   <ItemGroup>
     <ProjectReference Include="..\TypeShape.CSharp\TypeShape.CSharp.csproj" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(Platform)'=='net45'">
-    <PackageReference Include="FSharp.Core" Version="3.1.2" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

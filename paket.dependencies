@@ -22,6 +22,12 @@ nuget xunit.runner.visualstudio ~> 2.3.0 version_in_path: true
 nuget FParsec
 nuget FSharp.Quotations.Evaluator
 
+group Legacy
+  source https://api.nuget.org/v3/index.json
+  framework: net45
+
+  nuget FSharp.Core >= 3.1.2 lowest_matching: true
+
 group Build
   source https://api.nuget.org/v3/index.json
   framework: net461
