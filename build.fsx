@@ -198,7 +198,7 @@ Target "NuGet.Bundle" (fun _ ->
 Target "NuGet.ValidateSourceLink" (fun _ ->
     for nupkg in !! (artifactsDir @@ "*.nupkg") do
         DotNetCli.RunCommand
-            (fun p -> { p with WorkingDir = __SOURCE_DIRECTORY__ @@ "tests" @@ "TypeShape.Tests.Core" } )
+            (fun p -> { p with WorkingDir = __SOURCE_DIRECTORY__ @@ "tests" @@ "TypeShape.Tests" } )
             (sprintf "sourcelink test %s" nupkg)
 )
 

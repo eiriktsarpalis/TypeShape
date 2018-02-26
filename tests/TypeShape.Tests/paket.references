@@ -5,3 +5,4 @@ xunit.runner.visualstudio
 FsCheck
 FsCheck.Xunit
 Unquote
+dotnet-sourcelink

@@ -10,6 +10,7 @@ FAKE_EXE=packages/build/FAKE/tools/FAKE.exe
 
 FSIARGS=""
 FSIARGS2=""
+PAKET_BOOTSTRAPPER_ARGS="prerelease"
 OS=${OS:-"unknown"}
 if [ "$OS" != "Windows_NT" ]
 then
@@ -38,7 +39,7 @@ yesno() {
 }
 
 set +e
-run $PAKET_BOOTSTRAPPER_EXE
+run $PAKET_BOOTSTRAPPER_EXE $PAKET_BOOTSTRAPPER_ARGS
 bootstrapper_exitcode=$?
 set -e
 
@@ -66,7 +67,7 @@ then
   fi
   # Re-run bootstrapper whether or not the user ran mozroots, because maybe
   # they fixed the problem in a separate terminal window.
-  run $PAKET_BOOTSTRAPPER_EXE
+  run $PAKET_BOOTSTRAPPER_EXE $PAKET_BOOTSTRAPPER_ARGS
 fi
 
 run $PAKET_EXE restore

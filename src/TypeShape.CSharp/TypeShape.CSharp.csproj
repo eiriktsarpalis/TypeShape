@@ -7,13 +7,9 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AssemblyName>TypeShape.CSharp</AssemblyName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>bin\Debug\$(Framework)\</OutputPath>
-    <DocumentationFile>bin\Debug\$(Framework)\TypeShape.CSharp.xml</DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>bin\Release\$(Framework)\</OutputPath>
-    <DocumentationFile>bin\Release\$(Framework)\TypeShape.CSharp.xml</DocumentationFile>
+  <PropertyGroup>
+    <OutputPath>bin\$(Configuration)\$(Framework)\</OutputPath>
+    <DocumentationFile>bin\$(Configuration)\$(Framework)\TypeShape.CSharp.xml</DocumentationFile>
   </PropertyGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
