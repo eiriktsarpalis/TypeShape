@@ -1,8 +1,0 @@
-FSharp.Core
-xunit
-xunit.runner.visualstudio
-xunit.abstractions
-FsCheck
-FsCheck.XUnit
-Unquote
-dotnet-sourcelink

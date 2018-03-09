@@ -1,3 +1,5 @@
+FSharp.Core
+System.Reflection.Emit.Lightweight
 SourceLink.Create.CommandLine
 group Legacy
-FSharp.Core
+  FSharp.Core

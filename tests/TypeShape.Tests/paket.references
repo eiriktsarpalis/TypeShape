@@ -1,9 +1,8 @@
 FSharp.Core
 System.ValueTuple
 xunit
-xunit.abstractions
-xunit.extensions
 xunit.runner.visualstudio
 FsCheck
 FsCheck.Xunit
 Unquote
+dotnet-sourcelink
