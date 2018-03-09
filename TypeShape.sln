@@ -49,7 +49,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{07CC7F
 		paket.dependencies = paket.dependencies
 		paket.lock = paket.lock
 		.paket\Paket.Restore.targets = .paket\Paket.Restore.targets
-		.paket\paket.targets = .paket\paket.targets
 	EndProjectSection
 EndProject
 Global
