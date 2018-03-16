@@ -6,9 +6,16 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AssemblyName>TypeShape</AssemblyName>
   </PropertyGroup>
-  
+
   <PropertyGroup>
     <WarningLevel>5</WarningLevel>
+    <NoWarn>52,1178</NoWarn>
+    <OtherFlags>--warnon:1182</OtherFlags>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+  </PropertyGroup>
+  
+  <PropertyGroup>
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <DocumentationFile>bin\$(Configuration)\$(Framework)\TypeShape.XML</DocumentationFile>
   </PropertyGroup>

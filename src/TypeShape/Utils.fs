@@ -114,7 +114,7 @@ type TypeGenerationContext internal (parentCache : TypeCache option) =
                 NotCached GenerationToken
 
     /// Commits computed value to the generator.
-    member __.Commit<'T> (token : GenerationToken<'T>) (value : 'T) : 'T =
+    member __.Commit<'T> (_ : GenerationToken<'T>) (value : 'T) : 'T =
         use _d = acquire()
         if stack.Count = 0 || stack.Pop() <> typeof<'T> then invalidOp "TypeGenerationContext: unexpected commit operation"
         let p = dict.[typeof<'T>]
