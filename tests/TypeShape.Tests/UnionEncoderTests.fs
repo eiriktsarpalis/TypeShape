@@ -1,4 +1,4 @@
-﻿module TypeShape.Tests.EventSum
+﻿module TypeShape.Tests.UnionEncoder
 
 open System
 open System.Runtime.Serialization
@@ -7,7 +7,7 @@ open Xunit
 open FsCheck.Xunit
 open Swensen.Unquote
 open TypeShape.Empty
-open TypeShape.EventSum
+open TypeShape.UnionEncoder
 
 // Placeholder event records emulating an imaginary domain
 type CartCreated = { id: string ; client_id: string } 
@@ -25,9 +25,10 @@ type BasicEventSum =
     | CashUsed of CashUsed
     | CreditsUsed of CreditsUsed
     | CartItemRemoved of CartItemRemoved
+    | InlinedCase of value1:int * value2:string
     | [<DataMember(Name = "Legacy")>] Old_Stuff of CartItemRemoved
     
-let mkCastEncoder<'T> = generateSumEventEncoder<'T,obj> (CastEncoder())
+let mkCastEncoder<'T> = generateUnionEncoder<'T,obj> (CastEncoder())
 let encoder = lazy(mkCastEncoder<BasicEventSum>)
 
 [<Property>]
@@ -45,20 +46,44 @@ let ``Should use correct event types in encodings`` (sum : BasicEventSum) =
             let uci, _ = FSharpValue.GetUnionFields(sum, typeof<BasicEventSum>, true)
             uci.Name
 
-    test <@ expectedLabel = e.EventType @>
+    test <@ expectedLabel = e.CaseName @>
+
+[<Property>]
+let ``Payload should match arity of union case`` (sum : BasicEventSum) =
+    let enc = encoder.Value
+    let encoding = enc.Encode sum
+    let _, fields = FSharpValue.GetUnionFields(sum, typeof<BasicEventSum>, true)
+    let expectedArity = fields.Length
+    test <@ expectedArity = Array.length encoding.Payload @>
+
+[<Property>]
+let ``Payload keys should match case names`` (sum : BasicEventSum) =
+    let enc = encoder.Value
+    let encoding = enc.Encode sum
+    let uci, _ = FSharpValue.GetUnionFields(sum, typeof<BasicEventSum>, true)
+    let expectedKeys = uci.GetFields() |> Array.map (fun f -> f.Name)
+    let actualKeys = encoding.Payload |> Array.map (fun kv -> kv.Key)
+    test <@ expectedKeys = actualKeys @>
+
+[<Fact>]
+let ``Nullary union cases should return empty payloads`` () =
+    let enc = encoder.Value
+    let encoding = enc.Encode NullaryEvent
+    test <@ Array.isEmpty encoding.Payload @>
+
 
 [<Fact>]
 let ``Should throw FormatException on Decode of unrecognized event types`` () =
     let enc = encoder.Value
     let e = enc.Encode (CartCreated empty)
-    let e' = { e with EventType = "__UNKNOWN_TYPE__" }
+    let e' = { e with CaseName = "__UNKNOWN_TYPE__" }
     raises<FormatException> <@ enc.Decode e' @>
 
 [<Fact>]
 let ``Should return None on TryDecode of unrecognized event types`` () =
     let enc = encoder.Value
     let e = enc.Encode (CartCreated empty)
-    let e' = { e with EventType = "__UNKNOWN_TYPE__" }
+    let e' = { e with CaseName = "__UNKNOWN_TYPE__" }
     test <@ None = enc.TryDecode e' @>
 
 
@@ -74,27 +99,6 @@ let ``Should work with private types`` () =
 [<Fact>]
 let ``Should fail on non-union inputs`` () =
     raises<ArgumentException> <@ mkCastEncoder<CartCreated> @>
-
-
-
-type EventSumWithMultipleFields =
-    | A of CreditsUsed
-    | B of AddressUpdated
-    | C of CartCreated * CreditsUsed
-
-[<Fact>]
-let ``Should fail on event sums with multiple fields`` () =
-    raises<ArgumentException> <@ mkCastEncoder<EventSumWithMultipleFields> @>
-
-type EventSumWithNonRecordCase =
-    | A of CartCreated
-    | B of CashUsed
-    | C of string
-
-[<Fact>]
-let ``Should fail on event sums with non-record cases`` () =
-    raises<ArgumentException> <@ mkCastEncoder<EventSumWithNonRecordCase> @>
-
 
 type EventSumWithDuplicateLabels =
     | A of CartCreated

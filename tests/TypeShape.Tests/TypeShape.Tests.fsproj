@@ -35,7 +35,7 @@
     <Compile Include="StagedClone.fs" />
     <Compile Include="GenericTester.fs" />
     <Compile Include="Tests.fs" />
-    <Compile Include="EventSumTests.fs" />
+    <Compile Include="UnionEncoderTests.fs" />
     <Compile Include="Main.fs" />
     <None Include="App.config" />
     <None Include="paket.references" />
