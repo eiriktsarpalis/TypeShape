@@ -28,7 +28,7 @@ type BasicEventSum =
     | InlinedCase of value1:int * value2:string
     | [<DataMember(Name = "Legacy")>] Old_Stuff of CartItemRemoved
     
-let mkCastEncoder<'T> = generateUnionEncoder<'T,obj> (CastEncoder())
+let mkCastEncoder<'T> = UnionEncoder<'T>.Create(CastEncoder())
 let encoder = lazy(mkCastEncoder<BasicEventSum>)
 
 [<Property>]

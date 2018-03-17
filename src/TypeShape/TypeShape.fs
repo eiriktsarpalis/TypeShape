@@ -1526,6 +1526,8 @@ type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
 
     /// Underlying FSharp.Reflection.UnionCaseInfo description
     member __.CaseInfo = uci
+    /// Number of fields in the particular union case
+    member __.Arity = properties.Length
     /// Field shapes for union case
     member __.Fields = caseFields
 
