@@ -2,8 +2,8 @@
 
 open BenchmarkDotNet.Running
 
-//type Benchmark = UnionEncoder.Benchmark
-type Benchmark = Empty.Benchmark
+type Benchmark = UnionEncoder.Benchmark
+//type Benchmark = Empty.Benchmark
 
 [<EntryPoint>]
 let main _ =

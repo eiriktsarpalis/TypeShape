@@ -258,9 +258,9 @@ and TypeCache private (cache : ConcurrentDictionary<Type, CachePayload>) =
 
 //-------------------------------------------------------------
 
-/// Provides a binary search implementation for generic values
+/// Provides a binary search implementation for string values
 [<Sealed>]
-type BinSearch<'T when 'T : comparison>(inputs : 'T[]) =
+type BinSearch(inputs : string[]) =
     do 
         let duplicates =
             inputs 
@@ -289,7 +289,7 @@ type BinSearch<'T when 'T : comparison>(inputs : 'T[]) =
 
     /// Returns an integer indicating the position of the
     /// given value in the source array, or -1 if not found.
-    member __.TryFindIndex(value : 'T) : int =
+    member __.TryFindIndex(value : string) : int =
         match sortedInputs.Length with
         | 0 -> -1
         | 1 -> if sortedInputs.[0] = value then 0 else -1

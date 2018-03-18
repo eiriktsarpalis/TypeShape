@@ -38,9 +38,8 @@ module private Impl =
     type UnionFieldEncoder<'Union, 'Format> =
         string * ('Union -> 'Format) * ('Union -> 'Format -> 'Union)
 
-    type EncoderGenerator<'Union, 'Format> =
-        // requireRecord -> minArity -> maxArity -> ..
-        bool -> int option -> int option -> IEncoder<'Format> -> IUnionEncoder<'Union, 'Format>
+    type EncoderGenerator<'Union, 'Format> = 
+        (* requireRecordPayloads:*)bool -> IEncoder<'Format> -> IUnionEncoder<'Union, 'Format>
 
     /// Generates an F# union encoder given a generic format encoder instance
     let mkUnionEncoder<'Union, 'Format> () : EncoderGenerator<'Union, 'Format> =
@@ -62,7 +61,7 @@ module private Impl =
 
         let hasRecordPayload (scase : ShapeFSharpUnionCase<'Union>) =
             match scase.Fields with
-            | [||] -> true
+            | [||] -> true // allow nullary fields to fit that description
             | [| field |] ->
                 match field.Member with
                 | Shape.FSharpRecord _ -> true
@@ -77,7 +76,7 @@ module private Impl =
                 |> (function None -> scase.CaseInfo.Name | Some v -> v)
 
             let labels = 
-                scase.Fields 
+                scase.Fields
                 |> Array.map (fun f -> f.Label) 
                 |> BinSearch
 
@@ -117,11 +116,6 @@ module private Impl =
             shape.UnionCases
             |> Array.tryFind (not << hasRecordPayload)
 
-        let minArityCase, maxArityCase =
-            let getArity (scase : ShapeFSharpUnionCase<'Union>) = scase.Arity
-            shape.UnionCases |> Array.minBy getArity,
-            shape.UnionCases |> Array.maxBy getArity
-
         // check for duplicate union case labels
         let duplicates =
             eventTypes 
@@ -137,21 +131,10 @@ module private Impl =
 
         let unionCases = BinSearch eventTypes
 
-        fun requireRecordPayloads minAllowedArity maxAllowedArity encoder ->
+        fun requireRecordPayloads encoder ->
             if requireRecordPayloads && Option.isSome caseWithoutRecordPayload then
                 sprintf "Union case '%O.%O' contains field which is not an F# record" typeof<'Union> caseWithoutRecordPayload.Value
                 |> invalidArg "Union"
-
-            match minAllowedArity, maxAllowedArity with
-            | Some min, _ when minArityCase.Arity < min ->
-                sprintf "Union case %O.%O has arity %d which is less than the minimum %d"
-                    typeof<'Union> minArityCase.CaseInfo.Name minArityCase.Arity min
-                |> invalidArg "Union"
-            | _, Some max when maxArityCase.Arity > max ->
-                sprintf "Union case %O.%O has arity %d which is less than the minimum %d"
-                    typeof<'Union> minArityCase.CaseInfo.Name minArityCase.Arity max
-                |> invalidArg "Union"
-            | _ -> ()
 
             let caseEncoders,caseDecoders =
                 caseEncoders
@@ -182,7 +165,7 @@ module private Impl =
 
     type EncoderFactory<'Union, 'Format> private () =
         static let factory = lazy(mkUnionEncoder<'Union, 'Format>())
-        static member Create reqRec min max (e : IEncoder<_>) = factory.Value reqRec min max e
+        static member Create reqRec (e : IEncoder<_>) = factory.Value reqRec e
 
 
 type UnionEncoder<'Union> =
@@ -191,5 +174,5 @@ type UnionEncoder<'Union> =
     ///     an F# union encoder which constructs and deconstructs
     ///     DU instances into a flat structure.
     /// </summary>
-    static member Create(encoder : IEncoder<'Format>, ?minArity : int, ?maxArity : int, ?requireRecordPayload : bool) : IUnionEncoder<'Union, 'Format> = 
-        EncoderFactory<'Union, 'Format>.Create (defaultArg requireRecordPayload false) minArity maxArity encoder
+    static member Create(encoder : IEncoder<'Format>, ?requireRecordPayloads : bool) : IUnionEncoder<'Union, 'Format> = 
+        EncoderFactory<'Union, 'Format>.Create (defaultArg requireRecordPayloads false) encoder
