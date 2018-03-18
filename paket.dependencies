@@ -7,7 +7,6 @@ redirects: force
 # paket.references constraints
 nuget FSharp.Core >= 4.3.2 lowest_matching: true
 nuget System.Reflection.Emit.Lightweight >= 4.3 lowest_matching: true
-nuget BenchmarkDotNet
 
 nuget SourceLink.Create.CommandLine copy_local: true
 clitool dotnet-sourcelink
@@ -19,6 +18,7 @@ nuget FsCheck ~> 3.0 prerelease
 nuget FsCheck.XUnit ~> 3.0 prerelease
 nuget xunit ~> 2.3.0
 nuget xunit.runner.visualstudio ~> 2.3.0 version_in_path: true
+nuget BenchmarkDotNet
 
 nuget FParsec
 nuget FSharp.Quotations.Evaluator

@@ -47,7 +47,7 @@ let solutionFile  = "TypeShape.sln"
 let artifactsDir = __SOURCE_DIRECTORY__ @@ "artifacts"
 
 // Pattern specifying assemblies to be tested
-let testProjects = "tests/**/*.??proj"
+let testProjects = "tests/*.Tests/*.??proj"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted
