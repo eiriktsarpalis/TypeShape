@@ -174,5 +174,7 @@ type UnionEncoder<'Union> =
     ///     an F# union encoder which constructs and deconstructs
     ///     DU instances into a flat structure.
     /// </summary>
+    /// <param name="encoder">Encoder used for converting union case payloads into given format.</param>
+    /// <param name="requireRecordPayloads">Fail encoder generation if union cases contain payloads that are not F# records. Defaults to false.</param>
     static member Create(encoder : IEncoder<'Format>, ?requireRecordPayloads : bool) : IUnionEncoder<'Union, 'Format> = 
         EncoderFactory<'Union, 'Format>.Create (defaultArg requireRecordPayloads false) encoder
