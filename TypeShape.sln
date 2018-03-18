@@ -50,6 +50,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{07CC7F
 		.paket\Paket.Restore.targets = .paket\Paket.Restore.targets
 	EndProjectSection
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape.Benchmarks", "tests\TypeShape.Benchmarks\TypeShape.Benchmarks.fsproj", "{6DCE45EB-7822-4CE7-8856-E053257C0D5F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -82,6 +84,14 @@ Global
 		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}.Release-NoEmit|Any CPU.ActiveCfg = Release|Any CPU
 		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}.Release-NoEmit|Any CPU.Build.0 = Release|Any CPU
+		{6DCE45EB-7822-4CE7-8856-E053257C0D5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DCE45EB-7822-4CE7-8856-E053257C0D5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DCE45EB-7822-4CE7-8856-E053257C0D5F}.Debug-NoEmit|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DCE45EB-7822-4CE7-8856-E053257C0D5F}.Debug-NoEmit|Any CPU.Build.0 = Debug|Any CPU
+		{6DCE45EB-7822-4CE7-8856-E053257C0D5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DCE45EB-7822-4CE7-8856-E053257C0D5F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6DCE45EB-7822-4CE7-8856-E053257C0D5F}.Release-NoEmit|Any CPU.ActiveCfg = Release|Any CPU
+		{6DCE45EB-7822-4CE7-8856-E053257C0D5F}.Release-NoEmit|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -90,6 +100,7 @@ Global
 		{8609D2FB-063F-45FE-94E2-FF251792C495} = {B2C69EAD-8F2A-4B13-AE09-3BE6E2A2EC40}
 		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC} = {5572A9F7-C4EB-45BF-8FCF-FC07E99FB92C}
 		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18} = {B2C69EAD-8F2A-4B13-AE09-3BE6E2A2EC40}
+		{6DCE45EB-7822-4CE7-8856-E053257C0D5F} = {5572A9F7-C4EB-45BF-8FCF-FC07E99FB92C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5A544A5F-CD9E-4B69-9492-FF21A20A861C}
