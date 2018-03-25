@@ -117,7 +117,7 @@ let inline testEncoderRoundtrip (encoder : IUnionEncoder<BasicEventSum, obj>) =
     ()
     
 
-type Benchmark() =
+type UnionEncoderBenchmark() =
     
     [<Benchmark(Description = "Baseline Union Encoder", Baseline = true)>]
     member __.Baseline() = testEncoderRoundtrip baselineEncoder

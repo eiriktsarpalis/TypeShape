@@ -5,6 +5,7 @@ open System
 open System.Runtime.Serialization
 open FSharp.Quotations
 open Swensen.Unquote
+open FSharp.Quotations.Evaluator
 
 open TypeShape.Core
 open TypeShape.Core.Utils
@@ -135,4 +136,5 @@ let mkCloneExpr<'T> () : Expr<'T -> 'T> =
         e
 
 let mkStagedCloner<'T> () = mkCloneExpr<'T>() |> eval
+let mkCompiledCloner<'T> () = mkCloneExpr<'T>() |> QuotationEvaluator.Evaluate
 let decompileCloner<'T> () = mkCloneExpr<'T>() |> decompile

@@ -1,2 +1,2 @@
-﻿BenchmarkDotNet
-FsCheck
+﻿FSharp.Core
+BenchmarkDotNet

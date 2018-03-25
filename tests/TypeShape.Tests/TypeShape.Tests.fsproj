@@ -6,25 +6,8 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
-    <DefineConstants>TRACE;DEBUG</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Debug-NoEmit'">
-    <DefineConstants>TRACE;DEBUG</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <DefineConstants>TRACE</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Release-NoEmit'">
-    <DefineConstants>TRACE</DefineConstants>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Framework)'=='netcoreapp2.0'">
     <DefineConstants>NETCOREAPP2_0</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup>
-    <OutputPath>bin\$(Configuration)\$(Framework)\</OutputPath>
-    <DocumentationFile>
-    </DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\TypeShape.CSharp\TypeShape.CSharp.csproj" />
@@ -37,7 +20,6 @@
     <Compile Include="Tests.fs" />
     <Compile Include="UnionEncoderTests.fs" />
     <Compile Include="Main.fs" />
-    <None Include="App.config" />
     <None Include="paket.references" />
     <None Include="Script.fsx" />
   </ItemGroup>

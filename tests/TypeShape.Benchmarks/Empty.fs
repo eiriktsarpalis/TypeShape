@@ -18,8 +18,8 @@ let baselineEmpty () =
     
 let typeShapeEmpty () = notEmpty<TestType>
 
-type Benchmark() =
-    
+type EmptyBenchmark() =
+
     [<Benchmark(Description = "Baseline Empty", Baseline = true)>]
     member __.Baseline() = baselineEmpty() |> ignore
     [<Benchmark(Description = "TypeShape Empty")>]

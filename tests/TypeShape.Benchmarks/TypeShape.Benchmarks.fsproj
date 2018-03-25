@@ -7,11 +7,13 @@
   <ItemGroup>
     <Compile Include="Empty.fs" />
     <Compile Include="UnionEncoder.fs" />
+    <Compile Include="Clone.fs" />
     <Compile Include="Main.fs" />
     <None Include="paket.references" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\TypeShape\TypeShape.fsproj" />
+    <ProjectReference Include="..\TypeShape.Tests\TypeShape.Tests.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
