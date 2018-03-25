@@ -2,14 +2,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
-  </PropertyGroup>
-  <PropertyGroup>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <AssemblyName>TypeShape.CSharp</AssemblyName>
   </PropertyGroup>
   <PropertyGroup>
-    <OutputPath>bin\$(Configuration)\$(Framework)\</OutputPath>
-    <DocumentationFile>bin\$(Configuration)\$(Framework)\TypeShape.CSharp.xml</DocumentationFile>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
