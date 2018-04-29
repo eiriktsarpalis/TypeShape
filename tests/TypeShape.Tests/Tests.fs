@@ -794,6 +794,20 @@ module GenericEmpty =
                 empty<'T> = empty<'T> }
         |> Check.GenericPredicate false false 100 10
 
+module ``Generic SizeOf`` =
+
+    open TypeShape.Sizeof
+
+    [<Fact>]
+    let ``Sizeof should terminate for all inputs`` () =
+        { new Predicate with 
+            member __.Invoke (t : 'T) = gsizeof t >= 0L }
+        |> Check.GenericPredicate false false 100 10
+
+    [<Fact>]
+    let ``Sizeof should support cyclic objects`` () =
+        test <@ gsizeof Cycle.Instance >= 0L @>
+
 module ``Generic Combinators`` =
 
     [<Fact>]
