@@ -1,3 +1,7 @@
+### 5.0.0
+* Generalize "EventSum" implementation to "UnionEncoder".
+* Provide "gsizeof" operator.
+
 ### 4.0.0
 * Namespace refactorings.
 * Provide "empty", "EventSum" and combinator implementations.
