@@ -1,5 +1,5 @@
-#r "../bin/Release/net40/TypeShape.CSharp.dll"
-#r "../bin/Release/net40/TypeShape.dll"
+#r "../src/TypeShape/bin/Release/net45/TypeShape.CSharp.dll"
+#r "../src/TypeShape/bin/Release/net45/TypeShape.dll"
 
 // structural Disposable generator
 

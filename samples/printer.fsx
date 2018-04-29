@@ -1,4 +1,4 @@
-#r "../bin/Release/net40/TypeShape.dll"
+#r "../src/TypeShape/bin/Release/net45/TypeShape.dll"
 
 open System
 open TypeShape.Core

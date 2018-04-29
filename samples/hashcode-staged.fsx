@@ -1,6 +1,6 @@
-﻿#r "../bin/Release/net40/TypeShape.dll"
+﻿#r "../src/TypeShape/bin/Release/net45/TypeShape.dll"
 #r "../packages/Unquote/lib/net45/Unquote.dll"
-#r "../packages/FSharp.Quotations.Evaluator/lib/net40/FSharp.Quotations.Evaluator.dll"
+#r "../packages/FSharp.Quotations.Evaluator/lib/net45/FSharp.Quotations.Evaluator.dll"
 
 open FSharp.Quotations
 open FSharp.Quotations.Evaluator

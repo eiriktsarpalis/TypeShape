@@ -1,4 +1,4 @@
-#r "../bin/Release/net40/TypeShape.dll"
+#r "../src/TypeShape/bin/Release/net45/TypeShape.dll"
 #r "../packages/Unquote/lib/net45/Unquote.dll"
 
 open TypeShape.Core

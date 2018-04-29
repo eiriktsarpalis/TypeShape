@@ -17,7 +17,7 @@ open ``Equality-comparer``
 
 // check if our equality comparer satisfies reflexivivity
 Check.GenericPredicate true false 100 100 
-    { new IPredicate with 
+    { new Predicate with 
         member __.Invoke (t : 'T) =
             let cmp = comparer<'T>
             cmp.Equals(t,t) }
