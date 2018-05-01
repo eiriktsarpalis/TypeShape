@@ -18,54 +18,47 @@ type CreditsUsed = { id: string ; value: bool }
 type CartItemRemoved = { id : string ; retail_sku_id : string ; date : DateTimeOffset }
 
 type BasicEventSum =
-    | NullaryEvent
+    | NullaryEvent of unit
     | CartCreated of CartCreated
     | AddressUpdated of AddressUpdated
     | ItemReturnWaived of ItemReturnWaived
     | CashUsed of CashUsed
     | CreditsUsed of CreditsUsed
     | CartItemRemoved of CartItemRemoved
-    | InlinedCase of value1:int * value2:string
+    | InlinedCase of value:int
     | [<DataMember(Name = "Legacy")>] Old_Stuff of CartItemRemoved
 
 let baselineEncoder =
     { new IUnionEncoder<BasicEventSum, obj> with
         member this.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
-            let inline (=>) k v = KeyValuePair(k,box v)
-            let mkEnc name payload = { CaseName = name ; Payload = payload }
+            let mkEnc name payload = { Label = name ; Payload = box payload }
             match sum with
-            | NullaryEvent -> mkEnc "NullaryEvent" [||]
-            | CartCreated c -> mkEnc "CartCreated" [|"Item" => c|]
-            | AddressUpdated c -> mkEnc "AddressUpdated" [|"Item" => c |]
-            | ItemReturnWaived c -> mkEnc "ItemReturnWaived" [|"Item" => c|]
-            | CashUsed c -> mkEnc "CashUsed" [|"Item" => c |]
-            | CreditsUsed c -> mkEnc "CreditsUsed" [|"Item" => c |]
-            | CartItemRemoved c -> mkEnc "CartItemRemoved" [|"Item" => c |]
-            | InlinedCase (value1, value2) ->
-                mkEnc "InlinedCase" [| "value1" => value1 ; "value2" => value2 |]
-            | Old_Stuff c -> mkEnc "Legacy" [|"Item" => c |]
+            | NullaryEvent () -> mkEnc "NullaryEvent" ()
+            | CartCreated c -> mkEnc "CartCreated" c
+            | AddressUpdated c -> mkEnc "AddressUpdated" c
+            | ItemReturnWaived c -> mkEnc "ItemReturnWaived" c
+            | CashUsed c -> mkEnc "CashUsed" c
+            | CreditsUsed c -> mkEnc "CreditsUsed" c
+            | CartItemRemoved c -> mkEnc "CartItemRemoved" c
+            | InlinedCase c -> mkEnc "InlinedCase" c
+            | Old_Stuff c -> mkEnc "Legacy" c
 
         member this.Decode(e : EncodedUnion<obj>): BasicEventSum = 
-            let getValue key = 
-                let kv = e.Payload |> Array.find (fun kv -> kv.Key = key)
-                kv.Value :?> 'a
+            let getValue() = e.Payload :?> 'a
 
-            match e.CaseName with
-            | "NullaryEvent" -> NullaryEvent
-            | "CartCreated"  -> CartCreated(getValue "Item")
-            | "AddressUpdated" -> AddressUpdated(getValue "Item")
-            | "ItemReturnWaived" -> ItemReturnWaived(getValue "Item")
-            | "CashUsed" -> CashUsed(getValue "Item")
-            | "CreditsUsed" -> CreditsUsed(getValue "Item")
-            | "CartItemRemoved" -> CartItemRemoved(getValue "Item")
-            | "InlinedCase" -> InlinedCase(getValue "value1", getValue "value2")
-            | "Legacy" -> Old_Stuff(getValue "Item")
+            match e.Label with
+            | "NullaryEvent" -> NullaryEvent(getValue())
+            | "CartCreated"  -> CartCreated(getValue())
+            | "AddressUpdated" -> AddressUpdated(getValue())
+            | "ItemReturnWaived" -> ItemReturnWaived(getValue())
+            | "CashUsed" -> CashUsed(getValue())
+            | "CreditsUsed" -> CreditsUsed(getValue())
+            | "CartItemRemoved" -> CartItemRemoved(getValue())
+            | "InlinedCase" -> InlinedCase(getValue())
+            | "Legacy" -> Old_Stuff(getValue())
             | _ -> failwith "unrecognized case name"
 
-        member this.GetCaseSchema(arg1: BasicEventSum) =
-            raise (System.NotImplementedException())
-
-        member this.CaseSchemas = 
+        member this.GetLabel(arg1: BasicEventSum) =
             raise (System.NotImplementedException())
 
         member this.TryDecode(arg1: EncodedUnion<obj>): BasicEventSum option = 
@@ -83,22 +76,16 @@ let reflectionEncoder =
             let tag = tagReader sum
             let name = ucis.[tag].Name
             let reader = readers.[tag]
-            let fields = fieldss.[tag]
             let values = reader sum
-            let keyVals = (fields,values) ||> Array.map2 (fun k v -> KeyValuePair(k,v))
-            { CaseName = name ; Payload = keyVals }
+            { Label = name ; Payload = values.[0] }
 
         member this.Decode(e : EncodedUnion<obj>): BasicEventSum =
-            let tag = ucis |> Array.findIndex (fun u -> e.CaseName = u.Name)
+            let tag = ucis |> Array.findIndex (fun u -> e.Label = u.Name)
             let ctor = ctors.[tag]
-            let fields = fieldss.[tag]
-            let values = fields |> Array.map (fun f -> let kv = e.Payload |> Array.find (fun kv -> kv.Key = f) in kv.Value)
+            let values = [|e.Payload|]
             ctor values :?> BasicEventSum
 
-        member this.GetCaseSchema(arg1: BasicEventSum) =
-            raise (System.NotImplementedException())
-
-        member this.CaseSchemas = 
+        member this.GetLabel(arg1: BasicEventSum) =
             raise (System.NotImplementedException())
 
         member this.TryDecode(arg1: EncodedUnion<obj>): BasicEventSum option = 
