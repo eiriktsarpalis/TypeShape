@@ -8,8 +8,8 @@ open TypeShape.Core.Utils
 /// Generic encoding abstraction for serializing/deserializing 
 /// to a fixed format type, e.g. string, byte[], JToken etc
 type IEncoder<'Format> =
-    abstract Encode  : 'T -> 'Format
-    abstract Decode  : 'Format -> 'T
+    abstract Encode : 'T -> 'Format
+    abstract Decode : 'Format -> 'T
 
 /// Generic encoder that simply upcasts values to System.Object
 type CastEncoder() =
@@ -20,16 +20,16 @@ type CastEncoder() =
 /// Represents an encoded event
 type EncodedUnion<'Encoding> =
     {
-        Label    : string
+        CaseName : string
         Payload  : 'Encoding
     }
 
 /// Provides an encoder implementation for a sum of events
 type IUnionEncoder<'Union, 'Format> =
-    abstract GetLabel      : 'Union -> string
-    abstract Encode        : 'Union -> EncodedUnion<'Format>
-    abstract Decode        : EncodedUnion<'Format> -> 'Union
-    abstract TryDecode     : EncodedUnion<'Format> -> 'Union option
+    abstract GetCaseName : 'Union -> string
+    abstract Encode      : 'Union -> EncodedUnion<'Format>
+    abstract Decode      : EncodedUnion<'Format> -> 'Union
+    abstract TryDecode   : EncodedUnion<'Format> -> 'Union option
 
 [<AutoOpen>]
 module private Impl =
@@ -118,23 +118,23 @@ module private Impl =
                 |> Array.unzip
 
             { new IUnionEncoder<'Union, 'Format> with
-                member __.GetLabel(u:'Union) =
+                member __.GetCaseName(u:'Union) =
                     let tag = shape.GetTag u
                     labels.[tag]
 
                 member __.Encode(u:'Union) =
                     let tag = shape.GetTag u
-                    { Label = labels.[tag] ; Payload = caseEncoders.[tag] u }
+                    { CaseName = labels.[tag] ; Payload = caseEncoders.[tag] u }
 
                 member __.Decode e =
-                    match labelIndex.TryFindIndex e.Label with
+                    match labelIndex.TryFindIndex e.CaseName with
                     |  -1 ->
-                        let msg = sprintf "Unrecognized event type '%s'" e.Label
+                        let msg = sprintf "Unrecognized case name '%O.%s'" typeof<'Union> e.CaseName
                         raise <| FormatException msg
                     | tag -> caseDecoders.[tag] e.Payload
                 
                 member __.TryDecode e =
-                    match labelIndex.TryFindIndex e.Label with
+                    match labelIndex.TryFindIndex e.CaseName with
                     |  -1 -> None
                     | tag -> caseDecoders.[tag] e.Payload |> Some
             }

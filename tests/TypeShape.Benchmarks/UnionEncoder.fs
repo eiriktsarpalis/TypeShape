@@ -31,7 +31,7 @@ type BasicEventSum =
 let baselineEncoder =
     { new IUnionEncoder<BasicEventSum, obj> with
         member this.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
-            let mkEnc name payload = { Label = name ; Payload = box payload }
+            let inline mkEnc name payload = { CaseName = name ; Payload = box payload }
             match sum with
             | NullaryEvent () -> mkEnc "NullaryEvent" ()
             | CartCreated c -> mkEnc "CartCreated" c
@@ -44,9 +44,9 @@ let baselineEncoder =
             | Old_Stuff c -> mkEnc "Legacy" c
 
         member this.Decode(e : EncodedUnion<obj>): BasicEventSum = 
-            let getValue() = e.Payload :?> 'a
+            let inline getValue() = e.Payload :?> 'a
 
-            match e.Label with
+            match e.CaseName with
             | "NullaryEvent" -> NullaryEvent(getValue())
             | "CartCreated"  -> CartCreated(getValue())
             | "AddressUpdated" -> AddressUpdated(getValue())
@@ -58,7 +58,7 @@ let baselineEncoder =
             | "Legacy" -> Old_Stuff(getValue())
             | _ -> failwith "unrecognized case name"
 
-        member this.GetLabel(arg1: BasicEventSum) =
+        member this.GetCaseName(arg1: BasicEventSum) =
             raise (System.NotImplementedException())
 
         member this.TryDecode(arg1: EncodedUnion<obj>): BasicEventSum option = 
@@ -77,15 +77,15 @@ let reflectionEncoder =
             let name = ucis.[tag].Name
             let reader = readers.[tag]
             let values = reader sum
-            { Label = name ; Payload = values.[0] }
+            { CaseName = name ; Payload = values.[0] }
 
         member this.Decode(e : EncodedUnion<obj>): BasicEventSum =
-            let tag = ucis |> Array.findIndex (fun u -> e.Label = u.Name)
+            let tag = ucis |> Array.findIndex (fun u -> e.CaseName = u.Name)
             let ctor = ctors.[tag]
             let values = [|e.Payload|]
             ctor values :?> BasicEventSum
 
-        member this.GetLabel(arg1: BasicEventSum) =
+        member this.GetCaseName(arg1: BasicEventSum) =
             raise (System.NotImplementedException())
 
         member this.TryDecode(arg1: EncodedUnion<obj>): BasicEventSum option = 

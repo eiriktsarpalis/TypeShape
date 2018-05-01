@@ -46,20 +46,20 @@ let ``Should use correct event types in encodings`` (sum : BasicEventSum) =
             let uci, _ = FSharpValue.GetUnionFields(sum, typeof<BasicEventSum>, true)
             uci.Name
 
-    test <@ expectedLabel = e.Label @>
+    test <@ expectedLabel = e.CaseName @>
 
 [<Fact>]
 let ``Should throw FormatException on Decode of unrecognized event types`` () =
     let enc = encoder.Value
     let e = enc.Encode (CartCreated empty)
-    let e' = { e with Label = "__UNKNOWN_TYPE__" }
+    let e' = { e with CaseName = "__UNKNOWN_TYPE__" }
     raises<FormatException> <@ enc.Decode e' @>
 
 [<Fact>]
 let ``Should return None on TryDecode of unrecognized event types`` () =
     let enc = encoder.Value
     let e = enc.Encode (CartCreated empty)
-    let e' = { e with Label = "__UNKNOWN_TYPE__" }
+    let e' = { e with CaseName = "__UNKNOWN_TYPE__" }
     test <@ None = enc.TryDecode e' @>
 
 [<Fact>]
