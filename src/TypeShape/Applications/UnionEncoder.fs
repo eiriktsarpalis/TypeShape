@@ -3,6 +3,7 @@
 open System
 open System.Collections.Generic
 open System.Runtime.Serialization
+open FSharp.Reflection
 open TypeShape.Core
 open TypeShape.Core.Utils
 
@@ -25,9 +26,18 @@ type EncodedUnion<'Encoding> =
         Payload  : KeyValuePair<string, 'Encoding> []
     }
 
+
+type UnionCaseSchema =
+    {
+        Label : string
+        FieldNames : string []
+        Metadata : UnionCaseInfo
+    }
+
 /// Provides an encoder implementation for a sum of events
 type IUnionEncoder<'Union, 'Format> =
-    abstract GetCaseName   : 'Union -> string
+    abstract CaseSchemas   : UnionCaseSchema []
+    abstract GetCaseSchema : 'Union -> UnionCaseSchema
     abstract Encode        : 'Union -> EncodedUnion<'Format>
     abstract Decode        : EncodedUnion<'Format> -> 'Union
     abstract TryDecode     : EncodedUnion<'Format> -> 'Union option
@@ -70,15 +80,20 @@ module private Impl =
 
         let genUnionCaseEncoder (scase : ShapeFSharpUnionCase<'Union>) =
             // extract the case label identifier for given case
-            let caseLabel =
-                scase.CaseInfo.GetCustomAttributes()
-                |> Seq.tryPick (function :? DataMemberAttribute as dm -> Some dm.Name | _ -> None)
-                |> (function None -> scase.CaseInfo.Name | Some v -> v)
+            let caseSchema =
+                {
+                    Label =
+                        scase.CaseInfo.GetCustomAttributes()
+                        |> Seq.tryPick (function :? DataMemberAttribute as dm -> Some dm.Name | _ -> None)
+                        |> (function None -> scase.CaseInfo.Name | Some v -> v)
 
-            let labels = 
-                scase.Fields
-                |> Array.map (fun f -> f.Label) 
-                |> BinSearch
+                    FieldNames = scase.Fields |> Array.map (fun f -> f.Label)
+
+                    Metadata = scase.CaseInfo
+
+                }
+
+            let fieldLabels = BinSearch caseSchema.FieldNames
 
             let mkCaseEncDec encoder =
                 let fieldEncoders = scase.Fields |> Array.map (mkFieldEncDec encoder)
@@ -91,23 +106,27 @@ module private Impl =
                         let e = fe u
                         r.[i] <- KeyValuePair(k,e)
 
-                    { CaseName = caseLabel ; Payload = r }
+                    { CaseName = caseSchema.Label ; Payload = r }
 
                 let dec (e:EncodedUnion<'Format>) =
                     let mutable u = scase.CreateUninitialized()
-                    for kv in e.Payload do
-                        match labels.TryFindIndex kv.Key with
-                        | -1 -> ()
-                        |  i -> 
-                            let _,_,fd = fieldEncoders.[i]
-                            u <- fd u kv.Value
+                    match fieldEncoders, e.Payload with
+                    // hardwire single-field cases to whatever the payload is
+                    | [|_,_,fd|], [|kv|] -> u <- fd u kv.Value
+                    | _ ->
+                        for kv in e.Payload do
+                            match fieldLabels.TryFindIndex kv.Key with
+                            | -1 -> ()
+                            |  i -> 
+                                let _,_,fd = fieldEncoders.[i]
+                                u <- fd u kv.Value
                     u
 
                 enc, dec
 
-            caseLabel, mkCaseEncDec
+            caseSchema, mkCaseEncDec
 
-        let eventTypes, caseEncoders = 
+        let caseSchemas, caseEncoders = 
             shape.UnionCases 
             |> Array.map genUnionCaseEncoder
             |> Array.unzip
@@ -118,8 +137,8 @@ module private Impl =
 
         // check for duplicate union case labels
         let duplicates =
-            eventTypes 
-            |> Seq.groupBy id
+            caseSchemas
+            |> Seq.groupBy (fun s -> s.Label)
             |> Seq.filter (fun (_,items) -> Seq.length items > 1)
             |> Seq.map fst
             |> Seq.toArray
@@ -129,7 +148,7 @@ module private Impl =
             |> sprintf "Union type '%O' defines the following duplicate case identifiers: %s" typeof<'Union>
             |> invalidArg "Union"
 
-        let unionCases = BinSearch eventTypes
+        let unionCases = caseSchemas |> Seq.map (fun s -> s.Label) |> BinSearch
 
         fun requireRecordPayloads encoder ->
             if requireRecordPayloads && Option.isSome caseWithoutRecordPayload then
@@ -142,9 +161,10 @@ module private Impl =
                 |> Array.unzip
 
             { new IUnionEncoder<'Union, 'Format> with
-                member __.GetCaseName(u:'Union) =
+                member __.CaseSchemas = caseSchemas
+                member __.GetCaseSchema(u:'Union) =
                     let tag = shape.GetTag u
-                    eventTypes.[tag]
+                    caseSchemas.[tag]
 
                 member __.Encode(u:'Union) =
                     let tag = shape.GetTag u

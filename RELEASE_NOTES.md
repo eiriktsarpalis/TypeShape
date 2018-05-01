@@ -1,3 +1,6 @@
+### 5.0.1
+* Fix API Issues.
+
 ### 5.0.0
 * Generalize "EventSum" implementation to "UnionEncoder".
 * Provide "gsizeof" operator.

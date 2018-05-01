@@ -62,8 +62,12 @@ let baselineEncoder =
             | "Legacy" -> Old_Stuff(getValue "Item")
             | _ -> failwith "unrecognized case name"
 
-        member this.GetCaseName(arg1: BasicEventSum): string = 
+        member this.GetCaseSchema(arg1: BasicEventSum) =
             raise (System.NotImplementedException())
+
+        member this.CaseSchemas = 
+            raise (System.NotImplementedException())
+
         member this.TryDecode(arg1: EncodedUnion<obj>): BasicEventSum option = 
             raise (System.NotImplementedException())
     }
@@ -91,8 +95,12 @@ let reflectionEncoder =
             let values = fields |> Array.map (fun f -> let kv = e.Payload |> Array.find (fun kv -> kv.Key = f) in kv.Value)
             ctor values :?> BasicEventSum
 
-        member this.GetCaseName(arg1: BasicEventSum): string = 
+        member this.GetCaseSchema(arg1: BasicEventSum) =
             raise (System.NotImplementedException())
+
+        member this.CaseSchemas = 
+            raise (System.NotImplementedException())
+
         member this.TryDecode(arg1: EncodedUnion<obj>): BasicEventSum option = 
             raise (System.NotImplementedException())
     }

@@ -260,7 +260,8 @@ and TypeCache private (cache : ConcurrentDictionary<Type, CachePayload>) =
 
 /// Provides a binary search implementation for string values
 [<Sealed>]
-type BinSearch(inputs : string[]) =
+type BinSearch(inputs : seq<string>) =
+    let inputs = inputs |> Seq.map id |> Seq.toArray
     do 
         let duplicates =
             inputs 

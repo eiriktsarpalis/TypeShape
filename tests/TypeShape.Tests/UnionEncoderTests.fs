@@ -1,6 +1,7 @@
 ﻿module TypeShape.Tests.UnionEncoder
 
 open System
+open System.Collections.Generic
 open System.Runtime.Serialization
 open FSharp.Reflection
 open Xunit
@@ -85,6 +86,14 @@ let ``Should return None on TryDecode of unrecognized event types`` () =
     let e = enc.Encode (CartCreated empty)
     let e' = { e with CaseName = "__UNKNOWN_TYPE__" }
     test <@ None = enc.TryDecode e' @>
+
+[<Fact>]
+let ``Should be able to decode single-field union cases with null keys`` () =
+    let enc = encoder.Value
+    let value = CartCreated empty
+    let e = enc.Encode value
+    let e' = { e with Payload = [|KeyValuePair ("FAKEID", e.Payload.[0].Value)|] }
+    test <@ enc.Decode e' = value @>
 
 
 type private PrivateEventSum = A of CartCreated
