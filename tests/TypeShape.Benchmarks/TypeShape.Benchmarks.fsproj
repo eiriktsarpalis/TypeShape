@@ -6,7 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Empty.fs" />
-    <Compile Include="UnionEncoder.fs" />
+    <Compile Include="UnionContract.fs" />
     <Compile Include="Clone.fs" />
     <Compile Include="Main.fs" />
     <None Include="paket.references" />

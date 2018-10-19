@@ -42,7 +42,7 @@
     <Compile Include="Utils.fs" />
     <Compile Include="Applications\Combinators.fs" />
     <Compile Include="Applications\Empty.fs" />
-    <Compile Include="Applications\UnionEncoder.fs" />
+    <Compile Include="Applications\UnionContract.fs" />
     <Compile Include="Applications\Sizeof.fs" />
     <None Include="paket.references" />
     <None Include="paket.template" />

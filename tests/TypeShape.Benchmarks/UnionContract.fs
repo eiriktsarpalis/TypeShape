@@ -6,7 +6,7 @@ open System.Runtime.Serialization
 open System.Collections.Generic
 open FSharp.Reflection
 open FsCheck
-open TypeShape.UnionEncoder
+open TypeShape.UnionContract
 open BenchmarkDotNet.Attributes
 
 // Placeholder event records emulating an imaginary domain
@@ -27,9 +27,16 @@ type BasicEventSum =
     | CartItemRemoved of CartItemRemoved
     | InlinedCase of value:int
     | [<DataMember(Name = "Legacy")>] Old_Stuff of CartItemRemoved
+with
+    interface IUnionContract
+
+
+type IEncoder =
+    abstract Encode : BasicEventSum -> EncodedUnion<obj>
+    abstract Decode : EncodedUnion<obj> -> BasicEventSum
 
 let baselineEncoder =
-    { new IUnionEncoder<BasicEventSum, obj> with
+    { new IEncoder with
         member this.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
             let inline mkEnc name payload = { CaseName = name ; Payload = box payload }
             match sum with
@@ -57,12 +64,6 @@ let baselineEncoder =
             | "InlinedCase" -> InlinedCase(getValue())
             | "Legacy" -> Old_Stuff(getValue())
             | _ -> failwith "unrecognized case name"
-
-        member this.GetCaseName(arg1: BasicEventSum) =
-            raise (System.NotImplementedException())
-
-        member this.TryDecode(arg1: EncodedUnion<obj>): BasicEventSum option = 
-            raise (System.NotImplementedException())
     }
 
 let reflectionEncoder =
@@ -71,7 +72,7 @@ let reflectionEncoder =
     let fieldss = ucis |> Array.map (fun u -> u.GetFields() |> Array.map (fun f -> f.Name))
     let ctors = ucis |> Array.map FSharpValue.PreComputeUnionConstructor
     let readers = ucis |> Array.map FSharpValue.PreComputeUnionReader
-    { new IUnionEncoder<BasicEventSum, obj> with
+    { new IEncoder with
         member this.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
             let tag = tagReader sum
             let name = ucis.[tag].Name
@@ -84,15 +85,16 @@ let reflectionEncoder =
             let ctor = ctors.[tag]
             let values = [|e.Payload|]
             ctor values :?> BasicEventSum
-
-        member this.GetCaseName(arg1: BasicEventSum) =
-            raise (System.NotImplementedException())
-
-        member this.TryDecode(arg1: EncodedUnion<obj>): BasicEventSum option = 
-            raise (System.NotImplementedException())
     }
 
-let typeShapeEncoder = UnionEncoder<BasicEventSum>.Create(CastEncoder())
+let typeShapeEncoder = 
+    let encoder = UnionContractEncoder.Create<BasicEventSum,_>(CastEncoder()) 
+    { new IEncoder with
+        member this.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
+            encoder.Encode sum
+
+        member this.Decode(e : EncodedUnion<obj>): BasicEventSum =
+            encoder.Decode e }
 
 let valuePool =
     let values =
@@ -105,14 +107,14 @@ let valuePool =
         do incr i
         v
 
-let inline testEncoderRoundtrip (encoder : IUnionEncoder<BasicEventSum, obj>) =
+let inline testEncoderRoundtrip (encoder : IEncoder) =
     let v = valuePool()
     let e = encoder.Encode v
     let v' = encoder.Decode e
     ()
     
 
-type UnionEncoderBenchmark() =
+type UnionContractBenchmark() =
     
     [<Benchmark(Description = "Baseline Union Encoder", Baseline = true)>]
     member __.Baseline() = testEncoderRoundtrip baselineEncoder
