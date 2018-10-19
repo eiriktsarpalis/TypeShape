@@ -34,7 +34,7 @@ group Build
   source https://api.nuget.org/v3/index.json
   framework: net461
 
-  nuget FAKE
+  nuget FAKE ~> 4.0
   nuget FSharp.Formatting
   nuget xunit.runner.console ~> 2.3.0
 

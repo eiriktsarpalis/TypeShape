@@ -1,3 +1,6 @@
+### 6.0.0
+* Revise UnionContract design.
+
 ### 5.1.0
 * Fix API Issues.
 
