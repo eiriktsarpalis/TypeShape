@@ -16,9 +16,10 @@ nuget System.ValueTuple
 nuget Unquote ~> 4.0
 nuget FsCheck ~> 3.0 prerelease
 nuget FsCheck.XUnit ~> 3.0 prerelease
-nuget xunit ~> 2.3.0
-nuget xunit.runner.visualstudio ~> 2.3.0 version_in_path: true
+nuget xunit ~> 2.4.0
+nuget xunit.runner.visualstudio ~> 2.4.0 version_in_path: true
 nuget BenchmarkDotNet
+nuget Newtonsoft.Json
 
 nuget FParsec
 nuget FSharp.Quotations.Evaluator

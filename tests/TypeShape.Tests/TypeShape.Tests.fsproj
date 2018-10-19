@@ -18,8 +18,7 @@
     <Compile Include="StagedClone.fs" />
     <Compile Include="GenericTester.fs" />
     <Compile Include="Tests.fs" />
-    <Compile Include="UnionEncoderTests.fs" />
-    <Compile Include="Main.fs" />
+    <Compile Include="UnionContractTests.fs" />
     <None Include="paket.references" />
     <None Include="Script.fsx" />
   </ItemGroup>
