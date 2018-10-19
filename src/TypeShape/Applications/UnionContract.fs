@@ -49,8 +49,7 @@ module private Impl =
 
     type Config = { requireRecordPayloads : bool ; allowNullaryCases : bool }
 
-    type EncoderGenerator<'Union, 'Format> = 
-        Config -> IEncoder<'Format> -> UnionContractEncoder<'Union, 'Format>
+    type EncoderGenerator<'Union, 'Format> = Config -> IEncoder<'Format> -> UnionContractEncoder<'Union, 'Format>
 
     /// Generates an F# union encoder given a generic format encoder instance
     let mkUnionEncoder<'Union, 'Format> () : EncoderGenerator<'Union, 'Format> =
