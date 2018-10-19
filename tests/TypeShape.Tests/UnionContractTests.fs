@@ -75,7 +75,7 @@ let ``Should return None on TryDecode of unrecognized event types`` () =
 
 [<Fact>]
 let ``Should fail when requiring record fields`` () =
-    raises<ArgumentException> <@ UnionContractEncoder.Create<BasicEventSum,_>(CastEncoder(), requireRecordFields = true) @>
+    raises<ArgumentException> <@ UnionContractEncoder.Create<BasicEventSum,_>(BoxEncoder(), requireRecordFields = true) @>
 
 type private PrivateEventSum = A of CartCreated
 with interface IUnionContract
@@ -96,11 +96,11 @@ with
 
 [<Fact>]
 let ``Should fail on nullary union cases`` () =
-    raises<ArgumentException> <@ UnionContractEncoder.Create<EventSumWithNullaryCase,_>(CastEncoder(), allowNullaryCases = false) @>
+    raises<ArgumentException> <@ UnionContractEncoder.Create<EventSumWithNullaryCase,_>(BoxEncoder(), allowNullaryCases = false) @>
 
 [<Fact>]
 let ``Should succeed on nullary union cases`` () =
-    let enc = UnionContractEncoder.Create<EventSumWithNullaryCase,_>(CastEncoder(), allowNullaryCases = true)
+    let enc = UnionContractEncoder.Create<EventSumWithNullaryCase,_>(BoxEncoder(), allowNullaryCases = true)
     ()
 
 

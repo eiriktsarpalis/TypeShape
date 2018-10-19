@@ -19,7 +19,7 @@ type IEncoder<'Format> =
     abstract Decode<'T> : fmt:'Format -> 'T
 
 /// Generic encoder that simply upcasts values to System.Object
-type CastEncoder() =
+type BoxEncoder() =
     interface IEncoder<obj> with
         member __.Empty    = null
         member __.Encode t = box t
@@ -149,7 +149,7 @@ module private Impl =
         fun config encoder ->
             match caseWithoutRecordPayload with
             | Some case when config.requireRecordPayloads ->
-                sprintf "Union case '%O.%O' contains field which is not an F# record" typeof<'Union> case.CaseInfo.Name
+                sprintf "Union case '%O.%O' contains field that is not an F# record" typeof<'Union> case.CaseInfo.Name
                 |> invalidArg "Union"
             | _ -> ()
 

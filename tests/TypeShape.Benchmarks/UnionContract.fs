@@ -88,7 +88,7 @@ let reflectionEncoder =
     }
 
 let typeShapeEncoder = 
-    let encoder = UnionContractEncoder.Create<BasicEventSum,_>(CastEncoder()) 
+    let encoder = UnionContractEncoder.Create<BasicEventSum,_>(BoxEncoder()) 
     { new IEncoder with
         member this.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
             encoder.Encode sum
