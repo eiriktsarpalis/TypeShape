@@ -34,7 +34,7 @@ type EncodedUnion<'Encoding> =
 
 /// Provides an encoder implementation for a sum of events
 [<AbstractClass>]
-type UnionContractEncoder<'Union, 'Format when 'Union :> IUnionContract> internal () =
+type UnionContractEncoder<'Union, 'Format> internal () =
     /// Gets the union case string identifier for given union instance
     abstract GetCaseName : value:'Union -> string
     /// Encodes a union instance into a decoded representation
@@ -49,11 +49,11 @@ module private Impl =
 
     type Config = { requireRecordPayloads : bool ; allowNullaryCases : bool }
 
-    type EncoderGenerator<'Union, 'Format when 'Union :> IUnionContract> = 
+    type EncoderGenerator<'Union, 'Format> = 
         Config -> IEncoder<'Format> -> UnionContractEncoder<'Union, 'Format>
 
     /// Generates an F# union encoder given a generic format encoder instance
-    let mkUnionEncoder<'Union, 'Format when 'Union :> IUnionContract> () : EncoderGenerator<'Union, 'Format> =
+    let mkUnionEncoder<'Union, 'Format> () : EncoderGenerator<'Union, 'Format> =
         let shape =
             match shapeof<'Union> with
             | Shape.FSharpUnion (:? ShapeFSharpUnion<'Union> as s) -> s
@@ -185,7 +185,7 @@ module private Impl =
                     |  -1 -> None
                     | tag -> caseDecoders.[tag] e.Payload |> Some }
 
-    type EncoderFactory<'Union, 'Format when 'Union :> IUnionContract> private () =
+    type EncoderFactory<'Union, 'Format> private () =
         static let factory = lazy(mkUnionEncoder<'Union, 'Format>())
         static member Create requireRecordFields (e : IEncoder<_>) = factory.Value requireRecordFields e
 
