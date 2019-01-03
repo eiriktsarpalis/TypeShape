@@ -2,7 +2,10 @@
 // FAKE build script
 // --------------------------------------------------------------------------------------
 
+#nowarn "85"
 #r @"packages/build/FAKE/tools/FakeLib.dll"
+#load "paket-files/build/fsharp/FAKE/modules/Octokit/Octokit.fsx"
+
 open Fake
 open Fake.Git
 open Fake.AssemblyInfoFile
@@ -39,9 +42,6 @@ let authors = [ "Eirik Tsarpalis" ]
 
 // Tags for your project (for NuGet package)
 let tags = "fsharp, reflection"
-
-// File system information
-let solutionFile  = "TypeShape.sln"
 
 // Folder to deposit deploy artifacts
 let artifactsDir = __SOURCE_DIRECTORY__ @@ "artifacts"
@@ -115,20 +115,17 @@ Target "CleanDocs" (fun _ ->
     CleanDirs ["docs/output"]
 )
 
-Target "Restore" (fun _ ->
-    DotNetCli.Restore id
-)
-
 // --------------------------------------------------------------------------------------
 // Build library & test project
-
 
 Target "Build" DoNothing
 
 let buildWithConfiguration config =
-    !! solutionFile
-    |> MSBuild null "Rebuild" [("Configuration", config) ; ("SourceLinkCreate", "true")]
-    |> ignore  
+    DotNetCli.Build(fun c ->
+        { c with
+            Project = __SOURCE_DIRECTORY__
+            Configuration = config
+        })
 
 Target "Build.Emit" (fun _ -> buildWithConfiguration "Release")
 Target "Build.NoEmit" (fun _ -> buildWithConfiguration "Release-NoEmit")
@@ -192,7 +189,7 @@ Target "NuGet.Bundle" (fun _ ->
             OutputPath = artifactsDir
             Version = release.NugetVersion
             BuildPlatform = "AnyCpu"
-            ReleaseNotes = toLines release.Notes})
+            ReleaseNotes = toLines release.Notes })
 )
 
 Target "NuGet.ValidateSourceLink" (fun _ ->
@@ -313,7 +310,6 @@ Target "ReleaseDocs" (fun _ ->
     Branches.push tempDocsDir
 )
 
-#load "paket-files/build/fsharp/FAKE/modules/Octokit/Octokit.fsx"
 open Octokit
 
 Target "ReleaseGithub" (fun _ ->
@@ -362,7 +358,6 @@ Target "Bundle"  DoNothing
 Target "Release" DoNothing
 
 "Clean"
-  ==> "Restore"
   ==> "AssemblyInfo"
   ==> "Build.Emit"
   ==> "Build.NoEmit"

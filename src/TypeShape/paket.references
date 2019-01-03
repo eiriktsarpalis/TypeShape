@@ -1,5 +1,6 @@
 FSharp.Core
 System.Reflection.Emit.Lightweight
-SourceLink.Create.CommandLine
+Microsoft.SourceLink.GitHub
 group Legacy
   FSharp.Core
+  Microsoft.SourceLink.GitHub

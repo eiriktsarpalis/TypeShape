@@ -1,5 +1,5 @@
 source https://api.nuget.org/v3/index.json
-framework: netstandard2.0, netcoreapp2.0, net45, net461
+framework: netstandard2.0, netcoreapp2.0, net461
 redirects: force
 
 # NB TypeShape project has conditional PackageReference 
@@ -8,16 +8,16 @@ redirects: force
 nuget FSharp.Core >= 4.3.2 lowest_matching: true
 nuget System.Reflection.Emit.Lightweight >= 4.3 lowest_matching: true
 
-nuget SourceLink.Create.CommandLine copy_local: true
+nuget Microsoft.SourceLink.GitHub prerelease copy_local:true
 clitool dotnet-sourcelink
 
 # testing dependencies; NB intentionally kept in Main group
-nuget System.ValueTuple
+nuget System.ValueTuple ~> 4.0
+nuget xunit ~> 2.4.0
+nuget xunit.runner.visualstudio ~> 2.4.0 version_in_path: true
 nuget Unquote ~> 4.0
 nuget FsCheck ~> 3.0 prerelease
 nuget FsCheck.XUnit ~> 3.0 prerelease
-nuget xunit ~> 2.4.0
-nuget xunit.runner.visualstudio ~> 2.4.0 version_in_path: true
 nuget BenchmarkDotNet
 nuget Newtonsoft.Json
 
@@ -29,6 +29,7 @@ group Legacy
   framework: net45
 
   nuget FSharp.Core >= 3.1.2 lowest_matching: true
+  nuget Microsoft.SourceLink.GitHub prerelease copy_local:true
 
 group Build
   source https://api.nuget.org/v3/index.json

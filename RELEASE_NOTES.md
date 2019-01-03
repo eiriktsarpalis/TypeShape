@@ -1,3 +1,6 @@
+### 6.0.1
+* Use Microsoft Github SourceLink.
+
 ### 6.0.0
 * Revise UnionContract design.
 

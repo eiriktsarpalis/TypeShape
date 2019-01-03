@@ -1,1 +1,3 @@
-﻿SourceLink.Create.CommandLine
+﻿Microsoft.SourceLink.GitHub
+group Legacy
+  Microsoft.SourceLink.GitHub
