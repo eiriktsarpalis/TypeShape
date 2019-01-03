@@ -1,6 +1,6 @@
 source https://api.nuget.org/v3/index.json
 framework: netstandard2.0, netcoreapp2.0, net461
-redirects: force
+storage: none
 
 # NB TypeShape project has conditional PackageReference 
 # fixed to 3.1.2 for net40 builds. This is to address
@@ -27,6 +27,7 @@ nuget FSharp.Quotations.Evaluator
 group Legacy
   source https://api.nuget.org/v3/index.json
   framework: net45
+  storage: none
 
   nuget FSharp.Core >= 3.1.2 lowest_matching: true
   nuget Microsoft.SourceLink.GitHub prerelease copy_local:true

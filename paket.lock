@@ -1,4 +1,4 @@
-REDIRECTS: FORCE
+STORAGE: NONE
 RESTRICTION: || (== net461) (== netcoreapp2.0) (== netstandard2.0)
 NUGET
   remote: https://api.nuget.org/v3/index.json
@@ -833,6 +833,7 @@ GITHUB
     modules/Octokit/Octokit.fsx (457ae4cfb9bb4a39f0eb1352140584d7d04ebe5d)
       Octokit (>= 0.20)
 GROUP Legacy
+STORAGE: NONE
 RESTRICTION: == net45
 NUGET
   remote: https://api.nuget.org/v3/index.json
