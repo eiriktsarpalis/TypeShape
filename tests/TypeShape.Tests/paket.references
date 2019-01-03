@@ -2,6 +2,7 @@ FSharp.Core
 System.ValueTuple
 xunit
 xunit.runner.visualstudio
+Microsoft.Net.Test.SDK
 FsCheck
 FsCheck.Xunit
 Unquote
