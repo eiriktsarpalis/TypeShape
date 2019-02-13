@@ -16,6 +16,7 @@ open TypeShape.Core
 open TypeShape.Core.Utils
 open TypeShape.Core.SubtypeExtensions
 open TypeShape.Empty
+open TypeShape.Clone
 open TypeShape.Tests.GenericTests
 
 let check<'T>(prop : 'T -> bool) = Check.QuickThrowOnFailure prop
@@ -269,7 +270,7 @@ let ``Shape Generic Tuple`` () =
     test <@ checkShape typeof<int * decimal * byte[] * bigint> @>
     test <@ checkShape typeof<int * int * int * int * int * int * int * int * int * int * int * int> @>
 
-    let cloner = mkCloner<int * decimal * (string * int list) * bool * string option * uint64 * string * byte[] * string * byte[] * decimal>()
+    let cloner = clone<int * decimal * (string * int list) * bool * string option * uint64 * string * byte[] * string * byte[] * decimal>
     checkCloner cloner
     let scloner = mkStagedCloner<int * decimal * (string * int list) * bool * string option * uint64 * string * byte[] * string * byte[] * decimal>()
     checkCloner scloner
@@ -307,13 +308,13 @@ let ``Shape CliMutable`` () =
 
     let source = new CSharpRecord(Foo = "Foo", Bar = true, Baz = 42, TimeSpan = TimeSpan.MaxValue)
 
-    let cloner = mkCloner<CSharpRecord>()
+    let cloner = clone<CSharpRecord>
     let target = cloner source
     test <@ obj.ReferenceEquals(source, target) |> not @>
     test <@ source = target @>
     test <@ source.GetterOnly <> target.GetterOnly @>
 
-    let sCloner = mkCloner<CSharpRecord> ()
+    let sCloner = clone<CSharpRecord>
     let target = sCloner source
     test <@ obj.ReferenceEquals(source, target) |> not @>
     test <@ source = target @>
@@ -341,7 +342,7 @@ let ``Shape Poco`` () =
 
     let source = new SimplePoco("foo", 42)
 
-    let cloner = mkCloner<SimplePoco>()
+    let cloner = clone<SimplePoco>
     let target = cloner source
     test <@ obj.ReferenceEquals(source, target) |> not @>
     test <@ source.X = target.X @>
@@ -458,7 +459,7 @@ let ``Shape ISerializable`` () =
 
     let exn = new Exception("kaboom!")
     
-    let cloner = mkCloner<Exception>()
+    let cloner = clone<Exception>
     let exn' = cloner exn
     test <@ not (refEq exn exn') && exn.Message = exn'.Message @>
 
@@ -512,7 +513,7 @@ let ``Shape Record 7`` () =
         | _ -> raise <| new InvalidCastException()
 
     test <@ shape.Fields.Length = 7 @>
-    let cloner = Clone.mkCloner<Record7>()
+    let cloner = clone<Record7>
     checkCloner cloner
 
     let scloner = mkStagedCloner<Record7>()
@@ -596,7 +597,7 @@ let ``Shape Union 7`` () =
 
         | _ -> raise <| InvalidCastException()
 
-    let cloner = mkCloner<Union7>()
+    let cloner = clone<Union7>
     checkCloner cloner
 
     let scloner = mkStagedCloner<Union7>()
@@ -620,7 +621,7 @@ type P = Z | S of P
 
 [<Fact>]
 let ``Should clone recursive types`` () =
-    let cloner = mkCloner<P>()
+    let cloner = clone<P>
     checkCloner cloner
 
 [<Fact>]
@@ -662,7 +663,7 @@ let ``Should support struct records``() =
         test <@ s.IsStructRecord && s.Fields.Length = 2 @>
     | _ -> raise <| InvalidCastException()
 
-    let cloner = Clone.mkCloner<StructRecord>()
+    let cloner = clone<StructRecord>
     checkCloner cloner
 
     let scloner = mkStagedCloner<StructRecord>()
@@ -696,7 +697,7 @@ let ``Should support struct unions``() =
 
     | _ -> raise <| InvalidCastException()
 
-    let cloner = Clone.mkCloner<StructUnion>()
+    let cloner = clone<StructUnion>
     checkCloner cloner
 
     let scloner = mkStagedCloner<StructUnion>()
@@ -711,7 +712,7 @@ let ``Should support struct tuples``() =
             test <@ s.IsStructTuple && s.Elements |> Array.map (fun e -> e.Member.Type) = elems @>
         | _ -> raise <| InvalidCastException()
 
-        let cloner = Clone.mkCloner<'STuple>()
+        let cloner = clone<'STuple>
         test <@ stuple = cloner stuple @>
 
         let scloner = mkStagedCloner<'STuple>()
@@ -841,3 +842,31 @@ module ``Generic Combinators`` =
     [<Fact>]
     let ``Generic fold should support generic cyclic objects`` () =
         test <@ Generic.fold (fun c _ -> c + 1) 0 Cycle.Instance = 1 @>
+
+    [<Fact>]
+    let ``Generic exists should work as expected`` () =
+        let waldo = Some [Some "joe" ; None ; Some "bill" ; Some "waldo"] |> ref
+        let noWaldo = Some [Some "joe" ; None ; Some "bill" ; Some "peter"] |> ref
+        test <@ Generic.exists ((=) "waldo") waldo @>
+        test <@ Generic.exists ((=) "waldo") noWaldo |> not @>
+
+    [<Fact>]
+    let ``Generic forall should work as expected`` () =
+        let allWaldo = Some [Some "waldo" ; None ; Some "waldo" ; Some "waldo"] |> ref
+        let notAllWaldo = Some [Some "waldo" ; None ; Some "waldo" ; Some "peter"] |> ref
+        test <@ Generic.forall ((=) "waldo") allWaldo @>
+        test <@ Generic.forall ((=) "waldo") notAllWaldo |> not @>
+
+    [<Fact>]
+    let ``Generic exists should cancel on falsification`` () =
+        let values = [ for i in 1 .. 200 -> Some i]
+        let counter = ref 0
+        test <@ Generic.exists (fun i -> incr counter; i = 100) values @>
+        test <@ !counter = 100 @>
+
+    [<Fact>]
+    let ``Generic forall should cancel on falsification`` () =
+        let values = [ for i in 1 .. 200 -> Some i]
+        let counter = ref 0
+        test <@ Generic.forall (fun i -> incr counter; i < 100) values |> not @>
+        test <@ !counter = 100 @>

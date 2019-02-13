@@ -14,7 +14,6 @@
     <ProjectReference Include="..\..\src\TypeShape\TypeShape.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Clone.fs" />
     <Compile Include="StagedClone.fs" />
     <Compile Include="GenericTester.fs" />
     <Compile Include="Tests.fs" />

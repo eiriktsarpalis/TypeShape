@@ -41,6 +41,7 @@
     <Compile Include="Applications\Empty.fs" />
     <Compile Include="Applications\UnionContract.fs" />
     <Compile Include="Applications\Sizeof.fs" />
+    <Compile Include="Applications\Clone.fs" />
     <None Include="paket.references" />
     <None Include="paket.template" />
   </ItemGroup>

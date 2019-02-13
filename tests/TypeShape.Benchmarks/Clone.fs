@@ -3,7 +3,7 @@
 open System
 open BenchmarkDotNet.Attributes
 
-open TypeShape.Tests.Clone
+open TypeShape.Clone
 open TypeShape.Tests.StagedClone
 
 type Record =
@@ -24,7 +24,7 @@ let baselineCloner : TestType -> TestType =
         struct(v1',v2',v3')
 
 let typeShapeCloner : TestType -> TestType =
-    mkCloner<TestType>()
+    clone<TestType>
 
 let unquoteStagedCloner : TestType -> TestType =
     mkStagedCloner<TestType>()

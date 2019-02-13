@@ -2,6 +2,7 @@
 
 open System
 open System.Collections.Generic
+open System.Threading
 
 open TypeShape.Core
 open TypeShape.Core.Utils
@@ -9,7 +10,14 @@ open TypeShape.Core.SubtypeExtensions
 
 module private GIterator =
 
-    type Iterator<'Element, 'Graph> = ObjectStack -> ('Element -> unit) -> 'Graph -> unit
+    type Iterator<'Element, 'Graph> = Context<'Element> -> 'Graph -> unit
+
+    and Context<'Element> =
+        {
+            Token : CancellationToken
+            Stack : ObjectStack
+            Action : 'Element -> unit
+        }
 
     let cache = new TypeCache()
 
@@ -28,30 +36,33 @@ module private GIterator =
 
     and mkIteratorImpl<'E, 'T> (ctx : TypeGenerationContext) : Iterator<'E, 'T> =
         let inline wrap (iterator:Iterator<'E,'a>) : Iterator<'E,'T> =
-            if typeof<'a>.IsValueType then iterator
+            if typeof<'a>.IsValueType then 
+                fun c t -> if not c.Token.IsCancellationRequested then iterator c t
             else
-                fun s f t ->
-                    match t :> obj with
-                    | null -> ()
-                    | o ->
-                        s.Push o
-                        if not s.IsCycle then
-                            iterator s f t
-                        s.Pop()
+                fun c t ->
+                    if not c.Token.IsCancellationRequested then
+                        match t :> obj with
+                        | null -> ()
+                        | o ->
+                            let s = c.Stack
+                            s.Push o
+                            if not s.IsCycle then
+                                iterator c t
+                            s.Pop()
             |> unbox
 
         let mkMemberIter (shape : IShapeMember<'T>) =
             shape.Accept { new IMemberVisitor<'T, Iterator<'E,'T>> with
                 member __.Visit (shape : ShapeMember<'T, 'F>) =
                     let fIter = mkIteratorCached<'E, 'F> ctx
-                    fun s f t -> shape.Project t |> fIter s f }
+                    fun c t -> shape.Project t |> fIter c }
 
         match shapeof<'T> with
-        | :? TypeShape<'E> -> wrap(fun _ f (t:'E) -> f t)
+        | :? TypeShape<'E> -> wrap(fun c (t:'E) -> c.Action t)
         | Shape.SubtypeOf (tshapeof<'E>) s ->
             s.Accept { new ISubtypeWitnessVisitor<'E, Iterator<'E,'T>> with
                 member __.Visit(witness) =
-                    wrap(fun _ f t -> f (witness.Upcast t))
+                    wrap(fun c t -> c.Action (witness.Upcast t))
             }
 
         | Shape.Enum s ->
@@ -61,9 +72,9 @@ module private GIterator =
                                         and 't :> ValueType
                                         and 't : (new : unit -> 't)>() =
                     let ui = mkIteratorCached<'E,'u> ctx
-                    fun s f (t:'t) -> 
+                    fun c (t:'t) -> 
                         let u = LanguagePrimitives.EnumToValue t
-                        ui s f u
+                        ui c u
                     |> wrap }
 
         | Shape.Nullable s ->
@@ -72,17 +83,17 @@ module private GIterator =
                                     and 't :> ValueType 
                                     and 't : (new : unit -> 't)>() =
                     let ti = mkIteratorCached<'E,'t> ctx
-                    wrap(fun s f (n:Nullable<'t>) -> if n.HasValue then ti s f n.Value) }
+                    wrap(fun c (n:Nullable<'t>) -> if n.HasValue then ti c n.Value) }
 
         | Shape.FSharpOption s ->
             s.Accept {
                 new IFSharpOptionVisitor<Iterator<'E,'T>> with
                     member __.Visit<'t>() =
                         let ei = mkIteratorCached<'E, 't> ctx
-                        fun s f tOpt ->
+                        fun c tOpt ->
                             match tOpt with
                             | None -> ()
-                            | Some t -> ei s f t
+                            | Some t -> ei c t
                         |> wrap }
 
         | Shape.Array s ->
@@ -91,9 +102,9 @@ module private GIterator =
                     member __.Visit<'t> rk =
                         let ei = mkIteratorCached<'E, 't> ctx
                         match rk with
-                        | 1 -> wrap(fun s f (ts : 't[]) -> for t in ts do ei s f t)
-                        | 2 -> wrap(fun s f (ts : 't[,]) -> ts |> Array2D.iter (fun t -> ei s f t))
-                        | 3 -> wrap(fun s f (ts : 't[,,]) -> ts |> Array3D.iter (fun t -> ei s f t))
+                        | 1 -> wrap(fun c (ts : 't[]) -> for t in ts do ei c t)
+                        | 2 -> wrap(fun c (ts : 't[,]) -> ts |> Array2D.iter (fun t -> ei c t))
+                        | 3 -> wrap(fun c (ts : 't[,,]) -> ts |> Array3D.iter (fun t -> ei c t))
                         | _ -> failwithf "Rank-%d arrays not supported" rk
             }
 
@@ -102,7 +113,7 @@ module private GIterator =
                 new IFSharpListVisitor<Iterator<'E,'T>> with
                     member __.Visit<'t>() =
                         let ei = mkIteratorCached<'E, 't> ctx
-                        wrap(fun s f (ts : 't list) -> for t in ts do ei s f t)
+                        wrap(fun c (ts : 't list) -> for t in ts do ei c t)
             }
 
         | Shape.FSharpSet s ->
@@ -110,28 +121,28 @@ module private GIterator =
                 new IFSharpSetVisitor<Iterator<'E,'T>> with
                     member __.Visit<'t when 't : comparison> () =
                         let ei = mkIteratorCached<'E, 't> ctx
-                        wrap(fun s f (ts:Set<'t>) -> for t in ts do ei s f t)
+                        wrap(fun c (ts:Set<'t>) -> for t in ts do ei c t)
             }
 
         | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
             let eIters = shape.Elements |> Array.map mkMemberIter
-            fun s f (t:'T) -> for ei in eIters do ei s f t
+            fun c (t:'T) -> for ei in eIters do ei c t
 
         | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
             let fIters = shape.Fields |> Array.map mkMemberIter
-            fun s f (r:'T) -> for ei in fIters do ei s f r
+            fun c (r:'T) -> for ei in fIters do ei c r
 
         | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
             let fIterss = shape.UnionCases |> Array.map (fun uc -> uc.Fields |> Array.map mkMemberIter)
-            fun s f (u:'T) ->
+            fun c (u:'T) ->
                 let tag = shape.GetTag u
-                for fI in fIterss.[tag] do fI s f u
+                for fI in fIterss.[tag] do fI c u
 
         | Shape.Collection s ->
             s.Accept { new ICollectionVisitor<Iterator<'E,'T>> with
                 member __.Visit<'Collection, 't when 'Collection :> ICollection<'t>>() =
                     let tIter = mkIteratorCached<'E,'t> ctx
-                    wrap(fun s f (ts:'Collection) -> for t in ts do tIter s f t) }
+                    wrap(fun c (ts:'Collection) -> for t in ts do tIter c t) }
 
         | Shape.Poco (:? ShapePoco<'T> as shape) ->
             let pIters = 
@@ -139,9 +150,9 @@ module private GIterator =
                 |> Array.filter (fun p -> p.IsPublic)
                 |> Array.map mkMemberIter
 
-            fun s f (p:'T) -> for pI in pIters do pI s f p
+            fun c (p:'T) -> for pI in pIters do pI c p
 
-        | _ -> (fun _ _ _ -> ())
+        | _ -> (fun _ _ -> ())
 
 module private GMapper =
 
@@ -310,7 +321,20 @@ module Generic =
     /// <param name="action">Action to perform on every instance of type 'a.</param>
     /// <param name="source">Source type to be traversed for instances of type 'a.</param>
     let iter (action : 'a -> unit) (source : 'T) : unit =
-        GIterator.mkIterator<'a,'T>() (new ObjectStack()) action source
+        let ctx : GIterator.Context<'a> = { Token = CancellationToken() ; Stack = new ObjectStack() ; Action = action }
+        GIterator.mkIterator<'a,'T>() ctx source
+
+    /// <summary>
+    /// Generic iter combinator with cancellatoin semantics. Calls the action function on every instance
+    /// of type 'a structurally wihtin the source type 'T using depth-first
+    /// traversal. Cyclic objects are supported.
+    /// </summary>
+    /// <param name="action">Action to perform on every instance of type 'a.</param>
+    /// <param name="source">Source type to be traversed for instances of type 'a.</param>
+    let iterCancellation (action : CancellationTokenSource -> 'a -> unit) (source : 'T) : unit =
+        let cts = new CancellationTokenSource()
+        let ctx : GIterator.Context<'a> = { Token = cts.Token ; Stack = new ObjectStack() ; Action = action cts }
+        GIterator.mkIterator<'a, 'T>() ctx source
 
     /// <summary>
     /// Generic fold combinator. Folds over instances of type 'a structurally within
@@ -342,8 +366,8 @@ module Generic =
     /// <param name="predicate">Forall predicate.</param>
     /// <param name="source">Source type to traverse.</param>
     let forall (predicate : 'a -> bool) (source : 'T) : bool =
-        let mutable result = ref true
-        iter (fun a -> result := !result && predicate a) source
+        let result = ref true
+        iterCancellation (fun cts t -> if not(predicate t) then result := false; cts.Cancel()) source
         !result
 
     /// <summary>
@@ -353,8 +377,8 @@ module Generic =
     /// <param name="predicate">Exists predicate.</param>
     /// <param name="source">Source type to traverse.</param>
     let exists (predicate : 'a -> bool) (source : 'T) : bool =
-        let mutable result = ref false
-        iter (fun a -> result := !result || predicate a) source
+        let result = ref false
+        iterCancellation (fun cts t -> if predicate t then result := true; cts.Cancel()) source
         !result
 
     /// <summary>

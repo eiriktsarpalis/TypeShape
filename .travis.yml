@@ -1,16 +1,8 @@
-language: csharp
+os: linux
+language: bash
 
-addons:
-  apt:
-    packages:
-       - msbuild
-
-sudo: false # use the new container-based Travis infrastructure
-dist: trusty # Ubuntu 14.04
-mono: latest
-dotnet: 2.1.400
+services:
+  - docker
 
 script:
-  - dotnet --info
-  - export FrameworkPathOverride=$(dirname $(which mono))/../lib/mono/4.5/
-  - ./build.sh Default
+  - ./docker-build.sh

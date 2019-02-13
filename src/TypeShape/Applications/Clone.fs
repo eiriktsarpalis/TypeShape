@@ -1,14 +1,11 @@
-﻿[<AutoOpen>]
-module TypeShape.Tests.Clone
+﻿module TypeShape.Clone
 
 open System
 open System.Runtime.Serialization
+open System.Threading
 open TypeShape.Core
 open TypeShape.Core.Utils
 
-// Provides a relatively feature-complete implementation
-// of generic object cloning to ensure correctness of the
-// APIs being surfaced by the library
 module private Impl =
 
     type Cloner<'T> = ObjectStack -> ObjectCache -> 'T -> 'T
@@ -196,7 +193,6 @@ module private Impl =
     and cache : TypeCache = new TypeCache()
 
 
-let mkCloner<'T>() : 'T -> 'T =
-    Impl.mkCloner<'T>() (ObjectStack()) (ObjectCache())
-
-let clone<'T>(t : 'T) : 'T = mkCloner () t
+/// Creates a deep clone for the provided value.
+/// Accounts for reference equality and object cycles.
+let clone<'T> (t : 'T) : 'T = Impl.mkCloner<'T>() (ObjectStack()) (ObjectCache()) t
