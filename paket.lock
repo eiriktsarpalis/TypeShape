@@ -820,17 +820,10 @@ RESTRICTION: == net461
 NUGET
   remote: https://api.nuget.org/v3/index.json
     FAKE (4.64.13)
-    FSharp.Compiler.Service (2.0.0.6)
-    FSharp.Formatting (2.14.4)
-      FSharp.Compiler.Service (2.0.0.6)
-      FSharpVSPowerTools.Core (>= 2.3 < 2.4)
-    FSharpVSPowerTools.Core (2.3)
-      FSharp.Compiler.Service (>= 2.0.0.3)
     Octokit (0.32)
-    xunit.runner.console (2.3.1)
 GITHUB
   remote: fsharp/FAKE
-    modules/Octokit/Octokit.fsx (457ae4cfb9bb4a39f0eb1352140584d7d04ebe5d)
+    modules/Octokit/Octokit.fsx (5e58b484c43da36bbe0f7e9111f6c61a951a38a7)
       Octokit (>= 0.20)
 GROUP Legacy
 STORAGE: NONE
@@ -843,4 +836,3 @@ NUGET
     Microsoft.SourceLink.GitHub (1.0.0-beta2-18618-05) - copy_local: true
       Microsoft.Build.Tasks.Git (>= 1.0.0-beta2-18618-05)
       Microsoft.SourceLink.Common (>= 1.0.0-beta2-18618-05)
-    System.ValueTuple (4.5)
