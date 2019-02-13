@@ -141,7 +141,7 @@ Similarly, we could also add support for arbitrary F# unions:
 ```fsharp
     match shapeof<'T> with
     | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
-        let cases : ShapeFSharpUnionCase<'T> [] = s.UnionCases // all union cases
+        let cases : ShapeFSharpUnionCase<'T> [] = shape.UnionCases // all union cases
         let mkUnionCasePrinter (case : ShapeFSharpUnionCase<'T>) =
             let fieldPrinters = case.Fields |> Array.map mkMemberPrinter
             fun (u:'T) -> 
@@ -152,7 +152,7 @@ Similarly, we could also add support for arbitrary F# unions:
 
         let casePrinters = cases |> Array.map mkUnionCasePrinter // generate printers for all union cases
         fun (u:'T) ->
-            let tag : int = s.GetTag u // get the underlying tag for the union case
+            let tag : int = shape.GetTag u // get the underlying tag for the union case
             casePrinters.[tag] u
 ```
 Similar active patterns exist for classes with settable properties and general POCOs.
