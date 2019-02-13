@@ -1,3 +1,7 @@
+### 6.1
+* Expose generic clone function in main library.
+* Add cancellable generic iter combinator.
+
 ### 6.0.1
 * Use Microsoft Github SourceLink.
 
