@@ -1,9 +1,11 @@
-#r "../src/TypeShape/bin/Release/net45/TypeShape.dll"
+module EqualityComparer
 
 open System
 open System.Collections.Generic
 open TypeShape.Core
 open TypeShape.Core.Utils
+
+// Generic Equality comparer generator
 
 let rec mkEqualityComparer<'T> () : IEqualityComparer<'T> =
     let mutable f = Unchecked.defaultof<IEqualityComparer<'T>>

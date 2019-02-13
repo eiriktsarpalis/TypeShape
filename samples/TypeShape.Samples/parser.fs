@@ -1,11 +1,11 @@
-#r "../src/TypeShape/bin/Release/net45/TypeShape.dll"
-#r "../packages/FParsec/lib/net40-client/FParsecCS.dll"
-#r "../packages/FParsec/lib/net40-client/FParsec.dll"
+module Parser
 
 open System
 open FParsec
 open TypeShape.Core
 open TypeShape.Core.Utils
+
+// Generic value type parser using parser combinators
 
 type Parser<'T> = Parser<'T, unit>
 

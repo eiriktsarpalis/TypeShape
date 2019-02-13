@@ -1,4 +1,4 @@
-#r "../src/TypeShape/bin/Release/net45/TypeShape.dll"
+module Mock
 
 // A toy object mocking implementation
 

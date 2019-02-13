@@ -1,12 +1,11 @@
-#r "../src/TypeShape/bin/Release/net45/TypeShape.CSharp.dll"
-#r "../src/TypeShape/bin/Release/net45/TypeShape.dll"
-
-// structural Disposable generator
+module Disposable
 
 open System
 open TypeShape.Core
 open TypeShape.Core.Utils
 open TypeShape.Core.SubtypeExtensions
+
+// Generic IDisposable generator
 
 let rec mkDisposer<'T> () : 'T -> unit =
     let mutable f = Unchecked.defaultof<'T -> unit>

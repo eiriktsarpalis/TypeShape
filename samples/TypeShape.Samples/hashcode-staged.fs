@@ -1,12 +1,12 @@
-﻿#r "../src/TypeShape/bin/Release/net45/TypeShape.dll"
-#r "../packages/Unquote/lib/net45/Unquote.dll"
-#r "../packages/FSharp.Quotations.Evaluator/lib/net45/FSharp.Quotations.Evaluator.dll"
+﻿module HashCode_Staged
 
 open FSharp.Quotations
 open FSharp.Quotations.Evaluator
 open Swensen.Unquote
 open TypeShape.Core
 open TypeShape.Core.StagingExtensions
+
+// Staged hashcode generation
 
 let mkStagedHasher<'T> (self : StagedGenerator1) (expr : Expr<'T>) : Expr<int> =
     let unwrap () = unbox<Expr<'a>> expr

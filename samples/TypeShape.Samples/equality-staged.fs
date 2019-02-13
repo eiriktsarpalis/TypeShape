@@ -1,10 +1,11 @@
-#r "../src/TypeShape/bin/Release/net45/TypeShape.dll"
-#r "../packages/Unquote/lib/net45/Unquote.dll"
+module Equality_Staged
 
 open TypeShape.Core
 open TypeShape.Core.StagingExtensions
 open Swensen.Unquote
 open FSharp.Quotations
+
+// Staged generic equality comparer
 
 type CmpExpr<'T> = Expr<'T> -> Expr<'T> -> Expr<bool>
 

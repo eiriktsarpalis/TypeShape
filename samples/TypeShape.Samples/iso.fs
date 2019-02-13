@@ -1,5 +1,5 @@
-#r "../src/TypeShape/bin/Release/net45/TypeShape.dll"
-open System
+module Iso
+
 open TypeShape.Core
 open TypeShape.Core.Utils
 

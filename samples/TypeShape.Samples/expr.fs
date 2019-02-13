@@ -1,4 +1,4 @@
-#r "../src/TypeShape/bin/Release/net45/TypeShape.dll"
+module Expr
 
 open System
 open System.Collections.Generic
@@ -7,6 +7,8 @@ open FSharp.Quotations.Patterns
 open FSharp.Quotations.DerivedPatterns
 open FSharp.Quotations.ExprShape
 open TypeShape.Core
+
+// Quotation compiler
 
 type CompiledExpr<'T> = Environment -> 'T
 
@@ -383,8 +385,6 @@ let even, odd =
 //---------------------
 // Perf
 
-#r "../packages/Unquote/lib/net45/Unquote.dll"
-
 let factorialExpr =
     <@ 
         let rec factorial n = 
@@ -398,7 +398,7 @@ let rec baselineF n = if n = 0 then 1 else n * baselineF(n - 1)
 let compiledF = run factorialExpr
 let unquoteF = Swensen.Unquote.Operators.eval factorialExpr
 
-#time "on"
+// #time "on"
 
 // Real: 00:00:00.003, CPU: 00:00:00.015, GC gen0: 0, gen1: 0, gen2: 0
 for i = 1 to 100000 do

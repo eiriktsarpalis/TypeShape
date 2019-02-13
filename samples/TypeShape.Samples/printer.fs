@@ -1,10 +1,11 @@
-#r "../src/TypeShape/bin/Release/net45/TypeShape.dll"
+module Printer
 
 open System
 open TypeShape.Core
 open TypeShape.Core.Utils
 
-// Generic value printer with recursive type support
+// Generic pretty printer with recursive type support
+
 let rec mkPrinter<'T> () : 'T -> string =
     let ctx = new TypeGenerationContext()
     mkPrinterCached<'T> ctx
@@ -126,7 +127,7 @@ p ([1 .. 5], None, false, (), {A = 42 ; B = "42" ; C = [42] }, [A(2,"42") ; B 12
 // Some benchmarks
 //
 
-#time "on"
+// #time "on"
 
 type TestType = (int list * string option * string) * (bool * unit) * Bar
 let value : TestType = (([1 .. 5], None, "42"), (false, ()), B 12)

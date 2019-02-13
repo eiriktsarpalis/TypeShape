@@ -24,19 +24,6 @@ EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TypeShape.Tests", "tests\TypeShape.Tests\TypeShape.Tests.fsproj", "{2ACF9581-EA10-4C9B-A68A-A9963526E5EC}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{42131FE1-A70A-46AA-9760-C9180B08B951}"
-	ProjectSection(SolutionItems) = preProject
-		samples\disposable.fsx = samples\disposable.fsx
-		samples\equality-comparer.fsx = samples\equality-comparer.fsx
-		samples\equality-staged.fsx = samples\equality-staged.fsx
-		samples\expr.fsx = samples\expr.fsx
-		samples\hashcode-staged.fsx = samples\hashcode-staged.fsx
-		samples\iso.fsx = samples\iso.fsx
-		samples\json-serializer.fsx = samples\json-serializer.fsx
-		samples\mock.fsx = samples\mock.fsx
-		samples\parser.fsx = samples\parser.fsx
-		samples\printer.fsx = samples\printer.fsx
-		samples\random.fsx = samples\random.fsx
-	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TypeShape.CSharp", "src\TypeShape.CSharp\TypeShape.CSharp.csproj", "{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18}"
 EndProject
@@ -52,6 +39,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{07CC7F
 	EndProjectSection
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TypeShape.Benchmarks", "tests\TypeShape.Benchmarks\TypeShape.Benchmarks.fsproj", "{6DCE45EB-7822-4CE7-8856-E053257C0D5F}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape.Samples", "samples\TypeShape.Samples\TypeShape.Samples.fsproj", "{83BDFFE6-DCBF-468C-B640-D30C41855748}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -93,6 +82,14 @@ Global
 		{6DCE45EB-7822-4CE7-8856-E053257C0D5F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6DCE45EB-7822-4CE7-8856-E053257C0D5F}.Release-NoEmit|Any CPU.ActiveCfg = Release|Any CPU
 		{6DCE45EB-7822-4CE7-8856-E053257C0D5F}.Release-NoEmit|Any CPU.Build.0 = Release|Any CPU
+		{83BDFFE6-DCBF-468C-B640-D30C41855748}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83BDFFE6-DCBF-468C-B640-D30C41855748}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83BDFFE6-DCBF-468C-B640-D30C41855748}.Debug-NoEmit|Any CPU.ActiveCfg = Debug|Any CPU
+		{83BDFFE6-DCBF-468C-B640-D30C41855748}.Debug-NoEmit|Any CPU.Build.0 = Debug|Any CPU
+		{83BDFFE6-DCBF-468C-B640-D30C41855748}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83BDFFE6-DCBF-468C-B640-D30C41855748}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83BDFFE6-DCBF-468C-B640-D30C41855748}.Release-NoEmit|Any CPU.ActiveCfg = Release|Any CPU
+		{83BDFFE6-DCBF-468C-B640-D30C41855748}.Release-NoEmit|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -102,6 +99,7 @@ Global
 		{2ACF9581-EA10-4C9B-A68A-A9963526E5EC} = {5572A9F7-C4EB-45BF-8FCF-FC07E99FB92C}
 		{2AC53438-F8DF-44ED-A0BF-8CEB84A7BF18} = {B2C69EAD-8F2A-4B13-AE09-3BE6E2A2EC40}
 		{6DCE45EB-7822-4CE7-8856-E053257C0D5F} = {5572A9F7-C4EB-45BF-8FCF-FC07E99FB92C}
+		{83BDFFE6-DCBF-468C-B640-D30C41855748} = {42131FE1-A70A-46AA-9760-C9180B08B951}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5A544A5F-CD9E-4B69-9492-FF21A20A861C}

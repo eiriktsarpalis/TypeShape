@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net461</TargetFramework>
+    <NoWarn>FS0020</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="disposable.fs" />
+    <Compile Include="equality-comparer.fs" />
+    <Compile Include="equality-staged.fs" />
+    <Compile Include="expr.fs" />
+    <Compile Include="hashcode-staged.fs" />
+    <Compile Include="iso.fs" />
+    <Compile Include="json-serializer.fs" />
+    <Compile Include="mock.fs" />
+    <Compile Include="parser.fs" />
+    <Compile Include="printer.fs" />
+    <Compile Include="random.fs" />
+    <None Include="paket.references" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TypeShape\TypeShape.fsproj" />
+  </ItemGroup>
+
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
+
+</Project>

@@ -1,5 +1,4 @@
-#r "../src/TypeShape/bin/Release/net45/TypeShape.dll"
-#r "../packages/FsCheck/lib/net452/FsCheck.dll"
+module Random
 
 open System
 open TypeShape.Core
