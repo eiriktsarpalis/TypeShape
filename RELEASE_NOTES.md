@@ -1,3 +1,6 @@
+### 6.1.1
+* Remove Sourcelink nuget dependency.
+
 ### 6.1
 * Expose generic clone function in main library.
 * Add cancellable generic iter combinator.
