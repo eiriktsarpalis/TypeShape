@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-TARGET=${1:-test}
+TARGET=${1:-Default}
 IMAGE_LABEL=${2:-"typeshape-build"}
 
 # docker build
