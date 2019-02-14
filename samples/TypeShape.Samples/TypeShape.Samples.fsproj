@@ -17,6 +17,8 @@
     <Compile Include="parser.fs" />
     <Compile Include="printer.fs" />
     <Compile Include="random.fs" />
+    <Compile Include="lens.fs" />
+    <None Include="test.fsx" />
     <None Include="paket.references" />
   </ItemGroup>
 
