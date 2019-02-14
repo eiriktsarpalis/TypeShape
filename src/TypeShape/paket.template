@@ -26,7 +26,7 @@ dependencies
 	FSharp.Core >= LOCKEDVERSION
 	System.Reflection.Emit.Lightweight >= LOCKEDVERSION
 excludeddependencies
-    SourceLink.Create.CommandLine
+    Microsoft.SourceLink.GitHub
 files
     bin/Release/net45/TypeShape.dll ==> lib/net45
     bin/Release/net45/TypeShape.pdb ==> lib/net45
