@@ -21,6 +21,7 @@ nuget FsCheck ~> 3.0 prerelease
 nuget FsCheck.XUnit ~> 3.0 prerelease
 nuget BenchmarkDotNet
 nuget Newtonsoft.Json
+nuget FSharp.Data ~> 3.0
 
 nuget FParsec
 nuget FSharp.Quotations.Evaluator

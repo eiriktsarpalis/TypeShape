@@ -92,7 +92,7 @@ module private Impl =
         | _ -> failwithf "unsupported lens type %O" typeof<'T>
 
 
-let rec mkLens<'T, 'F> (expr : Expr<'T -> 'F>) : Lens<'T, 'F> =
+let mkLens<'T, 'F> (expr : Expr<'T -> 'F>) : Lens<'T, 'F> =
     let path = Impl.extractPath expr
     let lens = Impl.mkLensAux<'T, 'F> path
     {
@@ -103,6 +103,7 @@ let rec mkLens<'T, 'F> (expr : Expr<'T -> 'F>) : Lens<'T, 'F> =
 
 //--------------------------------------------
 // Examples
+
 
 type Foo<'T> =
     {
@@ -123,3 +124,15 @@ l3.get (Some [[| { a = [{ a = 42 ; b = "" ; c = false }] ; b = "" ; c = false } 
 l1.set 42 1
 l2.set (ref {a = 42; b = "" ; c = false}) 5
 l3.set (Some [[| { a = [{ a = 42 ; b = "" ; c = false }] ; b = "" ; c = false } |]]) { a = 42 ; b = "b" ; c = true }
+
+// working with type providers
+
+open FSharp.Data
+type Bar = CsvProvider<Schema = "A (int), B (string), C (float)", HasHeaders = false>
+
+let l4 = mkLens <@ fun (x:Bar.Row list) -> x.[1].B @>
+
+let values = Bar.Parse("42, bar, 3.14\n55, baz, 2.17").Rows |> Seq.toList
+
+l4.get values
+l4.set values "foo"
