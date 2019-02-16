@@ -108,6 +108,9 @@ let ``Shape Nullable`` () =
                 typeof<'T> = typeof<int> }
     test <@ match shapeof<Nullable<int>> with Shape.Nullable e -> e.Accept accepter | _ -> false @>
 
+    let cloner = clone<Nullable<TimeSpan>>
+    checkCloner cloner
+
 [<Fact>]
 let ``Shape Equality`` () =
     let testType expected (t:Type) =

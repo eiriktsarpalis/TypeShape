@@ -70,7 +70,7 @@ and private mkCounterAux<'T> (ctx : TypeGenerationContext) : SizeCounter<'T> =
         s.Accept { new INullableVisitor<SizeCounter<'T>> with
             member __.Visit<'t when 't : struct and 't :> ValueType and 't : (new : unit -> 't)>() = // 'T = 't
                 let ts = mkCounterCached<'t> ctx
-                fun s (n:Nullable<'t>) -> if n.HasValue then 1L else 1L + ts s n.Value
+                fun s (n:Nullable<'t>) -> if n.HasValue then 1L + ts s n.Value else 1L
                 |> wrap
         }
 

@@ -45,6 +45,7 @@ and GroundType =
     | DateTime
     | TimeSpan
     | IntEnum
+    | IntNullable
     | CharEnum
     | ByteEnum
     | Peano
@@ -196,6 +197,7 @@ module Implementation =
             | DateTime -> "DateTime"
             | TimeSpan -> "TimeSpan"
             | IntEnum -> "IntEnum"
+            | IntNullable -> "Nullable<int>"
             | ByteEnum -> "ByteEnum"
             | CharEnum -> "CharEnum"
             | Peano -> "Peano"
@@ -243,6 +245,7 @@ module Implementation =
             | ByteEnum -> typeof<ByteEnum>
             | CharEnum -> typeof<CharEnum>
             | IntEnum -> typeof<IntEnum>
+            | IntNullable -> typeof<Nullable<int>>
             | Peano -> typeof<Peano>
 
 
@@ -254,10 +257,10 @@ module Implementation =
         member tAlg.Accept (v:ITypeShapeVisitor<'R>) : 'R =
             tAlg.TypeShape.Accept v
 
-        member tAlg.Accept (v:IComparisonVisitor<'R>) : 'R =
+        member tAlg.Accept (v:IEqualityVisitor<'R>) : 'R =
             match tAlg.TypeShape with
-            | Shape.Comparison s -> s.Accept v
-            | s -> failwithf "internal error: type %O does not support comparison" s.Type
+            | Shape.Equality s -> s.Accept v
+            | s -> failwithf "internal error: type %O does not support equality" s.Type
 
 
 open Implementation
@@ -267,16 +270,16 @@ open Implementation
 // Runner Implementation
 
 type Checker =
-    abstract Invoke<'T when 'T : comparison> : TypeAlg -> bool
+    abstract Invoke<'T when 'T : equality> : TypeAlg -> bool
 
 type Predicate =
-    abstract Invoke<'T when 'T : comparison> : 'T -> bool
+    abstract Invoke<'T when 'T : equality> : 'T -> bool
 
 type Predicate2 =
-    abstract Invoke<'T when 'T : comparison> : 'T -> 'T -> bool
+    abstract Invoke<'T when 'T : equality> : 'T -> 'T -> bool
 
 type Predicate3 =
-    abstract Invoke<'T when 'T : comparison> : 'T -> 'T -> 'T -> bool
+    abstract Invoke<'T when 'T : equality> : 'T -> 'T -> 'T -> bool
 
 type Check with
     /// <summary>
@@ -289,8 +292,8 @@ type Check with
         let config = defaultArg config Config.QuickThrowOnFailure
         let verbose = defaultArg verbose false
         let runOnType (tAlg : TypeAlg) =
-            tAlg.Accept {  new IComparisonVisitor<bool> with
-                member __.Visit<'T when 'T : comparison>() =
+            tAlg.Accept {  new IEqualityVisitor<bool> with
+                member __.Visit<'T when 'T : equality>() =
                     if verbose then printfn "Testing type %s" (PrettyPrint.typeAlg tAlg)
                     checker.Invoke<'T> tAlg }
     
@@ -310,7 +313,7 @@ type Check with
 
         let checker =
             { new Checker with
-                member __.Invoke<'T when 'T : comparison> tAlg =
+                member __.Invoke<'T when 'T : equality> tAlg =
                     Check.One<'T -> bool>(vconf, predicate.Invoke) ; true }
 
         Check.Generic(checker, tconf, verbose = verbose)
@@ -329,7 +332,7 @@ type Check with
 
         let checker =
             { new Checker with
-                member __.Invoke<'T when 'T : comparison> tAlg =
+                member __.Invoke<'T when 'T : equality> tAlg =
                     Check.One<'T * 'T -> bool>(vconf, fun (t1,t2) -> predicate2.Invoke t1 t2) ; true }
 
         Check.Generic(checker, tconf, verbose = verbose)
@@ -348,7 +351,7 @@ type Check with
 
         let checker =
             { new Checker with
-                member __.Invoke<'T when 'T : comparison> tAlg =
+                member __.Invoke<'T when 'T : equality> tAlg =
                     Check.One<'T * 'T * 'T -> bool>(vconf, fun (t1,t2,t3) -> predicate3.Invoke t1 t2 t3) ; true }
 
         Check.Generic(checker, tconf, verbose = verbose)

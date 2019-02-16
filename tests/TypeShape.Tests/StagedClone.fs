@@ -41,6 +41,18 @@ let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
     | Shape.Decimal
     | Shape.Enum _ -> <@ %e @>
     | Shape.String -> wrap <@ match (% unwrap e) : string with null -> null | s -> String.Copy s @>
+    | Shape.Nullable s ->
+        s.Accept { new INullableVisitor<Expr<'T>> with
+            member __.Visit<'t when 't : (new : unit -> 't) 
+                                and 't :> ValueType 
+                                and 't : struct> () =
+                wrap 
+                    <@ 
+                        match (% unwrap e) : Nullable<'t> with 
+                        | x when x.HasValue -> Nullable((% stageCloner self) x.Value)
+                        | x -> x 
+                    @> }
+
     | Shape.Array s when s.Rank = 1 ->
         s.Accept { new IArrayVisitor<Expr<'T>> with
             member __.Visit<'t> _ =

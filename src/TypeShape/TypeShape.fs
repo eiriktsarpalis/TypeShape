@@ -1953,6 +1953,7 @@ module Shape =
 
     /// Identifies whether shape satisfies the 'struct' or 'not struct' constraint
     let (|Struct|NotStruct|) (s : TypeShape) =
+        // TODO move Nullable case here
         if s.Type.IsValueType then
             let instance = Activator.CreateInstanceGeneric<ShapeStruct<_>> [|s.Type|] :?> IShapeStruct
             Struct instance

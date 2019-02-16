@@ -24,6 +24,7 @@ module private Impl =
 
     and mkRefEqCloner<'T> (cloner : Cloner<'T>) : Cloner<'T> =
         match shapeof<'T> with
+        | Shape.Nullable _
         | Shape.Struct _ -> cloner
         | Shape.NotStruct s ->
             s.Accept { new INotStructVisitor<Cloner<'T>> with
