@@ -106,6 +106,7 @@ let ``Shape Nullable`` () =
         { new INullableVisitor<bool> with 
             member __.Visit<'T when 'T : struct and 'T : (new : unit -> 'T) and 'T :> ValueType>() = 
                 typeof<'T> = typeof<int> }
+
     test <@ match shapeof<Nullable<int>> with Shape.Nullable e -> e.Accept accepter | _ -> false @>
 
     let cloner = clone<Nullable<TimeSpan>>

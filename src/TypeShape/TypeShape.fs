@@ -2314,6 +2314,7 @@ module Shape =
 
     /// Recognizes POCO shapes, .NET types that are either classes or structs
     let (|Poco|_|) (s : TypeShape) =
+        // TODO exclude Nullable types in future major release
         if s.Type.IsClass || s.Type.IsValueType then
             let hasPointers = 
                 s.Type.GetFields allInstanceMembers 

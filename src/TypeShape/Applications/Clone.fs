@@ -106,6 +106,17 @@ module private Impl =
                                 for i = 0 to ts.Length - 1 do ts'.[i] <- ec s c ts.[i]
                                 ts') }
 
+        | Shape.Nullable s ->
+            s.Accept { new INullableVisitor<Cloner<'T>> with
+                member __.Visit<'t when 't : (new : unit -> 't) 
+                                    and 't :> ValueType 
+                                    and 't : struct> () =
+
+                    let ec = mkClonerCached<'t> ctx
+                    EQ(fun s c (t:Nullable<'t>) -> 
+                        if t.HasValue then Nullable(ec s c t.Value)
+                        else t) }
+
         | Shape.FSharpList s ->
             s.Accept {
                 new IFSharpListVisitor<Cloner<'T>> with
