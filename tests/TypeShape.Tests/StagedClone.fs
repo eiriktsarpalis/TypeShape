@@ -46,10 +46,14 @@ let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
             member __.Visit<'t when 't : (new : unit -> 't) 
                                 and 't :> ValueType 
                                 and 't : struct> () =
+
+                // work around unquote bug
+                let hasValue (x:Nullable<'t>) = x.HasValue
+
                 wrap 
                     <@ 
                         match (% unwrap e) : Nullable<'t> with 
-                        | x when x.HasValue -> Nullable((% stageCloner self) x.Value)
+                        | x when hasValue x -> Nullable((% stageCloner self) x.Value)
                         | x -> x 
                     @> }
 

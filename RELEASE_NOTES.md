@@ -1,3 +1,6 @@
+### 6.1.2
+* Fix Nullable related bugs.
+
 ### 6.1.1
 * Remove Sourcelink nuget dependency.
 

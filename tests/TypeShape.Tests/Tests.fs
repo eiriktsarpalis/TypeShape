@@ -111,6 +111,9 @@ let ``Shape Nullable`` () =
     let cloner = clone<Nullable<TimeSpan>>
     checkCloner cloner
 
+    let stagedCloner = mkStagedCloner<Nullable<TimeSpan>>()
+    checkCloner stagedCloner
+
 [<Fact>]
 let ``Shape Equality`` () =
     let testType expected (t:Type) =
