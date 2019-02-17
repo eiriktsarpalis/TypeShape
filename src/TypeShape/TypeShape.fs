@@ -1825,16 +1825,6 @@ module Shape =
     /// Recognizes abstract type shapes
     let (|Abstract|_|) (s:TypeShape) = 
         if s.Type.IsAbstract then SomeU else None
-    
-    /// Recognizes any type that is a System.Nullable instance
-    let (|Nullable|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<Nullable<_>> ->
-            Activator.CreateInstanceGeneric<ShapeNullable<_>>(ta) 
-            :?> IShapeNullable
-            |> Some
-
-        | _ -> None
         
     /// Recognizes any type that is a .NET enumeration
     let (|Enum|_|) (s : TypeShape) = 
@@ -1951,13 +1941,17 @@ module Shape =
         else
             None
 
-    /// Identifies whether shape satisfies the 'struct' or 'not struct' constraint
-    let (|Struct|NotStruct|) (s : TypeShape) =
-        // TODO move Nullable case here
-        if s.Type.IsValueType then
+    /// Identifies whether shape satisfies the 'struct', 'not struct' or 'nullable' constraint
+    let (|Struct|NotStruct|Nullable|) (s : TypeShape) =
+        match s.ShapeInfo with
+        | Generic(td,ta) when td = typedefof<Nullable<_>> ->
+            let shape = Activator.CreateInstanceGeneric<ShapeNullable<_>>(ta) :?> IShapeNullable
+            Nullable shape
+
+        | _ when s.Type.IsValueType ->
             let instance = Activator.CreateInstanceGeneric<ShapeStruct<_>> [|s.Type|] :?> IShapeStruct
             Struct instance
-        else
+        | _ ->
             let instance = Activator.CreateInstanceGeneric<ShapeNotStruct<_>> [|s.Type|] :?> IShapeNotStruct
             NotStruct instance
 
@@ -2314,14 +2308,18 @@ module Shape =
 
     /// Recognizes POCO shapes, .NET types that are either classes or structs
     let (|Poco|_|) (s : TypeShape) =
-        // TODO exclude Nullable types in future major release
         if s.Type.IsClass || s.Type.IsValueType then
+            let isNullable = 
+                match s.ShapeInfo with
+                | Generic(td,_) -> td = typedefof<Nullable<_>>
+                | _ -> false
+
             let hasPointers = 
                 s.Type.GetFields allInstanceMembers 
                 |> Seq.map (fun f -> f.FieldType)
                 |> Seq.exists (fun t -> t.IsByRef || t.IsPointer)
 
-            if hasPointers then None // do not recognize if type has pointer fields
+            if isNullable || hasPointers then None // do not recognize if type has pointer fields
             else
                 Activator.CreateInstanceGeneric<ShapePoco<_>>([|s.Type|], [||])
                 :?> IShapePoco

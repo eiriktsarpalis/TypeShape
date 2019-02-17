@@ -86,8 +86,8 @@ let ``Shape Struct`` () =
         { new INotStructVisitor<bool> with
             member __.Visit<'T when 'T : not struct and 'T : null> () = false }
 
-    test <@ match shapeof<int> with Shape.Struct s -> s.Accept accepter1 | Shape.NotStruct s -> s.Accept accepter2 @>    
-    test <@ not <| match shapeof<string> with Shape.Struct s -> s.Accept accepter1 | Shape.NotStruct s -> s.Accept accepter2 @>    
+    test <@ match shapeof<int> with Shape.Struct s -> s.Accept accepter1 | Shape.NotStruct s -> s.Accept accepter2 | _ -> false @>    
+    test <@ not <| match shapeof<string> with Shape.Struct s -> s.Accept accepter1 | Shape.NotStruct s -> s.Accept accepter2 | _ -> false @>    
 
 [<Fact>]
 let ``Shape Binding Flags`` () =

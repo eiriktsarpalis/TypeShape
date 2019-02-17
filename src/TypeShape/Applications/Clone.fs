@@ -2,7 +2,6 @@
 
 open System
 open System.Runtime.Serialization
-open System.Threading
 open TypeShape.Core
 open TypeShape.Core.Utils
 
