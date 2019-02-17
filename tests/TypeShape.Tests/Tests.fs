@@ -540,6 +540,18 @@ let ``Anonymous Record cloning`` () =
     checkCloner scloner
 
 [<Fact>]
+let ``Anonymous struct Records should be matched by the record active pattern`` () =
+    test <@ match shapeof<struct {| x : int ; y : string ; z : bool|}> with Shape.FSharpRecord s -> s.Fields.Length = 3 | _ -> false @>
+
+[<Fact>]
+let ``Anonymous struct Record cloning`` () =
+    let cloner = clone<struct {| x : int ; y : string; z : bool; w : int list|} >
+    checkCloner cloner
+
+    let scloner = mkStagedCloner< struct {| x : int ; y : string; z : bool; w : int list|} >()
+    checkCloner scloner
+
+[<Fact>]
 let ``Shape F# ref`` () =
     test <@ match shapeof<int ref> with Shape.FSharpRecord r -> r.Fields.Length = 1 | _ -> false @>
     let accepter = { new IFSharpRefVisitor<bool> with member __.Visit<'T>() = typeof<'T> = typeof<int> }
