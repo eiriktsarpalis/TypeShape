@@ -280,174 +280,6 @@ type private ShapeDelegate<'Delegate when 'Delegate :> Delegate>() =
     interface IShapeDelegate with
         member __.Accept v = v.Visit<'Delegate>()
 
-// System.Tuple`1
-
-type ITuple1Visitor<'R> =
-    abstract Visit<'T> : unit -> 'R
-
-type IShapeTuple1 =
-    abstract Item1 : TypeShape
-    abstract Accept : ITuple1Visitor<'R> -> 'R
-
-type private ShapeTuple1<'T> () =
-    interface IShapeTuple1 with
-        member __.Item1 = shapeof<'T>
-        member __.Accept v = v.Visit<'T> ()
-
-// System.Tuple`2
-
-type ITuple2Visitor<'R> =
-    abstract Visit<'T1, 'T2> : unit -> 'R
-
-type IShapeTuple2 =
-    abstract Item1 : TypeShape
-    abstract Item2 : TypeShape
-    abstract Accept : ITuple2Visitor<'R> -> 'R
-
-type private ShapeTuple2<'T1, 'T2> () =
-    interface IShapeTuple2 with
-        member __.Item1 = shapeof<'T1>
-        member __.Item2 = shapeof<'T2>
-        member __.Accept v = v.Visit<'T1,'T2> ()
-
-// System.Tuple`3
-
-type ITuple3Visitor<'R> =
-    abstract Visit<'T1, 'T2, 'T3> : unit -> 'R
-
-type IShapeTuple3 =
-    abstract Item1 : TypeShape
-    abstract Item2 : TypeShape
-    abstract Item3 : TypeShape
-    abstract Accept : ITuple3Visitor<'R> -> 'R
-
-type private ShapeTuple3<'T1, 'T2, 'T3> () =
-    interface IShapeTuple3 with
-        member __.Item1 = shapeof<'T1>
-        member __.Item2 = shapeof<'T2>
-        member __.Item3 = shapeof<'T3>
-        member __.Accept v = v.Visit<'T1, 'T2, 'T3> ()
-
-// System.Tuple`4
-
-type ITuple4Visitor<'R> =
-    abstract Visit<'T1, 'T2, 'T3, 'T4> : unit -> 'R
-
-type IShapeTuple4 =
-    abstract Item1 : TypeShape
-    abstract Item2 : TypeShape
-    abstract Item3 : TypeShape
-    abstract Item4 : TypeShape
-    abstract Accept : ITuple4Visitor<'R> -> 'R
-
-type private ShapeTuple4<'T1, 'T2, 'T3, 'T4> () =
-    interface IShapeTuple4 with
-        member __.Item1 = shapeof<'T1>
-        member __.Item2 = shapeof<'T2>
-        member __.Item3 = shapeof<'T3>
-        member __.Item4 = shapeof<'T4>
-        member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4> ()
-
-// System.Tuple`5
-
-type ITuple5Visitor<'R> =
-    abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5> : unit -> 'R
-
-type IShapeTuple5 =
-    abstract Item1 : TypeShape
-    abstract Item2 : TypeShape
-    abstract Item3 : TypeShape
-    abstract Item4 : TypeShape
-    abstract Item5 : TypeShape
-    abstract Accept : ITuple5Visitor<'R> -> 'R
-
-type private ShapeTuple5<'T1, 'T2, 'T3, 'T4, 'T5> () =
-    interface IShapeTuple5 with
-        member __.Item1 = shapeof<'T1>
-        member __.Item2 = shapeof<'T2>
-        member __.Item3 = shapeof<'T3>
-        member __.Item4 = shapeof<'T4>
-        member __.Item5 = shapeof<'T5>
-        member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5> ()
-
-// System.Tuple`6
-
-type ITuple6Visitor<'R> =
-    abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> : unit -> 'R
-
-type IShapeTuple6 =
-    abstract Item1 : TypeShape
-    abstract Item2 : TypeShape
-    abstract Item3 : TypeShape
-    abstract Item4 : TypeShape
-    abstract Item5 : TypeShape
-    abstract Item6 : TypeShape
-    abstract Accept : ITuple6Visitor<'R> -> 'R
-
-type private ShapeTuple6<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> () =
-    interface IShapeTuple6 with
-        member __.Item1 = shapeof<'T1>
-        member __.Item2 = shapeof<'T2>
-        member __.Item3 = shapeof<'T3>
-        member __.Item4 = shapeof<'T4>
-        member __.Item5 = shapeof<'T5>
-        member __.Item6 = shapeof<'T6>
-        member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> ()
-
-// System.Tuple`7
-
-type ITuple7Visitor<'R> =
-    abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> : unit -> 'R
-
-type IShapeTuple7 =
-    abstract Item1 : TypeShape
-    abstract Item2 : TypeShape
-    abstract Item3 : TypeShape
-    abstract Item4 : TypeShape
-    abstract Item5 : TypeShape
-    abstract Item6 : TypeShape
-    abstract Item7 : TypeShape
-    abstract Accept : ITuple7Visitor<'R> -> 'R
-
-type private ShapeTuple7<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> () =
-    interface IShapeTuple7 with
-        member __.Item1 = shapeof<'T1>
-        member __.Item2 = shapeof<'T2>
-        member __.Item3 = shapeof<'T3>
-        member __.Item4 = shapeof<'T4>
-        member __.Item5 = shapeof<'T5>
-        member __.Item6 = shapeof<'T6>
-        member __.Item7 = shapeof<'T7>
-        member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> ()
-
-// System.Tuple`8
-
-type ITuple8Visitor<'R> =
-    abstract Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> : unit -> 'R
-
-type IShapeTuple8 =
-    abstract Item1 : TypeShape
-    abstract Item2 : TypeShape
-    abstract Item3 : TypeShape
-    abstract Item4 : TypeShape
-    abstract Item5 : TypeShape
-    abstract Item6 : TypeShape
-    abstract Item7 : TypeShape
-    abstract Rest : TypeShape
-    abstract Accept : ITuple8Visitor<'R> -> 'R
-
-type private ShapeTuple8<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> () =
-    interface IShapeTuple8 with
-        member __.Item1 = shapeof<'T1>
-        member __.Item2 = shapeof<'T2>
-        member __.Item3 = shapeof<'T3>
-        member __.Item4 = shapeof<'T4>
-        member __.Item5 = shapeof<'T5>
-        member __.Item6 = shapeof<'T6>
-        member __.Item7 = shapeof<'T7>
-        member __.Rest = shapeof<'TRest>
-        member __.Accept v = v.Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest> ()
-
 // F# functions
 
 type IFSharpFuncVisitor<'R> =
@@ -528,22 +360,15 @@ type private ShapeKeyValuePair<'K,'V> () =
 
 // System.Array
 
-type IArrayVisitor<'R> =
-    abstract Visit<'T> : rank:int -> 'R
-
 type IShapeArray =
     /// Gets the rank of the array type shape
     abstract Rank : int
     abstract Element : TypeShape
-    abstract Accept : IArrayVisitor<'R> -> 'R
 
 type private ShapeArray<'T>(rank : int) =
-    /// Gets the rank of the array type shape
-    member __.Rank = rank
     interface IShapeArray with
         member __.Rank = rank
         member __.Element = shapeof<'T>
-        member __.Accept v = v.Visit<'T> rank
 
 type ISystemArrayVisitor<'R> =
     abstract Visit<'Array when 'Array :> System.Array> : unit -> 'R
@@ -567,12 +392,10 @@ type IResizeArrayVisitor<'R> =
 
 type IShapeResizeArray =
     abstract Element : TypeShape
-    abstract Accept : IResizeArrayVisitor<'R> -> 'R
 
 type private ShapeResizeArray<'T> () =
     interface IShapeResizeArray with
         member __.Element = shapeof<'T>
-        member __.Accept v = v.Visit<'T> ()
 
 
 // System.Collections.Dictionary
@@ -639,169 +462,28 @@ type private ShapeFSharpMap<'K, 'V when 'K : comparison> () =
 
 type IShapeFSharpRef =
     abstract Element : TypeShape
-    abstract Accept : IFSharpRefVisitor<'R> -> 'R
-
-and IFSharpRefVisitor<'R> =
-    abstract Visit<'T> : unit -> 'R
 
 type private ShapeFSharpRef<'T> () =
     interface IShapeFSharpRef with
         member __.Element = shapeof<'T>
-        member __.Accept v = v.Visit<'T> ()
 
 // F# option
 
-type IFSharpOptionVisitor<'R> =
-    abstract Visit<'T> : unit -> 'R
-
 type IShapeFSharpOption =
     abstract Element : TypeShape
-    abstract Accept : IFSharpOptionVisitor<'R> -> 'R
 
 type private ShapeFSharpOption<'T> () =
     interface IShapeFSharpOption with
         member __.Element = shapeof<'T>
-        member __.Accept v = v.Visit<'T> ()
 
 // F# List
 
-type IFSharpListVisitor<'R> =
-    abstract Visit<'T> : unit -> 'R
-
 type IShapeFSharpList =
     abstract Element : TypeShape
-    abstract Accept : IFSharpListVisitor<'R> -> 'R
 
 type private ShapeFSharpList<'T> () =
     interface IShapeFSharpList with
         member __.Element = shapeof<'T>
-        member __.Accept v = v.Visit<'T> ()
-
-// F# Choice`2
-
-type IFSharpChoice2Visitor<'R> =
-    abstract Visit<'T1,'T2> : unit -> 'R
-
-type IShapeFSharpChoice2 =
-    abstract Type1 : TypeShape
-    abstract Type2 : TypeShape
-    abstract Accept : IFSharpChoice2Visitor<'R> -> 'R
-
-type private ShapeFSharpChoice<'T1, 'T2> () =
-    interface IShapeFSharpChoice2 with
-        member __.Type1 = shapeof<'T1>
-        member __.Type2 = shapeof<'T2>
-        member __.Accept v = v.Visit<'T1,'T2>()
-
-// F# Choice`3
-
-type IFSharpChoice3Visitor<'R> =
-    abstract Visit<'T1,'T2,'T3> : unit -> 'R
-
-type IShapeFSharpChoice3 =
-    abstract Type1 : TypeShape
-    abstract Type2 : TypeShape
-    abstract Type3 : TypeShape
-    abstract Accept : IFSharpChoice3Visitor<'R> -> 'R
-
-type private ShapeFSharpChoice<'T1, 'T2, 'T3> () =
-    interface IShapeFSharpChoice3 with
-        member __.Type1 = shapeof<'T1>
-        member __.Type2 = shapeof<'T2>
-        member __.Type3 = shapeof<'T3>
-        member __.Accept v = v.Visit<'T1,'T2,'T3>()
-
-// F# Choice`4
-
-type IFSharpChoice4Visitor<'R> =
-    abstract Visit<'T1,'T2,'T3,'T4> : unit -> 'R
-
-type IShapeFSharpChoice4 =
-    abstract Type1 : TypeShape
-    abstract Type2 : TypeShape
-    abstract Type3 : TypeShape
-    abstract Type4 : TypeShape
-    abstract Accept : IFSharpChoice4Visitor<'R> -> 'R
-
-type private ShapeFSharpChoice<'T1, 'T2, 'T3, 'T4> () =
-    interface IShapeFSharpChoice4 with
-        member __.Type1 = shapeof<'T1>
-        member __.Type2 = shapeof<'T2>
-        member __.Type3 = shapeof<'T3>
-        member __.Type4 = shapeof<'T4>
-        member __.Accept v = v.Visit<'T1,'T2,'T3,'T4>()
-
-// F# Choice`5
-
-type IFSharpChoice5Visitor<'R> =
-    abstract Visit<'T1,'T2,'T3,'T4,'T5> : unit -> 'R
-
-type IShapeFSharpChoice5 =
-    abstract Type1 : TypeShape
-    abstract Type2 : TypeShape
-    abstract Type3 : TypeShape
-    abstract Type4 : TypeShape
-    abstract Type5 : TypeShape
-    abstract Accept : IFSharpChoice5Visitor<'R> -> 'R
-
-type private ShapeFSharpChoice<'T1, 'T2, 'T3, 'T4, 'T5> () =
-    interface IShapeFSharpChoice5 with
-        member __.Type1 = shapeof<'T1>
-        member __.Type2 = shapeof<'T2>
-        member __.Type3 = shapeof<'T3>
-        member __.Type4 = shapeof<'T4>
-        member __.Type5 = shapeof<'T5>
-        member __.Accept v = v.Visit<'T1,'T2,'T3,'T4,'T5>()
-
-// F# Choice`6
-
-type IFSharpChoice6Visitor<'R> =
-    abstract Visit<'T1,'T2,'T3,'T4,'T5,'T6> : unit -> 'R
-
-type IShapeFSharpChoice6 =
-    abstract Type1 : TypeShape
-    abstract Type2 : TypeShape
-    abstract Type3 : TypeShape
-    abstract Type4 : TypeShape
-    abstract Type5 : TypeShape
-    abstract Type6 : TypeShape
-    abstract Accept : IFSharpChoice6Visitor<'R> -> 'R
-
-type private ShapeFSharpChoice<'T1, 'T2, 'T3, 'T4, 'T5, 'T6> () =
-    interface IShapeFSharpChoice6 with
-        member __.Type1 = shapeof<'T1>
-        member __.Type2 = shapeof<'T2>
-        member __.Type3 = shapeof<'T3>
-        member __.Type4 = shapeof<'T4>
-        member __.Type5 = shapeof<'T5>
-        member __.Type6 = shapeof<'T6>
-        member __.Accept v = v.Visit<'T1,'T2,'T3,'T4,'T5,'T6>()
-
-// F# Choice`7
-
-type IFSharpChoice7Visitor<'R> =
-    abstract Visit<'T1,'T2,'T3,'T4,'T5,'T6,'T7> : unit -> 'R
-
-type IShapeFSharpChoice7 =
-    abstract Type1 : TypeShape
-    abstract Type2 : TypeShape
-    abstract Type3 : TypeShape
-    abstract Type4 : TypeShape
-    abstract Type5 : TypeShape
-    abstract Type6 : TypeShape
-    abstract Type7 : TypeShape
-    abstract Accept : IFSharpChoice7Visitor<'R> -> 'R
-
-type private ShapeFSharpChoice<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> () =
-    interface IShapeFSharpChoice7 with
-        member __.Type1 = shapeof<'T1>
-        member __.Type2 = shapeof<'T2>
-        member __.Type3 = shapeof<'T3>
-        member __.Type4 = shapeof<'T4>
-        member __.Type5 = shapeof<'T5>
-        member __.Type6 = shapeof<'T6>
-        member __.Type7 = shapeof<'T7>
-        member __.Accept v = v.Visit<'T1,'T2,'T3,'T4,'T5,'T6,'T7>()
 
 //-----------------------------
 // Section: Member-based Shapes
@@ -809,11 +491,14 @@ type private ShapeFSharpChoice<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7> () =
 [<AutoOpen>]
 module private MemberUtils =
 
-    let defaultOfUntyped (ty : Type) =
-        TypeShape.Create(ty).Accept {
+    let private untypedVisitor =
+        {
             new ITypeShapeVisitor<obj> with
                 member __.Visit<'T>() = Unchecked.defaultof<'T> :> obj
         }
+
+    let defaultOfUntyped (ty : Type) =
+        TypeShape.Create(ty).Accept untypedVisitor
 
     let inline invalidMember (memberInfo : MemberInfo) =
         sprintf "TypeShape internal error: invalid MemberInfo '%O'" memberInfo
@@ -827,12 +512,6 @@ module private MemberUtils =
         | :? FieldInfo as f -> f.IsPublic
         | :? PropertyInfo as p -> p.GetGetMethod(true).IsPublic
         | _ -> invalidMember memberInfo
-
-    let getMemberType (path : MemberInfo[]) =
-        match path.[path.Length - 1] with
-        | :? FieldInfo as f -> f.FieldType
-        | :? PropertyInfo as p -> p.PropertyType
-        | m -> invalidMember m
         
     let isWriteableMember (path : MemberInfo[]) =
         path 
@@ -1821,20 +1500,6 @@ module Shape =
     let (|Unit|_|) s = test<unit> s
     let (|FSharpUnit|_|) s = test<unit> s
     let (|ByteArray|_|) s = test<byte []> s
-
-    /// Recognizes abstract type shapes
-    let (|Abstract|_|) (s:TypeShape) = 
-        if s.Type.IsAbstract then SomeU else None
-    
-    /// Recognizes any type that is a System.Nullable instance
-    let (|Nullable|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<Nullable<_>> ->
-            Activator.CreateInstanceGeneric<ShapeNullable<_>>(ta) 
-            :?> IShapeNullable
-            |> Some
-
-        | _ -> None
         
     /// Recognizes any type that is a .NET enumeration
     let (|Enum|_|) (s : TypeShape) = 
@@ -1951,13 +1616,17 @@ module Shape =
         else
             None
 
-    /// Identifies whether shape satisfies the 'struct' or 'not struct' constraint
-    let (|Struct|NotStruct|) (s : TypeShape) =
-        // TODO move Nullable case here
-        if s.Type.IsValueType then
+    /// Identifies whether shape satisfies the 'struct', 'not struct' or 'nullable' constraint
+    let (|Struct|NotStruct|Nullable|) (s : TypeShape) =
+        match s.ShapeInfo with
+        | Generic(td,ta) when td = typedefof<Nullable<_>> ->
+            let shape = Activator.CreateInstanceGeneric<ShapeNullable<_>>(ta) :?> IShapeNullable
+            Nullable shape
+
+        | _ when s.Type.IsValueType ->
             let instance = Activator.CreateInstanceGeneric<ShapeStruct<_>> [|s.Type|] :?> IShapeStruct
             Struct instance
-        else
+        | _ ->
             let instance = Activator.CreateInstanceGeneric<ShapeNotStruct<_>> [|s.Type|] :?> IShapeNotStruct
             NotStruct instance
 
@@ -2057,78 +1726,6 @@ module Shape =
         | _ ->
             None
 
-    /// Recognizes instances of System.Tuple<_>
-    let (|Tuple1|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<Tuple<_>> ->
-            Activator.CreateInstanceGeneric<ShapeTuple1<_>>(ta)
-            :?> IShapeTuple1
-            |> Some
-        | _ -> None
-
-    /// Recognizes instances of System.Tuple<_,_>
-    let (|Tuple2|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<_ * _> ->
-            Activator.CreateInstanceGeneric<ShapeTuple2<_,_>>(ta)
-            :?> IShapeTuple2
-            |> Some
-        | _ -> None
-
-    /// Recognizes instances of System.Tuple<_,_,_>
-    let (|Tuple3|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<_ * _ * _> ->
-            Activator.CreateInstanceGeneric<ShapeTuple3<_,_,_>>(ta)
-            :?> IShapeTuple3
-            |> Some
-        | _ -> None
-        
-    /// Recognizes instances of System.Tuple<_,_,_,_>
-    let (|Tuple4|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<_ * _ * _ * _> ->
-            Activator.CreateInstanceGeneric<ShapeTuple4<_,_,_,_>>(ta)
-            :?> IShapeTuple4
-            |> Some
-        | _ -> None
-
-    /// Recognizes instances of System.Tuple<_,_,_,_,_>
-    let (|Tuple5|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<_ * _ * _ * _ * _> ->
-            Activator.CreateInstanceGeneric<ShapeTuple5<_,_,_,_,_>>(ta)
-            :?> IShapeTuple5
-            |> Some
-        | _ -> None
-
-    /// Recognizes instances of System.Tuple<_,_,_,_,_,_>
-    let (|Tuple6|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<_ * _ * _ * _ * _ * _> ->
-            Activator.CreateInstanceGeneric<ShapeTuple6<_,_,_,_,_,_>>(ta)
-            :?> IShapeTuple6
-            |> Some
-        | _ -> None
-
-    /// Recognizes instances of System.Tuple<_,_,_,_,_,_,_>
-    let (|Tuple7|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<_ * _ * _ * _ * _ * _ * _> ->
-            Activator.CreateInstanceGeneric<ShapeTuple7<_,_,_,_,_,_,_>>(ta)
-            :?> IShapeTuple7
-            |> Some
-        | _ -> None
-
-    /// Recognizes instances of System.Tuple<_,_,_,_,_,_,_,_>
-    let (|Tuple8|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<Tuple<_,_,_,_,_,_,_,_>> ->
-            Activator.CreateInstanceGeneric<ShapeTuple8<_,_,_,_,_,_,_,_>>(ta)
-            :?> IShapeTuple8
-            |> Some
-        | _ -> None
-
     /// Recognizes shapes of F# list types
     let (|FSharpList|_|) (s : TypeShape) =
         match s.ShapeInfo with
@@ -2171,60 +1768,6 @@ module Shape =
         | Generic(td,ta) when td = typedefof<Map<_,_>> -> 
             Activator.CreateInstanceGeneric<ShapeFSharpMap<_,_>>(ta)
             :?> IShapeFSharpMap
-            |> Some
-        | _ -> None
-
-    /// Recognizes shapes of F# Choice<_,_> types
-    let (|FSharpChoice2|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<Choice<_,_>> ->
-            Activator.CreateInstanceGeneric<ShapeFSharpChoice<_,_>>(ta)
-            :?> IShapeFSharpChoice2
-            |> Some
-        | _ -> None
-
-    /// Recognizes shapes of F# Choice<_,_,_> types
-    let (|FSharpChoice3|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<Choice<_,_,_>> ->
-            Activator.CreateInstanceGeneric<ShapeFSharpChoice<_,_,_>>(ta)
-            :?> IShapeFSharpChoice3
-            |> Some
-        | _ -> None
-
-    /// Recognizes shapes of F# Choice<_,_,_,_> types
-    let (|FSharpChoice4|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<Choice<_,_,_,_>> ->
-            Activator.CreateInstanceGeneric<ShapeFSharpChoice<_,_,_,_>>(ta)
-            :?> IShapeFSharpChoice4
-            |> Some
-        | _ -> None
-
-    /// Recognizes shapes of F# Choice<_,_,_,_,_> types
-    let (|FSharpChoice5|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<Choice<_,_,_,_,_>> ->
-            Activator.CreateInstanceGeneric<ShapeFSharpChoice<_,_,_,_,_>>(ta)
-            :?> IShapeFSharpChoice5
-            |> Some
-        | _ -> None
-
-    /// Recognizes shapes of F# Choice<_,_,_,_,_,_> types
-    let (|FSharpChoice6|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<Choice<_,_,_,_,_,_>> ->
-            Activator.CreateInstanceGeneric<ShapeFSharpChoice<_,_,_,_,_,_>>(ta)
-            :?> IShapeFSharpChoice6
-            |> Some
-        | _ -> None
-
-    /// Recognizes shapes of F# Choice<_,_,_,_,_,_,_> types
-    let (|FSharpChoice7|_|) (s : TypeShape) =
-        match s.ShapeInfo with
-        | Generic(td,ta) when td = typedefof<Choice<_,_,_,_,_,_,_>> ->
-            Activator.CreateInstanceGeneric<ShapeFSharpChoice<_,_,_,_,_,_,_>>(ta)
-            :?> IShapeFSharpChoice7
             |> Some
         | _ -> None
 
@@ -2314,14 +1857,18 @@ module Shape =
 
     /// Recognizes POCO shapes, .NET types that are either classes or structs
     let (|Poco|_|) (s : TypeShape) =
-        // TODO exclude Nullable types in future major release
         if s.Type.IsClass || s.Type.IsValueType then
+            let isNullable = 
+                match s.ShapeInfo with
+                | Generic(td,_) -> td = typedefof<Nullable<_>>
+                | _ -> false
+
             let hasPointers = 
                 s.Type.GetFields allInstanceMembers 
                 |> Seq.map (fun f -> f.FieldType)
                 |> Seq.exists (fun t -> t.IsByRef || t.IsPointer)
 
-            if hasPointers then None // do not recognize if type has pointer fields
+            if isNullable || hasPointers then None // do not recognize if type has pointer fields
             else
                 Activator.CreateInstanceGeneric<ShapePoco<_>>([|s.Type|], [||])
                 :?> IShapePoco

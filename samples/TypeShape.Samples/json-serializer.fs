@@ -160,8 +160,8 @@ and private genPicklerAux<'T> (ctx : TypeGenerationContext) : JsonPickler<'T> =
     | Shape.Int64 -> mkPickler (fun sb i -> append sb (string i)) (numLiteral |>> int64)
     | Shape.String -> mkPickler (fun sb str -> append sb (escapeStr str)) stringLiteral
     | Shape.FSharpOption s ->
-        s.Accept {
-            new IFSharpOptionVisitor<JsonPickler<'T>> with
+        s.Element.Accept {
+            new ITypeShapeVisitor<JsonPickler<'T>> with
                 member __.Visit<'t> () =
                     let tP = genPicklerCached<'t> ctx
                     let printer (sb : StringBuilder) (inp : 't option) =
@@ -176,8 +176,8 @@ and private genPicklerAux<'T> (ctx : TypeGenerationContext) : JsonPickler<'T> =
         }
 
     | Shape.FSharpList s ->
-        s.Accept {
-            new IFSharpListVisitor<JsonPickler<'T>> with
+        s.Element.Accept {
+            new ITypeShapeVisitor<JsonPickler<'T>> with
                 member __.Visit<'t> () =
                     let eP = genPicklerCached<'t> ctx
                     let printer sb (ts : 't list) =
@@ -198,9 +198,9 @@ and private genPicklerAux<'T> (ctx : TypeGenerationContext) : JsonPickler<'T> =
         }
 
     | Shape.Array s when s.Rank = 1 ->
-        s.Accept {
-            new IArrayVisitor<JsonPickler<'T>> with
-                member __.Visit<'t> _ =
+        s.Element.Accept {
+            new ITypeShapeVisitor<JsonPickler<'T>> with
+                member __.Visit<'t> () =
                     let eP = genPicklerCached<'t> ctx
                     let printer sb (ts : 't []) =
                         append sb "["

@@ -82,8 +82,8 @@ and private mkEqualityComparerAux<'T> (ctx : TypeGenerationContext) : IEqualityC
                          (fun (e1:'e) (e2:'e) -> uc.Equals(LanguagePrimitives.EnumToValue e1, LanguagePrimitives.EnumToValue e2)) }
 
     | Shape.FSharpOption s ->
-        s.Accept {
-            new IFSharpOptionVisitor<IEqualityComparer<'T>> with
+        s.Element.Accept {
+            new ITypeShapeVisitor<IEqualityComparer<'T>> with
                 member __.Visit<'a> () =
                     let tc = mkEqualityComparerCached<'a> ctx
                     wrap (function None -> 0 | Some t -> tc.GetHashCode t)
@@ -94,8 +94,8 @@ and private mkEqualityComparerAux<'T> (ctx : TypeGenerationContext) : IEqualityC
         }
 
     | Shape.FSharpList s ->
-        s.Accept {
-            new IFSharpListVisitor<IEqualityComparer<'T>> with
+        s.Element.Accept {
+            new ITypeShapeVisitor<IEqualityComparer<'T>> with
                 member __.Visit<'a> () =
                     let tc = mkEqualityComparerCached<'a> ctx
                     let rec hash c (xs : 'a list) =
@@ -115,9 +115,9 @@ and private mkEqualityComparerAux<'T> (ctx : TypeGenerationContext) : IEqualityC
         }
 
     | Shape.Array s when s.Rank = 1 ->
-        s.Accept {
-            new IArrayVisitor<IEqualityComparer<'T>> with
-                member __.Visit<'a> _ =
+        s.Element.Accept {
+            new ITypeShapeVisitor<IEqualityComparer<'T>> with
+                member __.Visit<'a> () =
                     let tc = mkEqualityComparerCached<'a> ctx
                     let hash (xs : 'a []) =
                         let mutable h = 0

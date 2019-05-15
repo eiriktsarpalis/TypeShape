@@ -2,7 +2,6 @@
 
 open System
 open System.Runtime.Serialization
-open System.Threading
 open TypeShape.Core
 open TypeShape.Core.Utils
 
@@ -91,9 +90,9 @@ module private Impl =
         | Shape.Enum _ -> fun _ _ x -> x
         | Shape.String -> EQ(fun _ _ s -> String.Copy(s))
         | Shape.Array s when s.Rank = 1 ->
-            s.Accept {
-                new IArrayVisitor<Cloner<'T>> with
-                    member __.Visit<'t> _ =
+            s.Element.Accept {
+                new ITypeShapeVisitor<Cloner<'T>> with
+                    member __.Visit<'t> () =
                         if typeof<'t>.IsPrimitive then
                             EQ(fun _ _ (ts:'t[]) -> ts.Clone() :?> 't[])
                         else
@@ -118,8 +117,8 @@ module private Impl =
                         else t) }
 
         | Shape.FSharpList s ->
-            s.Accept {
-                new IFSharpListVisitor<Cloner<'T>> with
+            s.Element.Accept {
+                new ITypeShapeVisitor<Cloner<'T>> with
                     member __.Visit<'t> () =
                         let ec = mkClonerCached<'t> ctx
                         EQ(fun s c ts -> List.map (ec s c) ts) }

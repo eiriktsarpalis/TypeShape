@@ -1,3 +1,8 @@
+### 7.0.0
+* Fix Nullable related bugs.
+* Deprecate fixed arity Tuple and Choice shapes.
+* Simplify API for array, list, option and ref shapes.
+
 ### 6.1.2
 * Fix Nullable related bugs.
 

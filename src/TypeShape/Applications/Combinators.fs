@@ -86,8 +86,8 @@ module private GIterator =
                     wrap(fun c (n:Nullable<'t>) -> if n.HasValue then ti c n.Value) }
 
         | Shape.FSharpOption s ->
-            s.Accept {
-                new IFSharpOptionVisitor<Iterator<'E,'T>> with
+            s.Element.Accept {
+                new ITypeShapeVisitor<Iterator<'E,'T>> with
                     member __.Visit<'t>() =
                         let ei = mkIteratorCached<'E, 't> ctx
                         fun c tOpt ->
@@ -97,20 +97,20 @@ module private GIterator =
                         |> wrap }
 
         | Shape.Array s ->
-            s.Accept {
-                new IArrayVisitor<Iterator<'E,'T>> with
-                    member __.Visit<'t> rk =
+            s.Element.Accept {
+                new ITypeShapeVisitor<Iterator<'E,'T>> with
+                    member __.Visit<'t> () =
                         let ei = mkIteratorCached<'E, 't> ctx
-                        match rk with
+                        match s.Rank with
                         | 1 -> wrap(fun c (ts : 't[]) -> for t in ts do ei c t)
                         | 2 -> wrap(fun c (ts : 't[,]) -> ts |> Array2D.iter (fun t -> ei c t))
                         | 3 -> wrap(fun c (ts : 't[,,]) -> ts |> Array3D.iter (fun t -> ei c t))
-                        | _ -> failwithf "Rank-%d arrays not supported" rk
+                        | rk -> failwithf "Rank-%d arrays not supported" rk
             }
 
         | Shape.FSharpList s ->
-            s.Accept {
-                new IFSharpListVisitor<Iterator<'E,'T>> with
+            s.Element.Accept {
+                new ITypeShapeVisitor<Iterator<'E,'T>> with
                     member __.Visit<'t>() =
                         let ei = mkIteratorCached<'E, 't> ctx
                         wrap(fun c (ts : 't list) -> for t in ts do ei c t)
@@ -230,8 +230,8 @@ module private GMapper =
                     wrap(fun s c f (n:Nullable<'t>) -> if n.HasValue then Nullable(tm s c f n.Value) else n) }
 
         | Shape.FSharpOption s ->
-            s.Accept {
-                new IFSharpOptionVisitor<Mapper<'E,'T>> with
+            s.Element.Accept {
+                new ITypeShapeVisitor<Mapper<'E,'T>> with
                     member __.Visit<'t>() =
                         let em = mkMapperCached<'E, 't> ctx
                         fun s c f tOpt ->
@@ -241,20 +241,20 @@ module private GMapper =
                         |> wrap }
 
         | Shape.Array s ->
-            s.Accept {
-                new IArrayVisitor<Mapper<'E,'T>> with
-                    member __.Visit<'t> rk =
+            s.Element.Accept {
+                new ITypeShapeVisitor<Mapper<'E,'T>> with
+                    member __.Visit<'t> () =
                         let em = mkMapperCached<'E, 't> ctx
-                        match rk with
+                        match s.Rank with
                         | 1 -> wrap(fun s c f (ts : 't[]) -> ts |> Array.map (em s c f))
                         | 2 -> wrap(fun s c f (ts : 't[,]) -> ts |> Array2D.map (em s c f))
                         | 3 -> wrap(fun s c f (ts : 't[,,]) -> ts |> Array3D.map (em s c f))
-                        | _ -> failwithf "Rank-%d arrays not supported" rk
+                        | rk -> failwithf "Rank-%d arrays not supported" rk
             }
 
         | Shape.FSharpList s ->
-            s.Accept {
-                new IFSharpListVisitor<Mapper<'E,'T>> with
+            s.Element.Accept {
+                new ITypeShapeVisitor<Mapper<'E,'T>> with
                     member __.Visit<'t>() =
                         let em = mkMapperCached<'E, 't> ctx
                         wrap(fun s c f (ts : 't list) -> ts |> List.map (em s c f))

@@ -146,7 +146,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
                 |> EQ }
 
     | Shape.FSharpOption s ->
-        s.Accept { new IFSharpOptionVisitor<Mocker<'T>> with
+        s.Element.Accept { new ITypeShapeVisitor<Mocker<'T>> with
             member __.Visit<'t>() = // 'T = 't option
                 let em = mkMockerCached<'t> ctx
                 fun mv ->
@@ -170,8 +170,8 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
                 |> EQ }
 
     | Shape.Array s when s.Rank = 1 ->
-        s.Accept { new IArrayVisitor<Mocker<'T>> with
-            member __.Visit<'t> _ = // 'T = 't []
+        s.Element.Accept { new ITypeShapeVisitor<Mocker<'T>> with
+            member __.Visit<'t> () = // 'T = 't []
                 let em = mkMockerCached<'t> ctx
                 fun mv ->
                     match mv with
@@ -184,7 +184,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
                 |> EQ }
 
     | Shape.FSharpList s ->
-        s.Accept { new IFSharpListVisitor<Mocker<'T>> with
+        s.Element.Accept { new ITypeShapeVisitor<Mocker<'T>> with
             member __.Visit<'t>() = // 'T = 't list
                 let em = mkMockerCached<'t> ctx
                 fun mv ->

@@ -86,8 +86,8 @@ let ``Shape Struct`` () =
         { new INotStructVisitor<bool> with
             member __.Visit<'T when 'T : not struct and 'T : null> () = false }
 
-    test <@ match shapeof<int> with Shape.Struct s -> s.Accept accepter1 | Shape.NotStruct s -> s.Accept accepter2 @>    
-    test <@ not <| match shapeof<string> with Shape.Struct s -> s.Accept accepter1 | Shape.NotStruct s -> s.Accept accepter2 @>    
+    test <@ match shapeof<int> with Shape.Struct s -> s.Accept accepter1 | Shape.NotStruct s -> s.Accept accepter2 | _ -> false @>    
+    test <@ not <| match shapeof<string> with Shape.Struct s -> s.Accept accepter1 | Shape.NotStruct s -> s.Accept accepter2 | _ -> false @>    
 
 [<Fact>]
 let ``Shape Binding Flags`` () =
@@ -170,95 +170,6 @@ let ``Shape Comparison`` () =
     test <@ typeof<NoEqNoComp list> |> testType false @>
     test <@ typeof<NoEqNoComp * int> |> testType false @>
     test <@ typeof<int -> int> |> testType false @>
-
-[<Fact>]
-let ``Shape Tuple`1`` () =
-    let accepter = 
-        { new ITuple1Visitor<bool> with 
-            member __.Visit<'T>() = typeof<'T> = typeof<int> }
-    test <@ match shapeof<Tuple<int>> with Shape.Tuple1 e -> e.Accept accepter | _ -> false @>
-
-[<Fact>]
-let ``Shape Tuple`2`` () =
-    let accepter = 
-        { new ITuple2Visitor<bool> with 
-            member __.Visit<'T1, 'T2>() = typeof<'T1> = typeof<int> && typeof<'T2> = typeof<string> }
-    test <@ match shapeof<int * string> with Shape.Tuple2 e -> e.Accept accepter | _ -> false @>
-
-[<Fact>]
-let ``Shape Tuple`3`` () =
-    let accepter = 
-        { new ITuple3Visitor<bool> with 
-            member __.Visit<'T1, 'T2, 'T3>() = 
-                typeof<'T1> = typeof<int> && 
-                typeof<'T2> = typeof<string> && 
-                typeof<'T3> = typeof<bool> }
-    test <@ match shapeof<int * string * bool> with Shape.Tuple3 e -> e.Accept accepter | _ -> false @>
-
-[<Fact>]
-let ``Shape Tuple`4`` () =
-    let accepter = 
-        { new ITuple4Visitor<bool> with 
-            member __.Visit<'T1, 'T2, 'T3, 'T4>() = 
-                typeof<'T1> = typeof<int> && 
-                typeof<'T2> = typeof<string> && 
-                typeof<'T3> = typeof<bool> &&
-                typeof<'T4> = typeof<byte> }
-    test <@ match shapeof<int * string * bool * byte> with Shape.Tuple4 e -> e.Accept accepter | _ -> false @>
-
-[<Fact>]
-let ``Shape Tuple`5`` () =
-    let accepter = 
-        { new ITuple5Visitor<bool> with 
-            member __.Visit<'T1, 'T2, 'T3, 'T4, 'T5>() = 
-                typeof<'T1> = typeof<int> && 
-                typeof<'T2> = typeof<string> && 
-                typeof<'T3> = typeof<bool> &&
-                typeof<'T4> = typeof<byte> &&
-                typeof<'T5> = typeof<sbyte> }
-    test <@ match shapeof<int * string * bool * byte * sbyte> with Shape.Tuple5 e -> e.Accept accepter | _ -> false @>
-
-[<Fact>]
-let ``Shape Tuple`6`` () =
-    let accepter = 
-        { new ITuple6Visitor<bool> with 
-            member __.Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6>() = 
-                typeof<'T1> = typeof<int> && 
-                typeof<'T2> = typeof<string> && 
-                typeof<'T3> = typeof<bool> &&
-                typeof<'T4> = typeof<byte> &&
-                typeof<'T5> = typeof<sbyte> &&
-                typeof<'T6> = typeof<int16> }
-    test <@ match shapeof<int * string * bool * byte * sbyte * int16> with Shape.Tuple6 e -> e.Accept accepter | _ -> false @>
-
-[<Fact>]
-let ``Shape Tuple`7`` () =
-    let accepter = 
-        { new ITuple7Visitor<bool> with 
-            member __.Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7>() = 
-                typeof<'T1> = typeof<int> && 
-                typeof<'T2> = typeof<string> && 
-                typeof<'T3> = typeof<bool> &&
-                typeof<'T4> = typeof<byte> &&
-                typeof<'T5> = typeof<sbyte> &&
-                typeof<'T6> = typeof<int16> && 
-                typeof<'T7> = typeof<int64>}
-    test <@ match shapeof<int * string * bool * byte * sbyte * int16 * int64> with Shape.Tuple7 e -> e.Accept accepter | _ -> false @>
-
-[<Fact>]
-let ``Shape Tuple`8`` () =
-    let accepter = 
-        { new ITuple8Visitor<bool> with 
-            member __.Visit<'T1, 'T2, 'T3, 'T4, 'T5, 'T6, 'T7, 'TRest>() = 
-                typeof<'T1> = typeof<int> && 
-                typeof<'T2> = typeof<string> && 
-                typeof<'T3> = typeof<bool> &&
-                typeof<'T4> = typeof<byte> &&
-                typeof<'T5> = typeof<sbyte> &&
-                typeof<'T6> = typeof<int16> && 
-                typeof<'T7> = typeof<int64> &&
-                typeof<'TRest> = typeof<Tuple<int>> }
-    test <@ match shapeof<int * string * bool * byte * sbyte * int16 * int64 * int> with Shape.Tuple8 e -> e.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Generic Tuple`` () =
@@ -423,22 +334,22 @@ let ``Shape KeyValuePair`` () =
 
 [<Fact>]
 let ``Shape Array`` () =
-    let accepter rk = 
-        { new IArrayVisitor<bool> with
-            member __.Visit<'T> rank = typeof<'T> = typeof<int> && rank = rk }
+    let accepter = 
+        { new ITypeShapeVisitor<bool> with
+            member __.Visit<'T> () = typeof<'T> = typeof<int> }
 
-    test <@ match shapeof<int []> with Shape.Array s -> s.Accept (accepter 1) | _ -> false @>    
-    test <@ match shapeof<int [,]> with Shape.Array s -> s.Accept (accepter 2) | _ -> false @>
-    test <@ match shapeof<int [,,]> with Shape.Array s -> s.Accept (accepter 3) | _ -> false @>
-    test <@ match shapeof<int [,,,]> with Shape.Array s -> s.Accept (accepter 4) | _ -> false @>
+    test <@ match shapeof<int []>    with Shape.Array s when s.Rank = 1 -> s.Element.Accept accepter | _ -> false @>    
+    test <@ match shapeof<int [,]>   with Shape.Array s when s.Rank = 2 -> s.Element.Accept accepter | _ -> false @>
+    test <@ match shapeof<int [,,]>  with Shape.Array s when s.Rank = 3 -> s.Element.Accept accepter | _ -> false @>
+    test <@ match shapeof<int [,,,]> with Shape.Array s when s.Rank = 4 -> s.Element.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape ResizeArray`` () =
     let accepter = 
-        { new IResizeArrayVisitor<bool> with
+        { new ITypeShapeVisitor<bool> with
             member __.Visit<'T>() = typeof<'T> = typeof<int> }
 
-    test <@ match shapeof<ResizeArray<int>> with Shape.ResizeArray s -> s.Accept accepter | _ -> false @>
+    test <@ match shapeof<ResizeArray<int>> with Shape.ResizeArray s -> s.Element.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Dictionary`` () =
@@ -487,16 +398,16 @@ let ``Shape Subtype`` () =
 [<Fact>]
 let ``Shape F# Option`` () =
     let visitor ty =
-        { new IFSharpOptionVisitor<bool> with member __.Visit<'T>() = typeof<'T> = ty }
+        { new ITypeShapeVisitor<bool> with member __.Visit<'T>() = typeof<'T> = ty }
 
-    test <@ match shapeof<int option> with Shape.FSharpOption s -> s.Accept (visitor typeof<int>) | _ -> false @>
+    test <@ match shapeof<int option> with Shape.FSharpOption s -> s.Element.Accept (visitor typeof<int>) | _ -> false @>
 
 [<Fact>]
 let ``Shape F# list`` () =
     let visitor ty =
-        { new IFSharpListVisitor<bool> with member __.Visit<'T>() = typeof<'T> = ty }
+        { new ITypeShapeVisitor<bool> with member __.Visit<'T>() = typeof<'T> = ty }
 
-    test <@ match shapeof<int list> with Shape.FSharpList s -> s.Accept (visitor typeof<int>) | _ -> false @>
+    test <@ match shapeof<int list> with Shape.FSharpList s -> s.Element.Accept (visitor typeof<int>) | _ -> false @>
 
 [<Fact>]
 let ``Shape F# Map`` () =
@@ -526,60 +437,36 @@ let ``Shape Record 7`` () =
     let scloner = mkStagedCloner<Record7>()
     checkCloner scloner
 
+
+[<Fact>]
+let ``Anonymous Records should be matched by the record active pattern`` () =
+    test <@ match shapeof<{| x : int ; y : string ; z : bool|}> with Shape.FSharpRecord s -> s.Fields.Length = 3 | _ -> false @>
+
+[<Fact>]
+let ``Anonymous Record cloning`` () =
+    let cloner = clone< {| x : int ; y : string; z : bool; w : int list|} >
+    checkCloner cloner
+
+    let scloner = mkStagedCloner< {| x : int ; y : string; z : bool; w : int list|} >()
+    checkCloner scloner
+
+[<Fact>]
+let ``Anonymous struct Records should be matched by the record active pattern`` () =
+    test <@ match shapeof<struct {| x : int ; y : string ; z : bool|}> with Shape.FSharpRecord s -> s.Fields.Length = 3 | _ -> false @>
+
+[<Fact>]
+let ``Anonymous struct Record cloning`` () =
+    let cloner = clone<struct {| x : int ; y : string; z : bool; w : int list|} >
+    checkCloner cloner
+
+    let scloner = mkStagedCloner< struct {| x : int ; y : string; z : bool; w : int list|} >()
+    checkCloner scloner
+
 [<Fact>]
 let ``Shape F# ref`` () =
     test <@ match shapeof<int ref> with Shape.FSharpRecord r -> r.Fields.Length = 1 | _ -> false @>
-    let accepter = { new IFSharpRefVisitor<bool> with member __.Visit<'T>() = typeof<'T> = typeof<int> }
-    test <@ match shapeof<int ref> with Shape.FSharpRef s -> s.Accept accepter | _ -> false @>
-
-[<Fact>]
-let ``Shape F# choice 2`` () =
-    let accepter = { new IFSharpChoice2Visitor<bool> with member __.Visit<'T1,'T2>() = typeof<'T1> = typeof<int> && typeof<'T2> = typeof<string> }
-    test <@ match shapeof<Choice<int,string>> with Shape.FSharpChoice2 c -> c.Accept accepter | _ -> false @>
-
-[<Fact>]
-let ``Shape F# choice 3`` () =
-    let accepter = { new IFSharpChoice3Visitor<bool> with member __.Visit<'T1,'T2,'T3>() = typeof<'T1> = typeof<int> && typeof<'T2> = typeof<string> && typeof<'T3> = typeof<bool> }
-    test <@ match shapeof<Choice<int,string,bool>> with Shape.FSharpChoice3 c -> c.Accept accepter | _ -> false @>
-
-[<Fact>]
-let ``Shape F# choice 4`` () =
-    let accepter = 
-        { new IFSharpChoice4Visitor<bool> with 
-            member __.Visit<'T1,'T2,'T3,'T4>() = 
-                typeof<'T1> = typeof<int> && typeof<'T2> = typeof<string> && 
-                typeof<'T3> = typeof<bool> && typeof<'T4> = typeof<byte[]> }
-    test <@ match shapeof<Choice<int,string,bool,byte[]>> with Shape.FSharpChoice4 c -> c.Accept accepter | _ -> false @>
-
-[<Fact>]
-let ``Shape F# choice 5`` () =
-    let accepter = 
-        { new IFSharpChoice5Visitor<bool> with 
-            member __.Visit<'T1,'T2,'T3,'T4,'T5>() = 
-                typeof<'T1> = typeof<int> && typeof<'T2> = typeof<string> && 
-                typeof<'T3> = typeof<bool> && typeof<'T4> = typeof<byte[]> &&
-                typeof<'T5> = typeof<sbyte> }
-    test <@ match shapeof<Choice<int,string,bool,byte[],sbyte>> with Shape.FSharpChoice5 c -> c.Accept accepter | _ -> false @>
-
-[<Fact>]
-let ``Shape F# choice 6`` () =
-    let accepter = 
-        { new IFSharpChoice6Visitor<bool> with 
-            member __.Visit<'T1,'T2,'T3,'T4,'T5,'T6>() = 
-                typeof<'T1> = typeof<int> && typeof<'T2> = typeof<string> && 
-                typeof<'T3> = typeof<bool> && typeof<'T4> = typeof<byte[]> &&
-                typeof<'T5> = typeof<sbyte> && typeof<'T6> = typeof<decimal> }
-    test <@ match shapeof<Choice<int,string,bool,byte[],sbyte,decimal>> with Shape.FSharpChoice6 c -> c.Accept accepter | _ -> false @>
-
-[<Fact>]
-let ``Shape F# choice 7`` () =
-    let accepter = 
-        { new IFSharpChoice7Visitor<bool> with 
-            member __.Visit<'T1,'T2,'T3,'T4,'T5,'T6,'T7>() = 
-                typeof<'T1> = typeof<int> && typeof<'T2> = typeof<string> && 
-                typeof<'T3> = typeof<bool> && typeof<'T4> = typeof<byte[]> &&
-                typeof<'T5> = typeof<sbyte> && typeof<'T6> = typeof<decimal> && typeof<'T7> = typeof<float> }
-    test <@ match shapeof<Choice<int,string,bool,byte[],sbyte,decimal,float>> with Shape.FSharpChoice7 c -> c.Accept accepter | _ -> false @>
+    let accepter = { new ITypeShapeVisitor<bool> with member __.Visit<'T>() = typeof<'T> = typeof<int> }
+    test <@ match shapeof<int ref> with Shape.FSharpRef s -> s.Element.Accept accepter | _ -> false @>
 
 type Union7 = 
     | C1U7 of int * _tag:string

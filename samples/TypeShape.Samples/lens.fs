@@ -51,7 +51,7 @@ module private Impl =
         match shapeof<'T>, path with
         | _, [] -> wrap { get = id<'F> ; set = fun (_:'F) (y:'F) -> y }
         | Shape.FSharpOption s, Property "Value" :: rest ->
-            s.Accept { new IFSharpOptionVisitor<Lens<'T,'F>> with
+            s.Element.Accept { new ITypeShapeVisitor<Lens<'T,'F>> with
                 member __.Visit<'t> () =
                     let inner = mkLensAux<'t, 'F> rest
                     wrap {
@@ -61,8 +61,8 @@ module private Impl =
             }
 
         | Shape.Array s, Item(:? int as i) :: rest when s.Rank = 1 ->
-            s.Accept { new IArrayVisitor<Lens<'T,'F>> with
-                member __.Visit<'t> _ =
+            s.Element.Accept { new ITypeShapeVisitor<Lens<'T,'F>> with
+                member __.Visit<'t> () =
                     let inner = mkLensAux<'t, 'F> rest
                     wrap {
                         get = fun (ts : 't[]) -> inner.get ts.[i]
@@ -71,7 +71,7 @@ module private Impl =
             }
 
         | Shape.FSharpList s, Item (:? int as i) :: rest ->
-            s.Accept { new IFSharpListVisitor<Lens<'T,'F>> with
+            s.Element.Accept { new ITypeShapeVisitor<Lens<'T,'F>> with
                 member __.Visit<'t> () =
                     let inner = mkLensAux<'t, 'F> rest
                     wrap {
