@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:2.2
+FROM mcr.microsoft.com/dotnet/core/sdk:2.2.204-stretch
 
 # Set the locale; suppress perl warnings
 ENV LC_ALL=en_US.UTF-8
