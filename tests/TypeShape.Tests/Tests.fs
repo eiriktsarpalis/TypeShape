@@ -334,22 +334,22 @@ let ``Shape KeyValuePair`` () =
 
 [<Fact>]
 let ``Shape Array`` () =
-    let accepter rk = 
-        { new IArrayVisitor<bool> with
-            member __.Visit<'T> rank = typeof<'T> = typeof<int> && rank = rk }
+    let accepter = 
+        { new ITypeShapeVisitor<bool> with
+            member __.Visit<'T> () = typeof<'T> = typeof<int> }
 
-    test <@ match shapeof<int []> with Shape.Array s -> s.Accept (accepter 1) | _ -> false @>    
-    test <@ match shapeof<int [,]> with Shape.Array s -> s.Accept (accepter 2) | _ -> false @>
-    test <@ match shapeof<int [,,]> with Shape.Array s -> s.Accept (accepter 3) | _ -> false @>
-    test <@ match shapeof<int [,,,]> with Shape.Array s -> s.Accept (accepter 4) | _ -> false @>
+    test <@ match shapeof<int []>    with Shape.Array s when s.Rank = 1 -> s.Element.Accept accepter | _ -> false @>    
+    test <@ match shapeof<int [,]>   with Shape.Array s when s.Rank = 2 -> s.Element.Accept accepter | _ -> false @>
+    test <@ match shapeof<int [,,]>  with Shape.Array s when s.Rank = 3 -> s.Element.Accept accepter | _ -> false @>
+    test <@ match shapeof<int [,,,]> with Shape.Array s when s.Rank = 4 -> s.Element.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape ResizeArray`` () =
     let accepter = 
-        { new IResizeArrayVisitor<bool> with
+        { new ITypeShapeVisitor<bool> with
             member __.Visit<'T>() = typeof<'T> = typeof<int> }
 
-    test <@ match shapeof<ResizeArray<int>> with Shape.ResizeArray s -> s.Accept accepter | _ -> false @>
+    test <@ match shapeof<ResizeArray<int>> with Shape.ResizeArray s -> s.Element.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Dictionary`` () =
@@ -398,16 +398,16 @@ let ``Shape Subtype`` () =
 [<Fact>]
 let ``Shape F# Option`` () =
     let visitor ty =
-        { new IFSharpOptionVisitor<bool> with member __.Visit<'T>() = typeof<'T> = ty }
+        { new ITypeShapeVisitor<bool> with member __.Visit<'T>() = typeof<'T> = ty }
 
-    test <@ match shapeof<int option> with Shape.FSharpOption s -> s.Accept (visitor typeof<int>) | _ -> false @>
+    test <@ match shapeof<int option> with Shape.FSharpOption s -> s.Element.Accept (visitor typeof<int>) | _ -> false @>
 
 [<Fact>]
 let ``Shape F# list`` () =
     let visitor ty =
-        { new IFSharpListVisitor<bool> with member __.Visit<'T>() = typeof<'T> = ty }
+        { new ITypeShapeVisitor<bool> with member __.Visit<'T>() = typeof<'T> = ty }
 
-    test <@ match shapeof<int list> with Shape.FSharpList s -> s.Accept (visitor typeof<int>) | _ -> false @>
+    test <@ match shapeof<int list> with Shape.FSharpList s -> s.Element.Accept (visitor typeof<int>) | _ -> false @>
 
 [<Fact>]
 let ``Shape F# Map`` () =
@@ -465,8 +465,8 @@ let ``Anonymous struct Record cloning`` () =
 [<Fact>]
 let ``Shape F# ref`` () =
     test <@ match shapeof<int ref> with Shape.FSharpRecord r -> r.Fields.Length = 1 | _ -> false @>
-    let accepter = { new IFSharpRefVisitor<bool> with member __.Visit<'T>() = typeof<'T> = typeof<int> }
-    test <@ match shapeof<int ref> with Shape.FSharpRef s -> s.Accept accepter | _ -> false @>
+    let accepter = { new ITypeShapeVisitor<bool> with member __.Visit<'T>() = typeof<'T> = typeof<int> }
+    test <@ match shapeof<int ref> with Shape.FSharpRef s -> s.Element.Accept accepter | _ -> false @>
 
 type Union7 = 
     | C1U7 of int * _tag:string

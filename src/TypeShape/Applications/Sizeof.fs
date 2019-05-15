@@ -75,14 +75,14 @@ and private mkCounterAux<'T> (ctx : TypeGenerationContext) : SizeCounter<'T> =
         }
 
     | Shape.FSharpOption s ->
-        s.Accept { new IFSharpOptionVisitor<SizeCounter<'T>> with
+        s.Element.Accept { new ITypeShapeVisitor<SizeCounter<'T>> with
             member __.Visit<'t>() = // 'T = 't option
                 let tc = mkCounterCached<'t> ctx
                 fun s (topt:'t option) -> match topt with None -> 1L | Some t -> 1L + tc s t
                 |> wrap }
 
     | Shape.FSharpList s ->
-        s.Accept { new IFSharpListVisitor<SizeCounter<'T>> with
+        s.Element.Accept { new ITypeShapeVisitor<SizeCounter<'T>> with
             member __.Visit<'t>() = 
                 let tc = mkCounterCached<'t> ctx
                 fun s (ts:'t list) -> 
@@ -99,10 +99,10 @@ and private mkCounterAux<'T> (ctx : TypeGenerationContext) : SizeCounter<'T> =
         }
 
     | Shape.Array s ->
-        s.Accept { new IArrayVisitor<SizeCounter<'T>> with
-            member __.Visit<'t> rank =
+        s.Element.Accept { new ITypeShapeVisitor<SizeCounter<'T>> with
+            member __.Visit<'t> () =
                 let tc = mkCounterCached<'t> ctx
-                match rank with
+                match s.Rank with
                 | 1 ->
                     fun s (ts:'t[]) -> 
                         let mutable c = 1L

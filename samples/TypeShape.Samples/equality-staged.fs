@@ -27,8 +27,8 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
     | Shape.Double -> wrap(fun (d: Expr<double>) d' -> <@ %d = %d' @>)
     | Shape.String -> wrap(fun (s: Expr<string>) s' -> <@ %s = %s' @>)
     | Shape.Array s when s.Rank = 1 ->
-        s.Accept { new IArrayVisitor<CmpExpr<'T>> with
-            member __.Visit<'t> _ =
+        s.Element.Accept { new ITypeShapeVisitor<CmpExpr<'T>> with
+            member __.Visit<'t> () =
                 let ec = stageCmp<'t>()
                 wrap(fun (ts : Expr<'t []>) ts' ->
                     <@
@@ -46,7 +46,7 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
                     @> )}
 
     | Shape.FSharpOption s ->
-        s.Accept { new IFSharpOptionVisitor<CmpExpr<'T>> with
+        s.Element.Accept { new ITypeShapeVisitor<CmpExpr<'T>> with
             member __.Visit<'t> () =
                 let ec = stageCmp<'t> ()
                 wrap(fun topt topt' ->
@@ -58,7 +58,7 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
                     @> )}
 
     | Shape.FSharpList s ->
-        s.Accept { new IFSharpListVisitor<CmpExpr<'T>> with
+        s.Element.Accept { new ITypeShapeVisitor<CmpExpr<'T>> with
             member __.Visit<'t> () =
                 let ec = stageCmp<'t> ()
                 wrap(fun ts ts' ->

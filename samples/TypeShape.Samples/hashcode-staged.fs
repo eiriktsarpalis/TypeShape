@@ -28,8 +28,8 @@ let mkStagedHasher<'T> (self : StagedGenerator1) (expr : Expr<'T>) : Expr<int> =
     | Shape.Double -> <@ hash<double> (% unwrap()) @>
     | Shape.String -> <@ hash<string> (% unwrap()) @>
     | Shape.Array s when s.Rank = 1 ->
-        s.Accept { new IArrayVisitor<Expr<int>> with
-            member __.Visit<'t> _ =
+        s.Element.Accept { new ITypeShapeVisitor<Expr<int>> with
+            member __.Visit<'t> () =
                 <@
                     match (% unwrap()) with
                     | null -> 0
@@ -42,7 +42,7 @@ let mkStagedHasher<'T> (self : StagedGenerator1) (expr : Expr<'T>) : Expr<int> =
                 @> }
 
     | Shape.FSharpOption s ->
-        s.Accept { new IFSharpOptionVisitor<Expr<int>> with
+        s.Element.Accept { new ITypeShapeVisitor<Expr<int>> with
             member __.Visit<'t> () =
                 <@
                     match (% (unwrap() : Expr<'t option>)) with
@@ -53,7 +53,7 @@ let mkStagedHasher<'T> (self : StagedGenerator1) (expr : Expr<'T>) : Expr<int> =
                 @> }
 
     | Shape.FSharpList s ->
-        s.Accept { new IFSharpListVisitor<Expr<int>> with
+        s.Element.Accept { new ITypeShapeVisitor<Expr<int>> with
             member __.Visit<'t> () =
                 <@
                     let mutable agg = 0

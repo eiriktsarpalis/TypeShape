@@ -48,14 +48,14 @@ and private mkDisposerAux<'T> (ctx : TypeGenerationContext) : 'T -> unit =
         }
 
     | Shape.FSharpList s ->
-        s.Accept { new IFSharpListVisitor<'T -> unit> with
+        s.Element.Accept { new ITypeShapeVisitor<'T -> unit> with
             member __.Visit<'t>() = // 'T = 't list
                 let td = mkDisposerCached<'t> ctx
                 EQ (fun (ts : 't list) -> for t in ts do td t) } 
 
     | Shape.Array s when s.Rank = 1 ->
-        s.Accept { new IArrayVisitor<'T -> unit> with
-            member __.Visit<'t> _ = // 'T = 't []
+        s.Element.Accept { new ITypeShapeVisitor<'T -> unit> with
+            member __.Visit<'t> () = // 'T = 't []
                 let td = mkDisposerCached<'t> ctx
                 EQ (fun (ts : 't []) -> for t in ts do td t) } 
 

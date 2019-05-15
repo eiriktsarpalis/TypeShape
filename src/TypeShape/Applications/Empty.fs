@@ -64,7 +64,7 @@ and private mkEmptyFuncAux<'T> (ctx : TypeGenerationContext) : bool -> 'T =
                 EQ(fun max -> fun (_ : 'Dom) -> de max) }
 
     | Shape.FSharpOption s ->
-        s.Accept { new IFSharpOptionVisitor<bool -> 'T> with
+        s.Element.Accept { new ITypeShapeVisitor<bool -> 'T> with
             member __.Visit<'t>() = // 'T = 't option
                 let et = mkEmptyFuncCached<'t> ctx
                 EQ(fun max -> if max then Some (et max) else None) }
@@ -76,17 +76,17 @@ and private mkEmptyFuncAux<'T> (ctx : TypeGenerationContext) : bool -> 'T =
                 EQ(fun max -> new KeyValuePair<'k,'v>(ke max,ve max)) }
 
     | Shape.FSharpList s ->
-        s.Accept { new IFSharpListVisitor<bool -> 'T> with
+        s.Element.Accept { new ITypeShapeVisitor<bool -> 'T> with
             member __.Visit<'t>() = // 'T = 't list
                 let te = mkEmptyFuncCached<'t> ctx
                 EQ(fun max -> if max then [te max] else []) } 
 
     | Shape.Array s ->
-        s.Accept { new IArrayVisitor<bool -> 'T> with
-            member __.Visit<'t> rank = 
+        s.Element.Accept { new ITypeShapeVisitor<bool -> 'T> with
+            member __.Visit<'t> () = 
                 let te = mkEmptyFuncCached<'t> ctx
                 let inline sz m = if m then 1 else 0
-                match rank with
+                match s.Rank with
                 | 1 -> EQ(fun m -> let s = sz m in Array.init s (fun _ -> te m)) // 'T = 't []
                 | 2 -> EQ(fun m -> let s = sz m in Array2D.init s s (fun _ _ -> te m)) // 'T = 't [,]
                 | 3 -> EQ(fun m -> let s = sz m in Array3D.init s s s (fun _ _ _ -> te m)) // 'T = 't [,,]

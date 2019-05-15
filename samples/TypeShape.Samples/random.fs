@@ -22,7 +22,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
     | Shape.Guid -> wrap Arb.generate<Guid>
     | Shape.DateTime -> wrap Arb.generate<DateTime>
     | Shape.FSharpOption s ->
-        s.Accept { new IFSharpOptionVisitor<Gen<'T>> with
+        s.Element.Accept { new ITypeShapeVisitor<Gen<'T>> with
             member __.Visit<'t> () =
                 let tGen = mkGenerator<'t>()
                 Gen.frequency 
@@ -32,8 +32,8 @@ let rec mkGenerator<'T> () : Gen<'T> =
         }
 
     | Shape.Array s when s.Rank = 1 ->
-        s.Accept { new IArrayVisitor<Gen<'T>> with
-            member __.Visit<'t> _ =
+        s.Element.Accept { new ITypeShapeVisitor<Gen<'T>> with
+            member __.Visit<'t> () =
                 let tG = mkGenerator<'t>()
                 gen {
                     let! length = Gen.sized(fun n -> Gen.choose(-1, n))
@@ -47,7 +47,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
         }
 
     | Shape.FSharpList s ->
-        s.Accept { new IFSharpListVisitor<Gen<'T>> with
+        s.Element.Accept { new ITypeShapeVisitor<Gen<'T>> with
             member __.Visit<'t> () =
                 let tG = mkGenerator<'t>()
                 gen {

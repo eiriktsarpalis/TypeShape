@@ -62,8 +62,8 @@ and private genParserAux<'T> (ctx : TypeGenerationContext) : Parser<'T> =
     | Shape.Int64 -> wrap(pint64)
     | Shape.String -> wrap(between (pchar '\"') (pchar '\"') (manySatisfy ((<>) '\"')))
     | Shape.FSharpOption s ->
-        s.Accept {
-            new IFSharpOptionVisitor<Parser<'T>> with
+        s.Element.Accept {
+            new ITypeShapeVisitor<Parser<'T>> with
                 member __.Visit<'t> () =
                     let tp = genParserCached<'t> ctx |>> Some
                     let nP = stringReturn "None" None
@@ -73,8 +73,8 @@ and private genParserAux<'T> (ctx : TypeGenerationContext) : Parser<'T> =
         }
 
     | Shape.FSharpList s ->
-        s.Accept {
-            new IFSharpListVisitor<Parser<'T>> with
+        s.Element.Accept {
+            new ITypeShapeVisitor<Parser<'T>> with
                 member __.Visit<'t> () =
                     let tp = genParserCached<'t> ctx
                     let sep = pchar ';'
@@ -83,9 +83,9 @@ and private genParserAux<'T> (ctx : TypeGenerationContext) : Parser<'T> =
         }
 
     | Shape.Array s when s.Rank = 1 ->
-        s.Accept {
-            new IArrayVisitor<Parser<'T>> with
-                member __.Visit<'t> _ =
+        s.Element.Accept {
+            new ITypeShapeVisitor<Parser<'T>> with
+                member __.Visit<'t> () =
                     let tp = genParserCached<'t> ctx
                     let sep = pchar ';'
                     let lp = between (pstring "[|") (pstring "|]") (sepBy tp sep)

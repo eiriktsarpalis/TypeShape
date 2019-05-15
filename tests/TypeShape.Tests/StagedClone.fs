@@ -58,15 +58,15 @@ let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
                     @> }
 
     | Shape.Array s when s.Rank = 1 ->
-        s.Accept { new IArrayVisitor<Expr<'T>> with
-            member __.Visit<'t> _ =
+        s.Element.Accept { new ITypeShapeVisitor<Expr<'T>> with
+            member __.Visit<'t> () =
                 if typeof<'t>.IsPrimitive then
                     wrap <@ match (% unwrap e) : 't[] with null -> null | ts -> ts.Clone() :?> 't[] @>
                 else
                     wrap <@ Array.map (% stageCloner self) (% unwrap e) :'t[] @> }
 
     | Shape.FSharpList s ->
-        s.Accept { new IFSharpListVisitor<Expr<'T>> with
+        s.Element.Accept { new ITypeShapeVisitor<Expr<'T>> with
             member __.Visit<'t> () =
                 wrap <@ List.map (% stageCloner self) (% unwrap e) : 't list @> }
 

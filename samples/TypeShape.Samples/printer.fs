@@ -37,25 +37,25 @@ and mkPrinterAux<'T> (ctx : TypeGenerationContext) : 'T -> string =
     | Shape.DateTime       -> wrap (fun (b:DateTime      ) -> sprintf "DateTime (%i, %i, %i, %i, %i, %i, %i)" b.Year b.Month b.Day b.Hour b.Minute b.Second b.Millisecond)
     | Shape.DateTimeOffset -> wrap (fun (b:DateTimeOffset) -> sprintf "DateTimeOffset (%i, %i, %i, %i, %i, %i, %i, TimeSpan.FromMinutes %i.)" b.Year b.Month b.Day b.Hour b.Minute b.Second b.Millisecond b.Offset.Minutes)    
     | Shape.FSharpOption s ->
-        s.Accept {
-            new IFSharpOptionVisitor<'T -> string> with
+        s.Element.Accept {
+            new ITypeShapeVisitor<'T -> string> with
                 member __.Visit<'a> () = // 'T = 'a option
                     let tp = mkPrinterCached<'a> ctx
                     wrap(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
         }
 
     | Shape.FSharpList s ->
-        s.Accept {
-            new IFSharpListVisitor<'T -> string> with
+        s.Element.Accept {
+            new ITypeShapeVisitor<'T -> string> with
                 member __.Visit<'a> () = // 'T = 'a list
                     let tp = mkPrinterCached<'a> ctx
                     wrap(fun (ts : 'a list) -> ts |> Seq.map tp |> String.concat "; " |> sprintf "[%s]")
         }
 
     | Shape.Array s when s.Rank = 1 ->
-        s.Accept {
-            new IArrayVisitor<'T -> string> with
-                member __.Visit<'a> _ = // 'T = 'a []
+        s.Element.Accept {
+            new ITypeShapeVisitor<'T -> string> with
+                member __.Visit<'a> () = // 'T = 'a []
                     let tp = mkPrinterCached<'a> ctx
                     wrap(fun (ts : 'a []) -> ts |> Seq.map tp |> String.concat "; " |> sprintf "[|%s|]")
         }

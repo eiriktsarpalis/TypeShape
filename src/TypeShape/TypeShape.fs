@@ -360,22 +360,15 @@ type private ShapeKeyValuePair<'K,'V> () =
 
 // System.Array
 
-type IArrayVisitor<'R> =
-    abstract Visit<'T> : rank:int -> 'R
-
 type IShapeArray =
     /// Gets the rank of the array type shape
     abstract Rank : int
     abstract Element : TypeShape
-    abstract Accept : IArrayVisitor<'R> -> 'R
 
 type private ShapeArray<'T>(rank : int) =
-    /// Gets the rank of the array type shape
-    member __.Rank = rank
     interface IShapeArray with
         member __.Rank = rank
         member __.Element = shapeof<'T>
-        member __.Accept v = v.Visit<'T> rank
 
 type ISystemArrayVisitor<'R> =
     abstract Visit<'Array when 'Array :> System.Array> : unit -> 'R
@@ -399,12 +392,10 @@ type IResizeArrayVisitor<'R> =
 
 type IShapeResizeArray =
     abstract Element : TypeShape
-    abstract Accept : IResizeArrayVisitor<'R> -> 'R
 
 type private ShapeResizeArray<'T> () =
     interface IShapeResizeArray with
         member __.Element = shapeof<'T>
-        member __.Accept v = v.Visit<'T> ()
 
 
 // System.Collections.Dictionary
@@ -471,43 +462,28 @@ type private ShapeFSharpMap<'K, 'V when 'K : comparison> () =
 
 type IShapeFSharpRef =
     abstract Element : TypeShape
-    abstract Accept : IFSharpRefVisitor<'R> -> 'R
-
-and IFSharpRefVisitor<'R> =
-    abstract Visit<'T> : unit -> 'R
 
 type private ShapeFSharpRef<'T> () =
     interface IShapeFSharpRef with
         member __.Element = shapeof<'T>
-        member __.Accept v = v.Visit<'T> ()
 
 // F# option
 
-type IFSharpOptionVisitor<'R> =
-    abstract Visit<'T> : unit -> 'R
-
 type IShapeFSharpOption =
     abstract Element : TypeShape
-    abstract Accept : IFSharpOptionVisitor<'R> -> 'R
 
 type private ShapeFSharpOption<'T> () =
     interface IShapeFSharpOption with
         member __.Element = shapeof<'T>
-        member __.Accept v = v.Visit<'T> ()
 
 // F# List
 
-type IFSharpListVisitor<'R> =
-    abstract Visit<'T> : unit -> 'R
-
 type IShapeFSharpList =
     abstract Element : TypeShape
-    abstract Accept : IFSharpListVisitor<'R> -> 'R
 
 type private ShapeFSharpList<'T> () =
     interface IShapeFSharpList with
         member __.Element = shapeof<'T>
-        member __.Accept v = v.Visit<'T> ()
 
 //-----------------------------
 // Section: Member-based Shapes
@@ -515,11 +491,14 @@ type private ShapeFSharpList<'T> () =
 [<AutoOpen>]
 module private MemberUtils =
 
-    let defaultOfUntyped (ty : Type) =
-        TypeShape.Create(ty).Accept {
+    let private untypedVisitor =
+        {
             new ITypeShapeVisitor<obj> with
                 member __.Visit<'T>() = Unchecked.defaultof<'T> :> obj
         }
+
+    let defaultOfUntyped (ty : Type) =
+        TypeShape.Create(ty).Accept untypedVisitor
 
     let inline invalidMember (memberInfo : MemberInfo) =
         sprintf "TypeShape internal error: invalid MemberInfo '%O'" memberInfo
