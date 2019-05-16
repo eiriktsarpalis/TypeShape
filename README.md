@@ -41,37 +41,43 @@ let rec mkPrinter<'T> () : 'T -> string =
     | Shape.Int64 -> wrap(fun (b:int64) -> sprintf "%dL" b)
     | Shape.String -> wrap(sprintf "\"%s\"")
     | Shape.FSharpOption s ->
-        s.Accept {
-            new IFSharpOptionVisitor<'T -> string> with
+        s.Element.Accept {
+            new ITypeShapeVisitor<'T -> string> with
                 member __.Visit<'a> () =
                     let tp = mkPrinter<'a>()
                     wrap(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
         }
 
-    | Shape.Tuple2 s ->
-        s.Accept {
-            new ITuple2Visitor<'T -> string> with
-                member __.Visit<'t1, 't2> () =
-                    let tp = mkPrinter<'t1>()
-                    let sp = mkPrinter<'t2>()
-                    wrap(fun (t : 't1, s : 't2) -> sprintf "(%s, %s)" (tp t) (sp s))
-        }
-
     | Shape.FSharpList s ->
-        s.Accept {
-            new IFSharpListVisitor<'T -> string> with
+        s.Element.Accept {
+            new ITypeShapeVisitor<'T -> string> with
                 member __.Visit<'a> () =
                     let tp = mkPrinter<'a>()
                     wrap(fun ts -> ts |> List.map tp |> String.concat "; " |> sprintf "[%s]")
         }
 
     | Shape.Array s when s.Rank = 1 ->
-        s.Accept {
-            new IArrayVisitor<'T -> string> with
-                member __.Visit<'a> _ =
+        s.Element.Accept {
+            new ITypeShapeVisitor<'T -> string> with
+                member __.Visit<'a> () =
                     let tp = mkPrinter<'a> ()
                     wrap(fun ts -> ts |> Array.map tp |> String.concat "; " |> sprintf "[|%s|]")
         }
+        
+    | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
+        let mkElemPrinter (shape : IShapeMember<'T>) =
+           shape.Accept { new IShapeMemberVisitor<'T, 'T -> string> with
+               member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
+                   let fieldPrinter = mkPrinter<'Field>()
+                   fieldPrinter << shape.Project }
+
+        let elemPrinters : ('T -> string) [] = s.Fields |> Array.map mkElemPrinter
+
+        fun (r:'T) ->
+            elemPrinters
+            |> Seq.map (fun ep -> ep r)
+            |> String.concat ", "
+            |> sprintf "(%s)"
 
     | Shape.FSharpSet s ->
         s.Accept {
@@ -83,8 +89,8 @@ let rec mkPrinter<'T> () : 'T -> string =
 
     | _ -> failwithf "unsupported type '%O'" typeof<'T>
 
-let p = mkPrinter<(int list * string option) * (bool * unit)> ()
-p (([1 .. 5], None), (false, ())) // "(([1; 2; 3; 4; 5], None), (false, ()))"
+let p = mkPrinter<int * bool option * string list * int []> ()
+p (42, Some false, ["string"], [|1;2;3;4;5|])
 ```
 Let's see how the value printer compares to sprintf:
 ```fsharp
