@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 TARGET=${1:-Bundle}
-IMAGE_LABEL=${2:-"typeshape-build.$RANDOM"}
+IMAGE_LABEL=${2:-"typeshape-build:$RANDOM"}
 
 # docker build
 docker build -t $IMAGE_LABEL .
