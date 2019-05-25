@@ -47,11 +47,11 @@ and private mkCounterAux<'T> (ctx : TypeGenerationContext) : SizeCounter<'T> =
             for t in ts do c <- c + tc s t
             c
 
-    let mkMemberCounter (shape : IShapeWriteMember<'DeclaringType>) =
-        shape.Accept { new IWriteMemberVisitor<'DeclaringType, SizeCounter<'DeclaringType>> with
-            member __.Visit (shape : ShapeWriteMember<'DeclaringType, 'Field>) =
+    let mkMemberCounter (shape : IShapeMember<'DeclaringType>) =
+        shape.Accept { new IMemberVisitor<'DeclaringType, SizeCounter<'DeclaringType>> with
+            member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                 let fe = mkCounterCached<'Field> ctx
-                fun s t -> fe s (shape.Project t)
+                fun s t -> fe s (shape.Get t)
         }
 
     match shapeof<'T> with
@@ -75,14 +75,14 @@ and private mkCounterAux<'T> (ctx : TypeGenerationContext) : SizeCounter<'T> =
         }
 
     | Shape.FSharpOption s ->
-        s.Element.Accept { new ITypeShapeVisitor<SizeCounter<'T>> with
+        s.Element.Accept { new ITypeVisitor<SizeCounter<'T>> with
             member __.Visit<'t>() = // 'T = 't option
                 let tc = mkCounterCached<'t> ctx
                 fun s (topt:'t option) -> match topt with None -> 1L | Some t -> 1L + tc s t
                 |> wrap }
 
     | Shape.FSharpList s ->
-        s.Element.Accept { new ITypeShapeVisitor<SizeCounter<'T>> with
+        s.Element.Accept { new ITypeVisitor<SizeCounter<'T>> with
             member __.Visit<'t>() = 
                 let tc = mkCounterCached<'t> ctx
                 fun s (ts:'t list) -> 
@@ -99,7 +99,7 @@ and private mkCounterAux<'T> (ctx : TypeGenerationContext) : SizeCounter<'T> =
         }
 
     | Shape.Array s ->
-        s.Element.Accept { new ITypeShapeVisitor<SizeCounter<'T>> with
+        s.Element.Accept { new ITypeVisitor<SizeCounter<'T>> with
             member __.Visit<'t> () =
                 let tc = mkCounterCached<'t> ctx
                 match s.Rank with

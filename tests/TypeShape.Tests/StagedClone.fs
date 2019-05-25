@@ -18,16 +18,16 @@ let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
     let wrap(e : Expr<'a>) = unbox<Expr<'T>> e
     let stageCloner (self : StagedGenerator1) = Expr.lam self.Generate<'a,'a>
 
-    let stageMemberCloner (fieldShape : IShapeWriteMember<'DeclaringType>) 
+    let stageMemberCloner (fieldShape : IShapeMember<'DeclaringType>) 
                             (src : Expr<'DeclaringType>) 
                             (tgt : Expr<'DeclaringType>) =
         fieldShape.Accept {
-            new IWriteMemberVisitor<'DeclaringType, Expr<'DeclaringType>> with
-                member __.Visit (shape : ShapeWriteMember<'DeclaringType, 'Field>) =
+            new IMemberVisitor<'DeclaringType, Expr<'DeclaringType>> with
+                member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                     <@
-                        let sourceField = (% shape.ProjectExpr src)
+                        let sourceField = (% shape.GetExpr src)
                         let clonedField = (% stageCloner self) sourceField
-                        (% Expr.lam (shape.InjectExpr tgt)) clonedField
+                        (% Expr.lam (shape.SetExpr tgt)) clonedField
                     @>
         }
 
@@ -58,7 +58,7 @@ let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
                     @> }
 
     | Shape.Array s when s.Rank = 1 ->
-        s.Element.Accept { new ITypeShapeVisitor<Expr<'T>> with
+        s.Element.Accept { new ITypeVisitor<Expr<'T>> with
             member __.Visit<'t> () =
                 if typeof<'t>.IsPrimitive then
                     wrap <@ match (% unwrap e) : 't[] with null -> null | ts -> ts.Clone() :?> 't[] @>
@@ -66,7 +66,7 @@ let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
                     wrap <@ Array.map (% stageCloner self) (% unwrap e) :'t[] @> }
 
     | Shape.FSharpList s ->
-        s.Element.Accept { new ITypeShapeVisitor<Expr<'T>> with
+        s.Element.Accept { new ITypeVisitor<Expr<'T>> with
             member __.Visit<'t> () =
                 wrap <@ List.map (% stageCloner self) (% unwrap e) : 't list @> }
 

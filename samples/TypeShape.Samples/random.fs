@@ -9,11 +9,11 @@ open FsCheck
 
 let rec mkGenerator<'T> () : Gen<'T> =
     let wrap (t : Gen<'a>) = unbox<Gen<'T>> t
-    let mkRandomMember (shape : IShapeWriteMember<'DeclaringType>) =
-        shape.Accept { new IWriteMemberVisitor<'DeclaringType, Gen<'DeclaringType -> 'DeclaringType>> with
-            member __.Visit (shape : ShapeWriteMember<'DeclaringType, 'Field>) =
+    let mkRandomMember (shape : IShapeMember<'DeclaringType>) =
+        shape.Accept { new IMemberVisitor<'DeclaringType, Gen<'DeclaringType -> 'DeclaringType>> with
+            member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                 let rf = mkGenerator<'Field>()
-                gen { let! f = rf in return fun dt -> shape.Inject dt f } }
+                gen { let! f = rf in return fun dt -> shape.Set dt f } }
 
     match shapeof<'T> with
     | Shape.Primitive -> wrap Arb.generate<'T>
@@ -22,7 +22,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
     | Shape.Guid -> wrap Arb.generate<Guid>
     | Shape.DateTime -> wrap Arb.generate<DateTime>
     | Shape.FSharpOption s ->
-        s.Element.Accept { new ITypeShapeVisitor<Gen<'T>> with
+        s.Element.Accept { new ITypeVisitor<Gen<'T>> with
             member __.Visit<'t> () =
                 let tGen = mkGenerator<'t>()
                 Gen.frequency 
@@ -32,7 +32,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
         }
 
     | Shape.Array s when s.Rank = 1 ->
-        s.Element.Accept { new ITypeShapeVisitor<Gen<'T>> with
+        s.Element.Accept { new ITypeVisitor<Gen<'T>> with
             member __.Visit<'t> () =
                 let tG = mkGenerator<'t>()
                 gen {
@@ -47,7 +47,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
         }
 
     | Shape.FSharpList s ->
-        s.Element.Accept { new ITypeShapeVisitor<Gen<'T>> with
+        s.Element.Accept { new ITypeVisitor<Gen<'T>> with
             member __.Visit<'t> () =
                 let tG = mkGenerator<'t>()
                 gen {

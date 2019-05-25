@@ -2,6 +2,11 @@
 * Fix Nullable related bugs.
 * Deprecate fixed arity Tuple and Choice shapes.
 * Simplify API for array, list, option and ref shapes.
+* Rename `ITypeShapeVisitor` to `ITypeVisitor`.
+* Rename `IShapeMember` to `IShapeReadOnlyMember`.
+* Rename `IShapeWriteMember` to `IShapeMember`.
+* Rename `IShapeMember.Project` to `IShapeMember.Get`.
+* Rename `IShapeMember.Inject` to `IShapeMember.Set`.
 
 ### 6.1.2
 * Fix Nullable related bugs.

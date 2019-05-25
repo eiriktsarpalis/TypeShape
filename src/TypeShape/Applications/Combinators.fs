@@ -51,11 +51,11 @@ module private GIterator =
                             s.Pop()
             |> unbox
 
-        let mkMemberIter (shape : IShapeMember<'T>) =
-            shape.Accept { new IMemberVisitor<'T, Iterator<'E,'T>> with
-                member __.Visit (shape : ShapeMember<'T, 'F>) =
+        let mkMemberIter (shape : IShapeReadOnlyMember<'T>) =
+            shape.Accept { new IReadOnlyMemberVisitor<'T, Iterator<'E,'T>> with
+                member __.Visit (shape : ReadOnlyMember<'T, 'F>) =
                     let fIter = mkIteratorCached<'E, 'F> ctx
-                    fun c t -> shape.Project t |> fIter c }
+                    fun c t -> shape.Get t |> fIter c }
 
         match shapeof<'T> with
         | :? TypeShape<'E> -> wrap(fun c (t:'E) -> c.Action t)
@@ -87,7 +87,7 @@ module private GIterator =
 
         | Shape.FSharpOption s ->
             s.Element.Accept {
-                new ITypeShapeVisitor<Iterator<'E,'T>> with
+                new ITypeVisitor<Iterator<'E,'T>> with
                     member __.Visit<'t>() =
                         let ei = mkIteratorCached<'E, 't> ctx
                         fun c tOpt ->
@@ -98,7 +98,7 @@ module private GIterator =
 
         | Shape.Array s ->
             s.Element.Accept {
-                new ITypeShapeVisitor<Iterator<'E,'T>> with
+                new ITypeVisitor<Iterator<'E,'T>> with
                     member __.Visit<'t> () =
                         let ei = mkIteratorCached<'E, 't> ctx
                         match s.Rank with
@@ -110,7 +110,7 @@ module private GIterator =
 
         | Shape.FSharpList s ->
             s.Element.Accept {
-                new ITypeShapeVisitor<Iterator<'E,'T>> with
+                new ITypeVisitor<Iterator<'E,'T>> with
                     member __.Visit<'t>() =
                         let ei = mkIteratorCached<'E, 't> ctx
                         wrap(fun c (ts : 't list) -> for t in ts do ei c t)
@@ -197,14 +197,14 @@ module private GMapper =
                     t' :?> 'a
             |> unbox
 
-        let mkMemberMapper (shape : IShapeWriteMember<'T>) =
-            shape.Accept { new IWriteMemberVisitor<'T, ObjectStack -> ObjectCache -> ('E -> 'E) -> 'T -> 'T -> 'T> with
-                member __.Visit (shape : ShapeWriteMember<'T, 'F>) =
+        let mkMemberMapper (shape : IShapeMember<'T>) =
+            shape.Accept { new IMemberVisitor<'T, ObjectStack -> ObjectCache -> ('E -> 'E) -> 'T -> 'T -> 'T> with
+                member __.Visit (shape : ShapeMember<'T, 'F>) =
                     let fMapper = mkMapperCached<'E, 'F> ctx
                     fun s c f src tgt ->
-                        let srcField = shape.Project src
+                        let srcField = shape.Get src
                         let tgtField = fMapper s c f srcField 
-                        shape.Inject tgt tgtField }
+                        shape.Set tgt tgtField }
 
         match shapeof<'T> with
         | :? TypeShape<'E> -> wrap(fun _ _ f (t:'E) -> f t)
@@ -231,7 +231,7 @@ module private GMapper =
 
         | Shape.FSharpOption s ->
             s.Element.Accept {
-                new ITypeShapeVisitor<Mapper<'E,'T>> with
+                new ITypeVisitor<Mapper<'E,'T>> with
                     member __.Visit<'t>() =
                         let em = mkMapperCached<'E, 't> ctx
                         fun s c f tOpt ->
@@ -242,7 +242,7 @@ module private GMapper =
 
         | Shape.Array s ->
             s.Element.Accept {
-                new ITypeShapeVisitor<Mapper<'E,'T>> with
+                new ITypeVisitor<Mapper<'E,'T>> with
                     member __.Visit<'t> () =
                         let em = mkMapperCached<'E, 't> ctx
                         match s.Rank with
@@ -254,7 +254,7 @@ module private GMapper =
 
         | Shape.FSharpList s ->
             s.Element.Accept {
-                new ITypeShapeVisitor<Mapper<'E,'T>> with
+                new ITypeVisitor<Mapper<'E,'T>> with
                     member __.Visit<'t>() =
                         let em = mkMapperCached<'E, 't> ctx
                         wrap(fun s c f (ts : 't list) -> ts |> List.map (em s c f))

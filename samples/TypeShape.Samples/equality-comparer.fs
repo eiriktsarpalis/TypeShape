@@ -32,14 +32,14 @@ and private mkEqualityComparerAux<'T> (ctx : TypeGenerationContext) : IEqualityC
             member __.Equals(t,t') = cmp t t'
             member __.GetHashCode t = hash t } |> unbox<IEqualityComparer<'T>>
 
-    let mkMembersComparer (members : #IShapeMember<'DeclaringType> []) =
-        let mkMemberComparer (shape : IShapeMember<'DeclaringType>) =
-            shape.Accept { new IMemberVisitor<'DeclaringType, IEqualityComparer<'DeclaringType>> with
-                member __.Visit (shape : ShapeMember<'DeclaringType, 'FieldType>) =
+    let mkMembersComparer (members : #IShapeReadOnlyMember<'DeclaringType> []) =
+        let mkMemberComparer (shape : IShapeReadOnlyMember<'DeclaringType>) =
+            shape.Accept { new IReadOnlyMemberVisitor<'DeclaringType, IEqualityComparer<'DeclaringType>> with
+                member __.Visit (shape : ReadOnlyMember<'DeclaringType, 'FieldType>) =
                     let fc = mkEqualityComparerCached<'FieldType> ctx
                     { new IEqualityComparer<'DeclaringType> with
-                        member __.Equals(d1, d2) = fc.Equals (shape.Project d1, shape.Project d2)
-                        member __.GetHashCode d = fc.GetHashCode (shape.Project d) }
+                        member __.Equals(d1, d2) = fc.Equals (shape.Get d1, shape.Get d2)
+                        member __.GetHashCode d = fc.GetHashCode (shape.Get d) }
             }
 
         let memberComps = members |> Array.map mkMemberComparer
@@ -83,7 +83,7 @@ and private mkEqualityComparerAux<'T> (ctx : TypeGenerationContext) : IEqualityC
 
     | Shape.FSharpOption s ->
         s.Element.Accept {
-            new ITypeShapeVisitor<IEqualityComparer<'T>> with
+            new ITypeVisitor<IEqualityComparer<'T>> with
                 member __.Visit<'a> () =
                     let tc = mkEqualityComparerCached<'a> ctx
                     wrap (function None -> 0 | Some t -> tc.GetHashCode t)
@@ -95,7 +95,7 @@ and private mkEqualityComparerAux<'T> (ctx : TypeGenerationContext) : IEqualityC
 
     | Shape.FSharpList s ->
         s.Element.Accept {
-            new ITypeShapeVisitor<IEqualityComparer<'T>> with
+            new ITypeVisitor<IEqualityComparer<'T>> with
                 member __.Visit<'a> () =
                     let tc = mkEqualityComparerCached<'a> ctx
                     let rec hash c (xs : 'a list) =
@@ -116,7 +116,7 @@ and private mkEqualityComparerAux<'T> (ctx : TypeGenerationContext) : IEqualityC
 
     | Shape.Array s when s.Rank = 1 ->
         s.Element.Accept {
-            new ITypeShapeVisitor<IEqualityComparer<'T>> with
+            new ITypeVisitor<IEqualityComparer<'T>> with
                 member __.Visit<'a> () =
                     let tc = mkEqualityComparerCached<'a> ctx
                     let hash (xs : 'a []) =

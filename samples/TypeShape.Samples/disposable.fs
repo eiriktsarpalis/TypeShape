@@ -24,11 +24,11 @@ and private mkDisposerCached<'T> (ctx : TypeGenerationContext) : 'T -> unit =
 and private mkDisposerAux<'T> (ctx : TypeGenerationContext) : 'T -> unit =
     let EQ (f : 'a -> unit) = unbox<'T -> unit> f
 
-    let mkMemberDisposer (shape : IShapeWriteMember<'DeclaringType>) =
-        shape.Accept { new IWriteMemberVisitor<'DeclaringType, 'DeclaringType -> unit> with
-            member __.Visit (shape : ShapeWriteMember<'DeclaringType, 'Field>) =
+    let mkMemberDisposer (shape : IShapeMember<'DeclaringType>) =
+        shape.Accept { new IMemberVisitor<'DeclaringType, 'DeclaringType -> unit> with
+            member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                 let fd = mkDisposerCached<'Field> ctx
-                fun inst -> let f = shape.Project inst in fd f }
+                fun inst -> let f = shape.Get inst in fd f }
 
     match shapeof<'T> with
     | Shape.IDisposable s ->
@@ -48,13 +48,13 @@ and private mkDisposerAux<'T> (ctx : TypeGenerationContext) : 'T -> unit =
         }
 
     | Shape.FSharpList s ->
-        s.Element.Accept { new ITypeShapeVisitor<'T -> unit> with
+        s.Element.Accept { new ITypeVisitor<'T -> unit> with
             member __.Visit<'t>() = // 'T = 't list
                 let td = mkDisposerCached<'t> ctx
                 EQ (fun (ts : 't list) -> for t in ts do td t) } 
 
     | Shape.Array s when s.Rank = 1 ->
-        s.Element.Accept { new ITypeShapeVisitor<'T -> unit> with
+        s.Element.Accept { new ITypeVisitor<'T -> unit> with
             member __.Visit<'t> () = // 'T = 't []
                 let td = mkDisposerCached<'t> ctx
                 EQ (fun (ts : 't []) -> for t in ts do td t) } 

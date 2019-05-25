@@ -38,11 +38,11 @@ and private genParserAux<'T> (ctx : TypeGenerationContext) : Parser<'T> =
     let paren p = between (pchar '(') (pchar ')') (spaced p)
     let wrap (p : Parser<'a>) = unbox<Parser<'T>>(spaced p)
 
-    let mkMemberParser (shape : IShapeWriteMember<'Class>) =
-        shape.Accept { new IWriteMemberVisitor<'Class, Parser<'Class -> 'Class>> with
-            member __.Visit (shape : ShapeWriteMember<'Class, 'Field>) =
+    let mkMemberParser (shape : IShapeMember<'Class>) =
+        shape.Accept { new IMemberVisitor<'Class, Parser<'Class -> 'Class>> with
+            member __.Visit (shape : ShapeMember<'Class, 'Field>) =
                 let fp = genParserCached<'Field> ctx
-                fp |>> fun f dt -> shape.Inject dt f
+                fp |>> fun f dt -> shape.Set dt f
         }
 
     let combineMemberParsers 
@@ -63,7 +63,7 @@ and private genParserAux<'T> (ctx : TypeGenerationContext) : Parser<'T> =
     | Shape.String -> wrap(between (pchar '\"') (pchar '\"') (manySatisfy ((<>) '\"')))
     | Shape.FSharpOption s ->
         s.Element.Accept {
-            new ITypeShapeVisitor<Parser<'T>> with
+            new ITypeVisitor<Parser<'T>> with
                 member __.Visit<'t> () =
                     let tp = genParserCached<'t> ctx |>> Some
                     let nP = stringReturn "None" None
@@ -74,7 +74,7 @@ and private genParserAux<'T> (ctx : TypeGenerationContext) : Parser<'T> =
 
     | Shape.FSharpList s ->
         s.Element.Accept {
-            new ITypeShapeVisitor<Parser<'T>> with
+            new ITypeVisitor<Parser<'T>> with
                 member __.Visit<'t> () =
                     let tp = genParserCached<'t> ctx
                     let sep = pchar ';'
@@ -84,7 +84,7 @@ and private genParserAux<'T> (ctx : TypeGenerationContext) : Parser<'T> =
 
     | Shape.Array s when s.Rank = 1 ->
         s.Element.Accept {
-            new ITypeShapeVisitor<Parser<'T>> with
+            new ITypeVisitor<Parser<'T>> with
                 member __.Visit<'t> () =
                     let tp = genParserCached<'t> ctx
                     let sep = pchar ';'

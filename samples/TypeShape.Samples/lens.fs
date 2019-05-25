@@ -37,13 +37,13 @@ module private Impl =
     let rec mkLensAux<'T, 'F> (path : Path) : Lens<'T, 'F> =
         let wrap (l : Lens<'a, 'F>) : Lens<'T, 'F> = unbox l
 
-        let nest path (m : IShapeWriteMember<'T>) =
-            m.Accept { new IWriteMemberVisitor<'T, Lens<'T, 'F>> with
-                member __.Visit<'F0> (m : ShapeWriteMember<'T, 'F0>) =
+        let nest path (m : IShapeMember<'T>) =
+            m.Accept { new IMemberVisitor<'T, Lens<'T, 'F>> with
+                member __.Visit<'F0> (m : ShapeMember<'T, 'F0>) =
                     let inner = mkLensAux<'F0, 'F> path
                     {
-                        get = fun (t:'T) -> inner.get (m.Project t)
-                        set = fun (t:'T) (f:'F) -> m.Inject t (inner.set (m.Project t) f)
+                        get = fun (t:'T) -> inner.get (m.Get t)
+                        set = fun (t:'T) (f:'F) -> m.Set t (inner.set (m.Get t) f)
                     }
         
             }
@@ -51,7 +51,7 @@ module private Impl =
         match shapeof<'T>, path with
         | _, [] -> wrap { get = id<'F> ; set = fun (_:'F) (y:'F) -> y }
         | Shape.FSharpOption s, Property "Value" :: rest ->
-            s.Element.Accept { new ITypeShapeVisitor<Lens<'T,'F>> with
+            s.Element.Accept { new ITypeVisitor<Lens<'T,'F>> with
                 member __.Visit<'t> () =
                     let inner = mkLensAux<'t, 'F> rest
                     wrap {
@@ -61,7 +61,7 @@ module private Impl =
             }
 
         | Shape.Array s, Item(:? int as i) :: rest when s.Rank = 1 ->
-            s.Element.Accept { new ITypeShapeVisitor<Lens<'T,'F>> with
+            s.Element.Accept { new ITypeVisitor<Lens<'T,'F>> with
                 member __.Visit<'t> () =
                     let inner = mkLensAux<'t, 'F> rest
                     wrap {
@@ -71,7 +71,7 @@ module private Impl =
             }
 
         | Shape.FSharpList s, Item (:? int as i) :: rest ->
-            s.Element.Accept { new ITypeShapeVisitor<Lens<'T,'F>> with
+            s.Element.Accept { new ITypeVisitor<Lens<'T,'F>> with
                 member __.Visit<'t> () =
                     let inner = mkLensAux<'t, 'F> rest
                     wrap {

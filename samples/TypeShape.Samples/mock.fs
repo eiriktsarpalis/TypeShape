@@ -49,7 +49,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
     let inline getPrimMock (mv : MockContext<'a>) (defaultV : 'a) =
         match mv with Static t -> t | _ -> defaultV
 
-    let mkMemberMocker (shape : IShapeWriteMember<'T>) =
+    let mkMemberMocker (shape : IShapeMember<'T>) =
         let mockValue : (obj * int * int) option =
             shape.MemberInfo.GetCustomAttributes(true)
             |> Seq.tryPick(function :? MockAttribute as m -> Some (m.Value, m.Size, m.PreferedUnionCase) | _ -> None)
@@ -59,8 +59,8 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
                 shape.MemberInfo v
             |> invalidArg (string typeof<'T>)
 
-        shape.Accept { new IWriteMemberVisitor<'T, 'T -> 'T> with
-            member __.Visit (shape : ShapeWriteMember<'T, 'Field>) =
+        shape.Accept { new IMemberVisitor<'T, 'T -> 'T> with
+            member __.Visit (shape : ShapeMember<'T, 'Field>) =
                 let mockValue =
                     match mockValue with
                     | Some((:? 'Field as f), _, _) -> Static f
@@ -95,7 +95,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
                     | None -> Empty
 
                 let fm = mkMockerCached<'Field> ctx
-                fun target -> shape.Inject target (fm mockValue) }
+                fun target -> shape.Set target (fm mockValue) }
 
     match shapeof<'T> with
     | Shape.Primitive -> fun mv -> getPrimMock mv Unchecked.defaultof<'T>
@@ -146,7 +146,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
                 |> EQ }
 
     | Shape.FSharpOption s ->
-        s.Element.Accept { new ITypeShapeVisitor<Mocker<'T>> with
+        s.Element.Accept { new ITypeVisitor<Mocker<'T>> with
             member __.Visit<'t>() = // 'T = 't option
                 let em = mkMockerCached<'t> ctx
                 fun mv ->
@@ -170,7 +170,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
                 |> EQ }
 
     | Shape.Array s when s.Rank = 1 ->
-        s.Element.Accept { new ITypeShapeVisitor<Mocker<'T>> with
+        s.Element.Accept { new ITypeVisitor<Mocker<'T>> with
             member __.Visit<'t> () = // 'T = 't []
                 let em = mkMockerCached<'t> ctx
                 fun mv ->
@@ -184,7 +184,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
                 |> EQ }
 
     | Shape.FSharpList s ->
-        s.Element.Accept { new ITypeShapeVisitor<Mocker<'T>> with
+        s.Element.Accept { new ITypeVisitor<Mocker<'T>> with
             member __.Visit<'t>() = // 'T = 't list
                 let em = mkMockerCached<'t> ctx
                 fun mv ->

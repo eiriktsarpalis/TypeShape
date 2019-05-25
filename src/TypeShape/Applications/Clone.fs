@@ -18,7 +18,7 @@ module private Impl =
     and cloneUntyped s c (o:obj) : obj =
         if obj.ReferenceEquals(o,null) then null else
         let shape = o.GetType() |> TypeShape.Create
-        shape.Accept { new ITypeShapeVisitor<obj> with
+        shape.Accept { new ITypeVisitor<obj> with
             member __.Visit<'T>() = mkCloner () s c (o :?> 'T) :> obj }
 
     and mkRefEqCloner<'T> (cloner : Cloner<'T>) : Cloner<'T> =
@@ -68,15 +68,15 @@ module private Impl =
     and mkClonerMain<'T> (ctx : TypeGenerationContext) : Cloner<'T> =
         let EQ (c : Cloner<'a>) : Cloner<'T> = unbox c
 
-        let mkMemberCloner (fieldShape : IShapeWriteMember<'DeclaringType>) =
+        let mkMemberCloner (fieldShape : IShapeMember<'DeclaringType>) =
             fieldShape.Accept {
-                new IWriteMemberVisitor<'DeclaringType, ObjectStack -> ObjectCache -> 'DeclaringType -> 'DeclaringType -> 'DeclaringType> with
-                    member __.Visit (shape : ShapeWriteMember<'DeclaringType, 'Field>) =
+                new IMemberVisitor<'DeclaringType, ObjectStack -> ObjectCache -> 'DeclaringType -> 'DeclaringType -> 'DeclaringType> with
+                    member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                         let fieldCloner = mkClonerCached<'FieldType> ctx
                         fun s c src tgt ->
-                            let field = shape.Project src
+                            let field = shape.Get src
                             let field' = fieldCloner s c field
-                            shape.Inject tgt field'
+                            shape.Set tgt field'
             }
 
         match shapeof<'T> with
@@ -91,7 +91,7 @@ module private Impl =
         | Shape.String -> EQ(fun _ _ s -> String.Copy(s))
         | Shape.Array s when s.Rank = 1 ->
             s.Element.Accept {
-                new ITypeShapeVisitor<Cloner<'T>> with
+                new ITypeVisitor<Cloner<'T>> with
                     member __.Visit<'t> () =
                         if typeof<'t>.IsPrimitive then
                             EQ(fun _ _ (ts:'t[]) -> ts.Clone() :?> 't[])
@@ -118,7 +118,7 @@ module private Impl =
 
         | Shape.FSharpList s ->
             s.Element.Accept {
-                new ITypeShapeVisitor<Cloner<'T>> with
+                new ITypeVisitor<Cloner<'T>> with
                     member __.Visit<'t> () =
                         let ec = mkClonerCached<'t> ctx
                         EQ(fun s c ts -> List.map (ec s c) ts) }

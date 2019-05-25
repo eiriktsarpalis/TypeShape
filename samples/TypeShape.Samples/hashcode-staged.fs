@@ -15,10 +15,10 @@ let mkStagedHasher<'T> (self : StagedGenerator1) (expr : Expr<'T>) : Expr<int> =
     let combineHash (h1 : Expr<int>) (h2 : Expr<int>) =
         <@ let h1 = %h1 in let h2 = %h2 in ((h1 <<< 5) + h1) ||| h2 @>
 
-    let stageMemberHash (shape : IShapeMember<'DeclaringType>) (dExpr : Expr<'DeclaringType>) =
-        shape.Accept { new IMemberVisitor<'DeclaringType, Expr<int>> with
-            member __.Visit (shape : ShapeMember<'DeclaringType, 'FieldType>) =
-                let fExpr = shape.ProjectExpr dExpr
+    let stageMemberHash (shape : IShapeReadOnlyMember<'DeclaringType>) (dExpr : Expr<'DeclaringType>) =
+        shape.Accept { new IReadOnlyMemberVisitor<'DeclaringType, Expr<int>> with
+            member __.Visit (shape : ReadOnlyMember<'DeclaringType, 'FieldType>) =
+                let fExpr = shape.GetExpr dExpr
                 self.Generate fExpr }
 
     match shapeof<'T> with
@@ -28,7 +28,7 @@ let mkStagedHasher<'T> (self : StagedGenerator1) (expr : Expr<'T>) : Expr<int> =
     | Shape.Double -> <@ hash<double> (% unwrap()) @>
     | Shape.String -> <@ hash<string> (% unwrap()) @>
     | Shape.Array s when s.Rank = 1 ->
-        s.Element.Accept { new ITypeShapeVisitor<Expr<int>> with
+        s.Element.Accept { new ITypeVisitor<Expr<int>> with
             member __.Visit<'t> () =
                 <@
                     match (% unwrap()) with
@@ -42,7 +42,7 @@ let mkStagedHasher<'T> (self : StagedGenerator1) (expr : Expr<'T>) : Expr<int> =
                 @> }
 
     | Shape.FSharpOption s ->
-        s.Element.Accept { new ITypeShapeVisitor<Expr<int>> with
+        s.Element.Accept { new ITypeVisitor<Expr<int>> with
             member __.Visit<'t> () =
                 <@
                     match (% (unwrap() : Expr<'t option>)) with
@@ -53,7 +53,7 @@ let mkStagedHasher<'T> (self : StagedGenerator1) (expr : Expr<'T>) : Expr<int> =
                 @> }
 
     | Shape.FSharpList s ->
-        s.Element.Accept { new ITypeShapeVisitor<Expr<int>> with
+        s.Element.Accept { new ITypeVisitor<Expr<int>> with
             member __.Visit<'t> () =
                 <@
                     let mutable agg = 0

@@ -31,7 +31,7 @@ type TypeShapeInfo =
     | Generic of definition:Type * args:Type []
 
 /// Used to extract the type variable contained in a specific shape
-type ITypeShapeVisitor<'R> =
+type ITypeVisitor<'R> =
     abstract Visit<'T> : unit -> 'R
 
 /// Encapsulates a type variable that can be accessed using type shape visitors
@@ -41,7 +41,7 @@ type TypeShape =
     internal new () = { }
     abstract Type : Type
     abstract ShapeInfo : TypeShapeInfo
-    abstract Accept : ITypeShapeVisitor<'R> -> 'R
+    abstract Accept : ITypeVisitor<'R> -> 'R
     override s.ToString() = sprintf "TypeShape [%O]" s.Type
 
 /// Encapsulates a type variable that can be accessed using type shape visitors
@@ -493,7 +493,7 @@ module private MemberUtils =
 
     let private untypedVisitor =
         {
-            new ITypeShapeVisitor<obj> with
+            new ITypeVisitor<obj> with
                 member __.Visit<'T>() = Unchecked.defaultof<'T> :> obj
         }
 
@@ -568,7 +568,7 @@ module private MemberUtils =
 
     let getDefaultValueExpr (t : Type) =
         TypeShape.Create(t).Accept {
-            new ITypeShapeVisitor<Expr> with
+            new ITypeVisitor<Expr> with
                 member __.Visit<'T> () = <@ Unchecked.defaultof<'T> @> :> _
         }
 
@@ -802,9 +802,9 @@ module private MemberUtils =
 //-------------------------
 // Member Shape Definitions
 
-/// Identifies an instance member that defines
-/// a value in a class instance, typically a field or property
-type IShapeMember =
+/// Identifies an instance member that defines a read-only value
+/// in a class instance, typically a field or property
+type IShapeReadOnlyMember =
     /// Human-readable member identifier
     abstract Label : string
     /// The actual System.Reflection.MemberInfo corresponding to member
@@ -816,15 +816,15 @@ type IShapeMember =
     /// True iff member is public
     abstract IsPublic : bool
 
-/// Identifies an instance member that defines
-/// a value in a class instance, typically a field or property
-type IShapeMember<'DeclaringType> =
-    inherit IShapeMember
-    abstract Accept : IMemberVisitor<'DeclaringType, 'R> -> 'R
+/// Identifies an instance member that defines a read-only value
+/// in a class instance, typically a field or property
+type IShapeReadOnlyMember<'DeclaringType> =
+    inherit IShapeReadOnlyMember
+    abstract Accept : IReadOnlyMemberVisitor<'DeclaringType, 'R> -> 'R
 
-/// Identifies an instance member that defines
-/// a value in a class instance, typically a field or property
-and ShapeMember<'DeclaringType, 'MemberType> internal (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
+/// Identifies an instance member that defines a read-only value
+/// in a class instance, typically a field or property
+and ReadOnlyMember<'DeclaringType, 'MemberType> internal (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
     let isStructMember = isStructMember path
     let isPublicMember = isPublicMember memberInfo
 #if TYPESHAPE_EMIT
@@ -839,21 +839,25 @@ and ShapeMember<'DeclaringType, 'MemberType> internal (label : string, memberInf
     member __.IsStructMember = isStructMember
     /// True iff member is public
     member __.IsPublic = isPublicMember
-    /// Projects an instance to member of given value
-    member __.Project (instance : 'DeclaringType) : 'MemberType =
+    /// Gets the current value from the given declaring type instance
+    member __.Get (instance : 'DeclaringType) : 'MemberType =
 #if TYPESHAPE_EMIT
         projectFunc.Value.Invoke instance
 #else
         project path instance
 #endif
+
+    /// Gets the current value from the given declaring type instance
+    [<Obsolete("Deprecated, please use the 'Get' method instead")>]
+    member __.Project (instance : 'DeclaringType) : 'MemberType = __.Get instance
        
 #if TYPESHAPE_EXPR
     /// Projects an instance to member of given value
-    member __.ProjectExpr (instance : Expr<'DeclaringType>) =
+    member __.GetExpr (instance : Expr<'DeclaringType>) =
         projectExpr<'DeclaringType, 'MemberType> path instance
 #endif
 
-    interface IShapeMember<'DeclaringType> with
+    interface IShapeReadOnlyMember<'DeclaringType> with
         member s.Label = label
         member s.Member = shapeof<'MemberType>
         member s.MemberInfo = memberInfo
@@ -861,22 +865,22 @@ and ShapeMember<'DeclaringType, 'MemberType> internal (label : string, memberInf
         member s.IsPublic = isPublicMember
         member s.Accept v = v.Visit s
 
-and IMemberVisitor<'DeclaringType, 'R> =
-    abstract Visit<'MemberType> : ShapeMember<'DeclaringType, 'MemberType> -> 'R
+and IReadOnlyMemberVisitor<'DeclaringType, 'R> =
+    abstract Visit<'MemberType> : ReadOnlyMember<'DeclaringType, 'MemberType> -> 'R
 
 //----------------------------
 // Writable Member Definitions
 
 /// Identifies an instance member that defines
 /// a mutable value in a class instance, typically a field or property
-type IShapeWriteMember<'Record> =
-    inherit IShapeMember<'Record>
-    abstract Accept : IWriteMemberVisitor<'Record,'R> -> 'R
+type IShapeMember<'Record> =
+    inherit IShapeReadOnlyMember<'Record>
+    abstract Accept : IMemberVisitor<'Record,'R> -> 'R
 
 /// Identifies an instance member that defines
 /// a mutable value in a class instance, typically a field or property
-and [<Sealed>] ShapeWriteMember<'DeclaringType, 'MemberType> private (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
-    inherit ShapeMember<'DeclaringType, 'MemberType>(label, memberInfo, path)
+and [<Sealed>] ShapeMember<'DeclaringType, 'MemberType> private (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
+    inherit ReadOnlyMember<'DeclaringType, 'MemberType>(label, memberInfo, path)
 
 #if TYPESHAPE_EMIT
     let injectFunc = emitInjection<'DeclaringType, 'MemberType> path
@@ -884,26 +888,31 @@ and [<Sealed>] ShapeWriteMember<'DeclaringType, 'MemberType> private (label : st
     let isStructMember = isStructMember path
 #endif
 
-    /// Injects a value to member of given instance
-    member __.Inject (instance : 'DeclaringType) (field : 'MemberType) : 'DeclaringType =
+    /// Assigns value to the provided instance. NB this is a mutating operation
+    member __.Set (instance : 'DeclaringType) (field : 'MemberType) : 'DeclaringType =
 #if TYPESHAPE_EMIT
         injectFunc.Value.Invoke(instance, field)
 #else
         inject isStructMember path instance field
 #endif
 
+    /// Assigns value to the provided instance. NB this is a mutating operation
+    [<Obsolete("Deprecated, please use the 'Set' method instead")>]
+    member __.Inject (instance : 'DeclaringType) (field : 'MemberType) : 'DeclaringType =
+        __.Set instance field
+
 #if TYPESHAPE_EXPR
 
     /// Injects a value to member of given instance
-    member __.InjectExpr (instance : Expr<'DeclaringType>) (field : Expr<'MemberType>) =
+    member __.SetExpr (instance : Expr<'DeclaringType>) (field : Expr<'MemberType>) =
         injectExpr path instance field
 #endif
 
-    interface IShapeWriteMember<'DeclaringType> with
-        member s.Accept (v : IWriteMemberVisitor<'DeclaringType, 'R>) = v.Visit s
+    interface IShapeMember<'DeclaringType> with
+        member s.Accept (v : IMemberVisitor<'DeclaringType, 'R>) = v.Visit s
 
-and IWriteMemberVisitor<'TRecord, 'R> =
-    abstract Visit<'Field> : ShapeWriteMember<'TRecord, 'Field> -> 'R
+and IMemberVisitor<'TRecord, 'R> =
+    abstract Visit<'Field> : ShapeMember<'TRecord, 'Field> -> 'R
 
 //-------------------------------
 // Constructor Shapes
@@ -973,15 +982,15 @@ module private MemberUtils2 =
         let tyArgs = [|typeof<'Record> ; memberType|]
         let args = [|box label; box memberInfo; box path|]
         if isWriteableMember path then
-            Activator.CreateInstanceGeneric<ShapeWriteMember<_,_>>(tyArgs, args)
-            :?> IShapeMember<'Record>
+            Activator.CreateInstanceGeneric<ShapeMember<_,_>>(tyArgs, args)
+            :?> IShapeReadOnlyMember<'Record>
         else
-            Activator.CreateInstanceGeneric<ShapeMember<_,_>>(tyArgs, args) 
-            :?> IShapeMember<'Record>
+            Activator.CreateInstanceGeneric<ReadOnlyMember<_,_>>(tyArgs, args) 
+            :?> IShapeReadOnlyMember<'Record>
         
     let mkWriteMemberUntyped<'Record> (label : string) (memberInfo : MemberInfo) (path : MemberInfo[]) =
         match mkMemberUntyped<'Record> label memberInfo path with
-        | :? IShapeWriteMember<'Record> as wm -> wm
+        | :? IShapeMember<'Record> as wm -> wm
         | _ -> invalidOp <| sprintf "TypeShape internal error: Member '%O' is not writable" memberInfo
 
     let mkCtorUntyped<'Record> (ctorInfo : ConstructorInfo) =
@@ -1067,7 +1076,7 @@ module private ShapeTupleImpl =
 /// Denotes a specific System.Tuple shape
 type IShapeTuple =
     /// Tuple element shape definitions
-    abstract Elements : IShapeMember[]
+    abstract Elements : IShapeReadOnlyMember[]
     abstract Accept : ITupleVisitor<'R> -> 'R
 
 and ITupleVisitor<'R> =
@@ -1122,7 +1131,7 @@ and [<Sealed>] ShapeTuple<'Tuple> private () =
 /// Denotes an F# record type
 type IShapeFSharpRecord =
     /// F# record field shapes
-    abstract Fields : IShapeMember[]
+    abstract Fields : IShapeReadOnlyMember[]
     abstract Accept : IFSharpRecordVisitor<'R> -> 'R
 
 /// Identifies an F# record type
@@ -1143,6 +1152,7 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
 
     let recordFields = Array.map mkRecordField props
 
+    /// True if an F# struct record
     member __.IsStructRecord = isStructRecord
 
     /// F# record field shapes
@@ -1179,7 +1189,7 @@ type IShapeFSharpUnionCase =
     /// Underlying FSharp.Reflection.UnionCaseInfo description
     abstract CaseInfo : UnionCaseInfo
     /// Field shapes for union case
-    abstract Fields : IShapeMember[]
+    abstract Fields : IShapeReadOnlyMember[]
 
 /// Denotes an F# union case shape
 type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
@@ -1308,7 +1318,7 @@ and IFSharpUnionVisitor<'R> =
 /// Carries a parameterless constructor and settable properties
 type IShapeCliMutable =
     /// Gettable and Settable properties for C# Record
-    abstract Properties : IShapeMember[]
+    abstract Properties : IShapeReadOnlyMember[]
     abstract Accept : ICliMutableVisitor<'R> -> 'R
 
 /// Denotes a type that behaves like a C# record:
@@ -1360,9 +1370,9 @@ type IShapePoco =
     /// Constructor shapes for the type
     abstract Constructors : IShapeConstructor[]
     /// Field shapes for the type
-    abstract Fields : IShapeMember[]
+    abstract Fields : IShapeReadOnlyMember[]
     /// Property shapes for the type
-    abstract Properties : IShapeMember[]
+    abstract Properties : IShapeReadOnlyMember[]
     abstract Accept : IPocoVisitor<'R> -> 'R
 
 /// Denotes any .NET type that is either a class or a struct

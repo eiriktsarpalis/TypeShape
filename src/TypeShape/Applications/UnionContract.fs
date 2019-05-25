@@ -60,17 +60,17 @@ module private Impl =
                 sprintf "Type '%O' is not an F# union" typeof<'Union>
                 |> invalidArg "Union"
 
-        let mkFieldEncoders (field : IShapeWriteMember<'Union>) (encoder : IEncoder<'Format>) =
+        let mkFieldEncoders (field : IShapeMember<'Union>) (encoder : IEncoder<'Format>) =
             field.Accept {
-                new IWriteMemberVisitor<'Union, ('Union -> 'Format) * ('Union -> 'Format -> 'Union)> with
-                    member __.Visit(sfield : ShapeWriteMember<'Union, 'Field>) =
+                new IMemberVisitor<'Union, ('Union -> 'Format) * ('Union -> 'Format -> 'Union)> with
+                    member __.Visit(sfield : ShapeMember<'Union, 'Field>) =
                         let enc u = 
-                            let f = sfield.Project u 
+                            let f = sfield.Get u 
                             encoder.Encode f
 
                         let dec u f =
                             let v = encoder.Decode f
-                            sfield.Inject u v
+                            sfield.Set u v
 
                         enc, dec
             }

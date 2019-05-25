@@ -42,7 +42,7 @@ let rec mkPrinter<'T> () : 'T -> string =
     | Shape.String -> wrap(sprintf "\"%s\"")
     | Shape.FSharpOption s ->
         s.Element.Accept {
-            new ITypeShapeVisitor<'T -> string> with
+            new ITypeVisitor<'T -> string> with
                 member __.Visit<'a> () =
                     let tp = mkPrinter<'a>()
                     wrap(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
@@ -50,7 +50,7 @@ let rec mkPrinter<'T> () : 'T -> string =
 
     | Shape.FSharpList s ->
         s.Element.Accept {
-            new ITypeShapeVisitor<'T -> string> with
+            new ITypeVisitor<'T -> string> with
                 member __.Visit<'a> () =
                     let tp = mkPrinter<'a>()
                     wrap(fun ts -> ts |> List.map tp |> String.concat "; " |> sprintf "[%s]")
@@ -58,7 +58,7 @@ let rec mkPrinter<'T> () : 'T -> string =
 
     | Shape.Array s when s.Rank = 1 ->
         s.Element.Accept {
-            new ITypeShapeVisitor<'T -> string> with
+            new ITypeVisitor<'T -> string> with
                 member __.Visit<'a> () =
                     let tp = mkPrinter<'a> ()
                     wrap(fun ts -> ts |> Array.map tp |> String.concat "; " |> sprintf "[|%s|]")
@@ -66,10 +66,10 @@ let rec mkPrinter<'T> () : 'T -> string =
         
     | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
         let mkElemPrinter (shape : IShapeMember<'T>) =
-           shape.Accept { new IShapeMemberVisitor<'T, 'T -> string> with
+           shape.Accept { new IMemberVisitor<'T, 'T -> string> with
                member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                    let fieldPrinter = mkPrinter<'Field>()
-                   fieldPrinter << shape.Project }
+                   fieldPrinter << shape.Get }
 
         let elemPrinters : ('T -> string) [] = s.Fields |> Array.map mkElemPrinter
 
@@ -110,25 +110,24 @@ for i = 1 to 1000 do ignore <| p2 value
 
 ### Records, Unions and POCOs
 
-TypeShape can be used to define generic programs that target arbitrary types:
+TypeShape can be used to define generic programs that access fields of arbitrary types:
 F# records, unions or POCOs. This is achieved using the `IShapeMember` abstraction:
 ```fsharp
 type IShapeMember<'DeclaringType, 'Field> =
-    inherit IShapeMember<'DeclaringType>
-    abstract Project : 'DeclaringType -> 'Field
-    abstract Inject : 'DeclaringType -> 'Field -> 'DeclaringType
+    abstract Get : 'DeclaringType -> 'Field
+    abstract Set : 'DeclaringType -> 'Field -> 'DeclaringType
 ```
 An F# record then is just a list of member shapes, a union is a list of lists of member shapes.
-Member shapes can optionally be configured to generate code at runtime for more performant `Project` and `Inject` operations.
+Member shapes can optionally be configured to generate code at runtime for more performant `Get` and `Set` operations.
 Member shapes come with quoted versions of the API for staged generic programming applications.
 
 To make our pretty printer support these types, we first provide a pretty printer for members:
 ```fsharp
 let mkMemberPrinter (shape : IShapeMember<'DeclaringType>) =
-   shape.Accept { new IShapeMemberVisitor<'DeclaringType, 'DeclaringType -> string> with
+   shape.Accept { new IMemberVisitor<'DeclaringType, 'DeclaringType -> string> with
        member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
            let fieldPrinter = mkPrinter<'Field>()
-           fieldPrinter << shape.Project }
+           fieldPrinter << shape.Get }
 ```
 Then for F# records:
 ```fsharp

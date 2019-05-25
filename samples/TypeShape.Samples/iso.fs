@@ -39,18 +39,18 @@ and private mkProjCached<'a, 'b> (ctx : TypeGenerationContext) : Proj<'a, 'b> =
 and private mkProjAux<'a, 'b> (ctx : TypeGenerationContext) : Proj<'a,'b> =
     let notProj() = failwithf "Type '%O' is not projectable to '%O'" typeof<'a> typeof<'b>
 
-    let mkMemberProj (candidates : IShapeWriteMember<'a>[]) (target : IShapeWriteMember<'b>) =
+    let mkMemberProj (candidates : IShapeMember<'a>[]) (target : IShapeMember<'b>) =
         match candidates |> Array.tryFind (fun c -> c.Label = target.Label) with
         | None -> notProj()
         | Some source ->
-            source.Accept { new IWriteMemberVisitor<'a, ('a -> 'b -> 'b)> with
-              member __.Visit (src : ShapeWriteMember<'a, 'F>) =
-                target.Accept { new IWriteMemberVisitor<'b, ('a -> 'b -> 'b)> with
-                  member __.Visit (tgt : ShapeWriteMember<'b, 'G>) =
+            source.Accept { new IMemberVisitor<'a, ('a -> 'b -> 'b)> with
+              member __.Visit (src : ShapeMember<'a, 'F>) =
+                target.Accept { new IMemberVisitor<'b, ('a -> 'b -> 'b)> with
+                  member __.Visit (tgt : ShapeMember<'b, 'G>) =
                     let (Proj conv) = mkProjCached<'F, 'G> ctx
                     fun (a:'a) (b:'b) -> 
-                        let f = src.Project a
-                        tgt.Inject b (conv f) } }
+                        let f = src.Get a
+                        tgt.Set b (conv f) } }
 
     match shapeof<'a>, shapeof<'b> with
     | s, s' when s.Type = s'.Type -> Proj(unbox<'a -> 'b> (fun (a:'a) -> a))

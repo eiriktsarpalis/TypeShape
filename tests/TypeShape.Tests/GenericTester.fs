@@ -254,7 +254,7 @@ module Implementation =
             let sysType = Mapper.typeAlg tAlg
             TypeShape.Create sysType
 
-        member tAlg.Accept (v:ITypeShapeVisitor<'R>) : 'R =
+        member tAlg.Accept (v:ITypeVisitor<'R>) : 'R =
             tAlg.TypeShape.Accept v
 
         member tAlg.Accept (v:IEqualityVisitor<'R>) : 'R =

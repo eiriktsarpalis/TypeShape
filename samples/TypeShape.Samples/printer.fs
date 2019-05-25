@@ -19,12 +19,12 @@ and mkPrinterCached<'T> (ctx : TypeGenerationContext) : 'T -> string =
 
 and mkPrinterAux<'T> (ctx : TypeGenerationContext) : 'T -> string =
     let wrap(p : 'a -> string) = unbox<'T -> string> p
-    let mkFieldPrinter (field : IShapeMember<'DeclaringType>) =
+    let mkFieldPrinter (field : IShapeReadOnlyMember<'DeclaringType>) =
         field.Accept {
-            new IMemberVisitor<'DeclaringType, string * ('DeclaringType -> string)> with
-                member __.Visit(field : ShapeMember<'DeclaringType, 'Field>) =
+            new IReadOnlyMemberVisitor<'DeclaringType, string * ('DeclaringType -> string)> with
+                member __.Visit(field : ReadOnlyMember<'DeclaringType, 'Field>) =
                     let fp = mkPrinterCached<'Field> ctx
-                    field.Label, fp << field.Project
+                    field.Label, fp << field.Get
         }
 
     match shapeof<'T> with
@@ -38,7 +38,7 @@ and mkPrinterAux<'T> (ctx : TypeGenerationContext) : 'T -> string =
     | Shape.DateTimeOffset -> wrap (fun (b:DateTimeOffset) -> sprintf "DateTimeOffset (%i, %i, %i, %i, %i, %i, %i, TimeSpan.FromMinutes %i.)" b.Year b.Month b.Day b.Hour b.Minute b.Second b.Millisecond b.Offset.Minutes)    
     | Shape.FSharpOption s ->
         s.Element.Accept {
-            new ITypeShapeVisitor<'T -> string> with
+            new ITypeVisitor<'T -> string> with
                 member __.Visit<'a> () = // 'T = 'a option
                     let tp = mkPrinterCached<'a> ctx
                     wrap(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
@@ -46,7 +46,7 @@ and mkPrinterAux<'T> (ctx : TypeGenerationContext) : 'T -> string =
 
     | Shape.FSharpList s ->
         s.Element.Accept {
-            new ITypeShapeVisitor<'T -> string> with
+            new ITypeVisitor<'T -> string> with
                 member __.Visit<'a> () = // 'T = 'a list
                     let tp = mkPrinterCached<'a> ctx
                     wrap(fun (ts : 'a list) -> ts |> Seq.map tp |> String.concat "; " |> sprintf "[%s]")
@@ -54,7 +54,7 @@ and mkPrinterAux<'T> (ctx : TypeGenerationContext) : 'T -> string =
 
     | Shape.Array s when s.Rank = 1 ->
         s.Element.Accept {
-            new ITypeShapeVisitor<'T -> string> with
+            new ITypeVisitor<'T -> string> with
                 member __.Visit<'a> () = // 'T = 'a []
                     let tp = mkPrinterCached<'a> ctx
                     wrap(fun (ts : 'a []) -> ts |> Seq.map tp |> String.concat "; " |> sprintf "[|%s|]")

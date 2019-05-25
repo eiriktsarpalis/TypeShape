@@ -12,13 +12,13 @@ type CmpExpr<'T> = Expr<'T> -> Expr<'T> -> Expr<bool>
 let rec stageCmp<'T> () : CmpExpr<'T> =
     let wrap (cmp : CmpExpr<'a>) = unbox<CmpExpr<'T>> cmp
 
-    let stageMemberCmp (shape : IShapeMember<'DeclaringType>) =
-        shape.Accept { new IMemberVisitor<'DeclaringType, CmpExpr<'DeclaringType>> with
-            member __.Visit (shape : ShapeMember<'DeclaringType, 'FieldType>) =
+    let stageMemberCmp (shape : IShapeReadOnlyMember<'DeclaringType>) =
+        shape.Accept { new IReadOnlyMemberVisitor<'DeclaringType, CmpExpr<'DeclaringType>> with
+            member __.Visit (shape : ReadOnlyMember<'DeclaringType, 'FieldType>) =
                 let fcmp = stageCmp<'FieldType>()
                 fun dt dt' ->
-                    fcmp (shape.ProjectExpr dt) 
-                         (shape.ProjectExpr dt') }
+                    fcmp (shape.GetExpr dt) 
+                         (shape.GetExpr dt') }
 
     match shapeof<'T> with
     | Shape.Unit -> wrap(fun (_: Expr<unit>) _ -> <@ true @>)
@@ -27,7 +27,7 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
     | Shape.Double -> wrap(fun (d: Expr<double>) d' -> <@ %d = %d' @>)
     | Shape.String -> wrap(fun (s: Expr<string>) s' -> <@ %s = %s' @>)
     | Shape.Array s when s.Rank = 1 ->
-        s.Element.Accept { new ITypeShapeVisitor<CmpExpr<'T>> with
+        s.Element.Accept { new ITypeVisitor<CmpExpr<'T>> with
             member __.Visit<'t> () =
                 let ec = stageCmp<'t>()
                 wrap(fun (ts : Expr<'t []>) ts' ->
@@ -46,7 +46,7 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
                     @> )}
 
     | Shape.FSharpOption s ->
-        s.Element.Accept { new ITypeShapeVisitor<CmpExpr<'T>> with
+        s.Element.Accept { new ITypeVisitor<CmpExpr<'T>> with
             member __.Visit<'t> () =
                 let ec = stageCmp<'t> ()
                 wrap(fun topt topt' ->
@@ -58,7 +58,7 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
                     @> )}
 
     | Shape.FSharpList s ->
-        s.Element.Accept { new ITypeShapeVisitor<CmpExpr<'T>> with
+        s.Element.Accept { new ITypeVisitor<CmpExpr<'T>> with
             member __.Visit<'t> () =
                 let ec = stageCmp<'t> ()
                 wrap(fun ts ts' ->

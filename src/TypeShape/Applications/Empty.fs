@@ -24,11 +24,11 @@ and private mkEmptyFuncCached<'T> (ctx : TypeGenerationContext) : bool -> 'T =
 and private mkEmptyFuncAux<'T> (ctx : TypeGenerationContext) : bool -> 'T =
     let EQ (f : bool -> 'a) = unbox<bool -> 'T> f
 
-    let mkMemberInitializer (shape : IShapeWriteMember<'DeclaringType>) =
-        shape.Accept { new IWriteMemberVisitor<'DeclaringType, bool -> 'DeclaringType -> 'DeclaringType> with
-            member __.Visit (shape : ShapeWriteMember<'DeclaringType, 'Field>) =
+    let mkMemberInitializer (shape : IShapeMember<'DeclaringType>) =
+        shape.Accept { new IMemberVisitor<'DeclaringType, bool -> 'DeclaringType -> 'DeclaringType> with
+            member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                 let fe = mkEmptyFuncCached<'Field> ctx
-                fun m inst -> shape.Inject inst (fe m)
+                fun m inst -> shape.Set inst (fe m)
         }
 
     match shapeof<'T> with
@@ -64,7 +64,7 @@ and private mkEmptyFuncAux<'T> (ctx : TypeGenerationContext) : bool -> 'T =
                 EQ(fun max -> fun (_ : 'Dom) -> de max) }
 
     | Shape.FSharpOption s ->
-        s.Element.Accept { new ITypeShapeVisitor<bool -> 'T> with
+        s.Element.Accept { new ITypeVisitor<bool -> 'T> with
             member __.Visit<'t>() = // 'T = 't option
                 let et = mkEmptyFuncCached<'t> ctx
                 EQ(fun max -> if max then Some (et max) else None) }
@@ -76,13 +76,13 @@ and private mkEmptyFuncAux<'T> (ctx : TypeGenerationContext) : bool -> 'T =
                 EQ(fun max -> new KeyValuePair<'k,'v>(ke max,ve max)) }
 
     | Shape.FSharpList s ->
-        s.Element.Accept { new ITypeShapeVisitor<bool -> 'T> with
+        s.Element.Accept { new ITypeVisitor<bool -> 'T> with
             member __.Visit<'t>() = // 'T = 't list
                 let te = mkEmptyFuncCached<'t> ctx
                 EQ(fun max -> if max then [te max] else []) } 
 
     | Shape.Array s ->
-        s.Element.Accept { new ITypeShapeVisitor<bool -> 'T> with
+        s.Element.Accept { new ITypeVisitor<bool -> 'T> with
             member __.Visit<'t> () = 
                 let te = mkEmptyFuncCached<'t> ctx
                 let inline sz m = if m then 1 else 0
