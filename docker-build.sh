@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 
-TARGET=${1:-Bundle}
-IMAGE_LABEL=${2:-"typeshape-build:$RANDOM"}
+if [ -z "$*" ] ; then
+	ARGS=Bundle
+else
+	ARGS="$@"
+fi
+
+IMAGE_LABEL="typeshape-build:$RANDOM"
 
 # docker build
 docker build -t $IMAGE_LABEL .
@@ -10,4 +15,4 @@ docker build -t $IMAGE_LABEL .
 docker run -t --rm \
            -e NUGET_KEY=$NUGET_KEY \
 		   $IMAGE_LABEL \
-		   ./build.sh $TARGET
+		   ./build.sh $ARGS

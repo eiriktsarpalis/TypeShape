@@ -8,37 +8,12 @@
 
 open Fake
 open Fake.Git
-open Fake.AssemblyInfoFile
 open Fake.ReleaseNotesHelper
 open System
 
 // --------------------------------------------------------------------------------------
 // START TODO: Provide project-specific details below
 // --------------------------------------------------------------------------------------
-
-// Information about the project are used
-//  - for version and project name in generated AssemblyInfo file
-//  - by the generated NuGet package
-//  - to run tests and to publish documentation on GitHub gh-pages
-//  - for documentation, you also need to edit info in "docs/tools/generate.fsx"
-
-// The name of the project
-// (used by attributes in AssemblyInfo, name of a NuGet package and directory in 'src')
-let project = "TypeShape"
-
-// Short summary of the project
-// (used as description in AssemblyInfo and as a short summary for NuGet package)
-let summary = "Practical Generic Programming in F#"
-
-// Longer description of the project
-// (used as a description for NuGet package; line breaks are automatically cleaned up)
-let description = "Practical Generic Programming in F#"
-
-// List of author names (for NuGet package)
-let authors = [ "Eirik Tsarpalis" ]
-
-// Tags for your project (for NuGet package)
-let tags = "fsharp, reflection"
 
 // Folder to deposit deploy artifacts
 let artifactsDir = __SOURCE_DIRECTORY__ @@ "artifacts"
@@ -54,8 +29,7 @@ let gitHome = "https://github.com/" + gitOwner
 // The name of the project on GitHub
 let gitName = "TypeShape"
 
-// The url for the raw files hosted
-let gitRaw = environVarOrDefault "gitRaw" "https://raw.github.com/eiriktsarpalis"
+let testFramework = getBuildParam "testFramework" |> Option.ofObj
 
 // --------------------------------------------------------------------------------------
 // END TODO: The rest of the file includes standard build steps
@@ -63,43 +37,6 @@ let gitRaw = environVarOrDefault "gitRaw" "https://raw.github.com/eiriktsarpalis
 
 // Read additional information from the release notes document
 let release = LoadReleaseNotes "RELEASE_NOTES.md"
-
-// Helper active pattern for project types
-let (|Fsproj|Csproj|Vbproj|Shproj|) (projFileName:string) =
-    match projFileName with
-    | f when f.EndsWith("fsproj") -> Fsproj
-    | f when f.EndsWith("csproj") -> Csproj
-    | f when f.EndsWith("vbproj") -> Vbproj
-    | f when f.EndsWith("shproj") -> Shproj
-    | _                           -> failwith (sprintf "Project file %s not supported. Unknown project type." projFileName)
-
-// Generate assembly info files with the right version & up-to-date information
-Target "AssemblyInfo" (fun _ ->
-    let getAssemblyInfoAttributes projectName =
-        [ Attribute.Title (projectName)
-          Attribute.Product project
-          Attribute.Description summary
-          Attribute.Version release.AssemblyVersion
-          Attribute.FileVersion release.AssemblyVersion ]
-
-    let getProjectDetails projectPath =
-        let projectName = System.IO.Path.GetFileNameWithoutExtension(projectPath)
-        ( projectPath,
-          projectName,
-          System.IO.Path.GetDirectoryName(projectPath),
-          (getAssemblyInfoAttributes projectName)
-        )
-
-    !! "src/**/*.??proj"
-    |> Seq.map getProjectDetails
-    |> Seq.iter (fun (projFileName, projectName, folderName, attributes) ->
-        match projFileName with
-        | Fsproj -> CreateFSharpAssemblyInfo (folderName </> "AssemblyInfo.fs") attributes
-        | Csproj -> CreateCSharpAssemblyInfo ((folderName </> "Properties") </> "AssemblyInfo.cs") attributes
-        | Vbproj -> CreateVisualBasicAssemblyInfo ((folderName </> "My Project") </> "AssemblyInfo.vb") attributes
-        | Shproj -> ()
-        )
-)
 
 // --------------------------------------------------------------------------------------
 // Clean build results
@@ -122,6 +59,11 @@ let buildWithConfiguration config =
         { c with
             Project = __SOURCE_DIRECTORY__
             Configuration = config
+            AdditionalArgs = 
+                [ 
+                    "-p:GenerateAssemblyInfo=true"
+                    "-p:Version=" + release.AssemblyVersion 
+                ]
         })
 
 Target "Build.Emit" (fun _ -> buildWithConfiguration "Release")
@@ -138,6 +80,8 @@ let runTests config (proj : string) =
             AdditionalArgs =
                 [
                     yield "--no-build"
+                    yield "--blame"
+                    match testFramework with Some f -> yield "--framework" ; yield f | None -> ()
                     yield "-p:ParallelizeAssemblies=true"
                     yield "-p:ParallelizeTestCollections=true"
                     yield "--"
@@ -232,7 +176,6 @@ Target "Bundle"  DoNothing
 Target "Release" DoNothing
 
 "Clean"
-  ==> "AssemblyInfo"
   ==> "Build.Emit"
   ==> "Build.NoEmit"
   ==> "Build"

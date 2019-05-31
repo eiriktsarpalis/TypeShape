@@ -32,7 +32,6 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <Compile Include="AssemblyInfo.fs" />
     <Compile Include="TypeShape.fs" />
     <Compile Include="StagingExtensions.fs" />
     <Compile Include="SubtypeExtensions.fs" />
