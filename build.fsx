@@ -29,7 +29,10 @@ let gitHome = "https://github.com/" + gitOwner
 // The name of the project on GitHub
 let gitName = "TypeShape"
 
-let testFramework = getBuildParam "testFramework" |> Option.ofObj
+let testFramework = 
+    match getBuildParam "testFramework" with
+    | x when String.IsNullOrWhiteSpace x -> None
+    | x -> Some x
 
 // --------------------------------------------------------------------------------------
 // END TODO: The rest of the file includes standard build steps
