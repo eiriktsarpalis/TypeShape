@@ -27,9 +27,6 @@
   <PropertyGroup Condition="'$(Configuration)'=='Release-NoEmit'">
     <DefineConstants>TRACE;TYPESHAPE_EXPOSE;TYPESHAPE_EXPR</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Platform)'=='netstandard2.0'">
-    <DefineConstants>NETSTANDARD2_0</DefineConstants>
-  </PropertyGroup>
   
   <ItemGroup>
     <Compile Include="TypeShape.fs" />
