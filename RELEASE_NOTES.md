@@ -1,3 +1,6 @@
+### 7.1.0
+* Expose IsAnonymousRecord property for F# record shapes.
+
 ### 7.0.0
 * Fix Nullable related bugs.
 * Deprecate fixed arity Tuple and Choice shapes.
