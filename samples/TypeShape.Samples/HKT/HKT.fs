@@ -1,5 +1,7 @@
 ﻿namespace TypeShape.HKT
 
+open System.ComponentModel
+
 type HKT = interface end
 
 [<Struct>]
@@ -15,13 +17,18 @@ and  TCons<'T1, 'T2, 'T3, 'T4> = TCons<TCons<'T1, 'T2, 'T3>, 'T4>
 
 module HKT =
 
+    [<EditorBrowsable(EditorBrowsableState.Never)>]
+    let _pack value = App<_,_>.App value
+    [<EditorBrowsable(EditorBrowsableState.Never)>]
+    let _unpack (App value) = value :?> _
+
     let inline pack (value : 'Fa) : App<'F, 'a>
         when 'F : (static member Assign : App<'F, 'a> * 'Fa -> unit) =
-        App<_,_>.App value
+        _pack value
         
-    let inline unpack (App value : App<'F, 'a>) : 'Fa
+    let inline unpack (value : App<'F, 'a>) : 'Fa
         when 'F : (static member Assign : App<'F, 'a> * 'Fa -> unit) =
-        value :?> _
+        _unpack value
         
     // helper active patterns
 
