@@ -440,7 +440,7 @@ let ``Shape Record 7`` () =
 
 [<Fact>]
 let ``Anonymous Records should be matched by the record active pattern`` () =
-    test <@ match shapeof<{| x : int ; y : string ; z : bool|}> with Shape.FSharpRecord s -> s.Fields.Length = 3 | _ -> false @>
+    test <@ match shapeof<{| x : int ; y : string ; z : bool|}> with Shape.FSharpRecord s -> s.IsAnonymousRecord && s.Fields.Length = 3 | _ -> false @>
 
 [<Fact>]
 let ``Anonymous Record cloning`` () =
@@ -452,7 +452,7 @@ let ``Anonymous Record cloning`` () =
 
 [<Fact>]
 let ``Anonymous struct Records should be matched by the record active pattern`` () =
-    test <@ match shapeof<struct {| x : int ; y : string ; z : bool|}> with Shape.FSharpRecord s -> s.Fields.Length = 3 | _ -> false @>
+    test <@ match shapeof<struct {| x : int ; y : string ; z : bool|}> with Shape.FSharpRecord s -> s.IsAnonymousRecord && s.Fields.Length = 3 | _ -> false @>
 
 [<Fact>]
 let ``Anonymous struct Record cloning`` () =

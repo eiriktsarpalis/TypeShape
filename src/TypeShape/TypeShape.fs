@@ -1130,6 +1130,9 @@ and [<Sealed>] ShapeTuple<'Tuple> private () =
 
 /// Denotes an F# record type
 type IShapeFSharpRecord =
+    abstract IsStructRecord : bool
+    abstract IsAnonymousRecord : bool
+
     /// F# record field shapes
     abstract Fields : IShapeReadOnlyMember[]
     abstract Accept : IFSharpRecordVisitor<'R> -> 'R
@@ -1137,6 +1140,8 @@ type IShapeFSharpRecord =
 /// Identifies an F# record type
 and [<Sealed>] ShapeFSharpRecord<'Record> private () =
     let isStructRecord = typeof<'Record>.IsValueType
+    // Warning: ugly hack -- should derive from FSharp.Reflection
+    let isAnonymousRecord = typeof<'Record>.Name.StartsWith "<>f__AnonymousType"
     let ctorInfo = FSharpValue.PreComputeRecordConstructorInfo(typeof<'Record>, allMembers)
     let props = FSharpType.GetRecordFields(typeof<'Record>, allMembers)
     let fields = typeof<'Record>.GetFields(allInstanceMembers)
@@ -1154,6 +1159,9 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
 
     /// True if an F# struct record
     member __.IsStructRecord = isStructRecord
+
+    /// True if F# 4.6 anonyous records
+    member __.IsAnonymousRecord = isAnonymousRecord
 
     /// F# record field shapes
     member __.Fields = recordFields
@@ -1175,6 +1183,9 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
 #endif
 
     interface IShapeFSharpRecord with
+        member __.IsStructRecord = isStructRecord
+        member __.IsAnonymousRecord = isAnonymousRecord
+
         member __.Fields = recordFields |> Array.map unbox
         member __.Accept v = v.Visit __
 
