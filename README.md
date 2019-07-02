@@ -172,11 +172,11 @@ illustrating how TypeShape can be extended to support ISerializable shapes.
 
 See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/master/samples) folder for more implementations using TypeShape:
 
-* [Printer.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/samples/printer.fsx) Pretty printer generator for common F# types.
-* [Parser.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/samples/parser.fsx) Parser generator for common F# types using FParsec.
-* [Equality-Comparer.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/samples/equality-comparer.fsx) Equality comparer generator for common F# types.
-* [Gmap.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/samples/gmap.fsx) A gmap implementation.
-* [hashcode-staged.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/samples/hashcode-staged.fsx) Staged generic hashcode generator.
+* [Printer.fsx](samples/TypeShape.Samples/printer.fs) Pretty printer generator for common F# types.
+* [Parser.fsx](samples/TypeShape.Samples/parser.fs) Parser generator for common F# types using FParsec.
+* [Equality-Comparer.fsx](samples/TypeShape.Samples/equality-comparer.fs) Equality comparer generator for common F# types.
+* [Gmap.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/bdf56d8519c288d1029a41d088d5896ee159c970/samples/gmap.fsx) A gmap implementation.
+* [hashcode-staged.fsx](samples/TypeShape.Samples/hashcode-staged.fs) Staged generic hashcode generator.
 
 ### Projects using TypeShape
 
