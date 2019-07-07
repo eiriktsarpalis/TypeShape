@@ -13,12 +13,24 @@ type EmptyFieldUpdater =
 
 type PrettyPrinterBuilder() =
     interface IFSharpTypeBuilder<Empty, EmptyFieldUpdater> with
-        member __.Unit() = HKT.pack id
         member __.Bool () = HKT.pack(fun () -> false)
+
+        member __.Byte () = HKT.pack(fun () -> 0uy)
+        member __.SByte() = HKT.pack(fun () -> 0y)
+        
+        member __.Int16 () = HKT.pack(fun () -> 0s)
         member __.Int32 () = HKT.pack(fun () -> 0)
         member __.Int64 () = HKT.pack(fun () -> 0L)
-        member __.String () = HKT.pack(fun () -> "")
 
+        member __.UInt16 () = HKT.pack(fun () -> 0us)
+        member __.UInt32 () = HKT.pack(fun () -> 0u)
+        member __.UInt64 () = HKT.pack(fun () -> 0uL)
+
+        member __.Single () = HKT.pack(fun () -> 0.f)
+        member __.Double () = HKT.pack(fun () -> 0.)
+
+        member __.Unit() = HKT.pack id
+        member __.String () = HKT.pack(fun () -> "")
         member __.Guid () = HKT.pack(fun () -> Guid.Empty)
         member __.TimeSpan () = HKT.pack(fun () -> TimeSpan.Zero)
         member __.DateTime () = HKT.pack(fun () -> DateTime.MinValue)
@@ -40,6 +52,12 @@ type PrettyPrinterBuilder() =
                 t)
 
         member __.Record shape (HKT.Unpacks fields) =
+            HKT.pack(fun () ->
+                let mutable t = shape.CreateUninitialized()
+                for f in fields do t <- f t
+                t)
+
+        member __.CliMutable shape (HKT.Unpacks fields) =
             HKT.pack(fun () ->
                 let mutable t = shape.CreateUninitialized()
                 for f in fields do t <- f t

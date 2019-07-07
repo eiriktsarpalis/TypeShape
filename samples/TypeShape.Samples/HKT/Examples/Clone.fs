@@ -13,12 +13,24 @@ type FieldCloner =
 
 type ClonerBuilder() =
     interface IFSharpTypeBuilder<Cloner, FieldCloner> with
-        member __.Unit() = HKT.pack id
         member __.Bool () = HKT.pack id
+
+        member __.Byte () = HKT.pack id
+        member __.SByte() = HKT.pack id
+
+        member __.Int16 () = HKT.pack id
         member __.Int32 () = HKT.pack id
         member __.Int64 () = HKT.pack id
-        member __.String () = HKT.pack String.Copy
 
+        member __.UInt16 () = HKT.pack id
+        member __.UInt32 () = HKT.pack id
+        member __.UInt64 () = HKT.pack id
+
+        member __.Single () = HKT.pack id
+        member __.Double () = HKT.pack id
+
+        member __.Unit() = HKT.pack id
+        member __.String () = HKT.pack String.Copy
         member __.Guid () = HKT.pack id
         member __.TimeSpan () = HKT.pack id
         member __.DateTime () = HKT.pack id
@@ -40,6 +52,12 @@ type ClonerBuilder() =
                 t')
 
         member __.Record shape (HKT.Unpacks fields) =
+            HKT.pack(fun t ->
+                let mutable t' = shape.CreateUninitialized()
+                for f in fields do t' <- f t t'
+                t')
+
+        member __.CliMutable shape (HKT.Unpacks fields) =
             HKT.pack(fun t ->
                 let mutable t' = shape.CreateUninitialized()
                 for f in fields do t' <- f t t'

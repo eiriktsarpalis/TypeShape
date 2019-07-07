@@ -7,13 +7,26 @@ type PrettyPrinter =
 
 type PrettyPrinterBuilder() =
     interface IFSharpTypeBuilder<PrettyPrinter, PrettyPrinter> with
-        member __.Unit() = HKT.pack(fun () -> "()")
         member __.Bool () = HKT.pack(function true -> "true" | false -> "false")
+
+        member __.Byte () = HKT.pack(fun i -> i.ToString())
+        member __.SByte() = HKT.pack(fun i -> i.ToString())
+        
+        member __.Int16 () = HKT.pack(fun i -> i.ToString())
         member __.Int32 () = HKT.pack(fun i -> i.ToString())
         member __.Int64 () = HKT.pack(fun i -> i.ToString())
-        member __.String () = HKT.pack(fun s -> sprintf "\"%s\"" s)
 
+        member __.UInt16 () = HKT.pack(fun i -> i.ToString())
+        member __.UInt32 () = HKT.pack(fun i -> i.ToString())
+        member __.UInt64 () = HKT.pack(fun i -> i.ToString())
+
+        member __.Single () = HKT.pack(fun i -> i.ToString())
+        member __.Double () = HKT.pack(fun i -> i.ToString())
+
+        member __.Unit() = HKT.pack(fun () -> "()")
+        member __.String () = HKT.pack(fun s -> sprintf "\"%s\"" s)
         member __.Guid () = HKT.pack(fun g -> g.ToString("N"))
+
         member __.TimeSpan () = HKT.pack(fun t -> t.ToString())
         member __.DateTime () = HKT.pack(fun d -> d.ToString("O"))
         member __.DateTimeOffset() = HKT.pack(fun d -> d.ToString("O"))
@@ -58,6 +71,17 @@ type PrettyPrinterBuilder() =
                 |> Seq.map (fun (label, value) -> sprintf "%s = %s" label value)
                 |> String.concat "; "
                 |> fmtBracket)
+
+        member __.CliMutable shape (HKT.Unpacks fields) =
+            let name = shape.DefaultCtorInfo.DeclaringType.Name
+
+            HKT.pack(fun record ->
+                fields
+                |> Seq.zip shape.Properties
+                |> Seq.map (fun (f,fp) -> f.Label, fp record)
+                |> Seq.map (fun (label, value) -> sprintf "%s = %s" label value)
+                |> String.concat ", "
+                |> sprintf "%s(%s)" name)
 
         member __.Union shape (HKT.Unpackss fieldss) =
             HKT.pack (fun union ->

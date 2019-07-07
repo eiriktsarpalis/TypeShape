@@ -4,12 +4,24 @@ open TypeShape.Core
 open TypeShape.Core.Utils
 
 type IFSharpTypeBuilder<'F, 'G when 'F :> HKT and 'G :> HKT> =
-    inherit IUnitBuilder<'F>
     inherit IBoolBuilder<'F>
+
+    inherit IByteBuilder<'F>
+    inherit ISByteBuilder<'F>
+
+    inherit IInt16Builder<'F>
     inherit IInt32Builder<'F>
     inherit IInt64Builder<'F>
-    inherit IStringBuilder<'F>
 
+    inherit IUInt16Builder<'F>
+    inherit IUInt32Builder<'F>
+    inherit IUInt64Builder<'F>
+
+    inherit ISingleBuilder<'F>
+    inherit IDoubleBuilder<'F>
+
+    inherit IUnitBuilder<'F>
+    inherit IStringBuilder<'F>
     inherit IGuidBuilder<'F>
     inherit ITimeSpanBuilder<'F>
     inherit IDateTimeBuilder<'F>
@@ -24,6 +36,7 @@ type IFSharpTypeBuilder<'F, 'G when 'F :> HKT and 'G :> HKT> =
     inherit ITupleBuilder<'F, 'G>
     inherit IFSharpRecordBuilder<'F, 'G>
     inherit IFSharpUnionBuilder<'F, 'G>
+    inherit ICliMutableBuilder<'F, 'G>
 
     /// Used for bootstrapping recursive types
     abstract Delay : Cell<App<'F, 't>> -> App<'F, 't>
@@ -52,12 +65,24 @@ module FSharpTypeBuilder =
         let self = { new IResolver<'F> with member __.Resolve<'a> () = foldCached<'F, 'G, 'a> ctx builder }
 
         match tshapeof<'t> with
-        | Fold.Unit builder s -> s
         | Fold.Bool builder s -> s
+
+        | Fold.Byte builder s -> s
+        | Fold.SByte builder s -> s
+
+        | Fold.Int16 builder s -> s
         | Fold.Int32 builder s -> s
         | Fold.Int64 builder s -> s
-        | Fold.String builder s -> s
 
+        | Fold.UInt16 builder s -> s
+        | Fold.UInt32 builder s -> s
+        | Fold.UInt64 builder s -> s
+
+        | Fold.Single builder s -> s
+        | Fold.Double builder s -> s
+
+        | Fold.Unit builder s -> s
+        | Fold.String builder s -> s
         | Fold.Guid builder s -> s
         | Fold.TimeSpan builder s -> s
         | Fold.DateTime builder s -> s
@@ -72,5 +97,6 @@ module FSharpTypeBuilder =
         | Fold.Tuple builder self s -> s
         | Fold.FSharpRecord builder self s -> s
         | Fold.FSharpUnion builder self s -> s
+        | Fold.CliMutable builder self s -> s
 
         | _ -> failwithf "do not know how to fold type %O" typeof<'t>

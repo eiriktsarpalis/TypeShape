@@ -5,17 +5,43 @@ open TypeShape.Core
 
 // Generic Program builder interfaces
 
-type IUnitBuilder<'F when 'F :> HKT> =
-    abstract Unit : unit -> App<'F, unit>
-
 type IBoolBuilder<'F when 'F :> HKT> =
     abstract Bool : unit -> App<'F, bool>
+
+type IByteBuilder<'F when 'F :> HKT> =
+    abstract Byte : unit -> App<'F, byte>
+
+type ISByteBuilder<'F when 'F :> HKT> =
+    abstract SByte : unit -> App<'F, sbyte>
+
+type IInt16Builder<'F when 'F :> HKT> =
+    abstract Int16 : unit -> App<'F, int16>
 
 type IInt32Builder<'F when 'F :> HKT> =
     abstract Int32 : unit -> App<'F, int>
 
 type IInt64Builder<'F when 'F :> HKT> =
     abstract Int64 : unit -> App<'F, int64>
+
+type IUInt16Builder<'F when 'F :> HKT> =
+    abstract UInt16 : unit -> App<'F, uint16>
+
+type IUInt32Builder<'F when 'F :> HKT> =
+    abstract UInt32 : unit -> App<'F, uint32>
+
+type IUInt64Builder<'F when 'F :> HKT> =
+    abstract UInt64 : unit -> App<'F, uint64>
+
+type ISingleBuilder<'F when 'F :> HKT> =
+    abstract Single : unit -> App<'F, single>
+
+type IDoubleBuilder<'F when 'F :> HKT> =
+    abstract Double : unit -> App<'F, double>
+
+//-------------------------------------------
+
+type IUnitBuilder<'F when 'F :> HKT> =
+    abstract Unit : unit -> App<'F, unit>
 
 type IStringBuilder<'F when 'F :> HKT> =
     abstract String : unit -> App<'F, string>
@@ -66,6 +92,10 @@ type IFSharpUnionBuilder<'F, 'G when 'F :> HKT and 'G :> HKT> =
     inherit IFieldExtractor<'F, 'G>
     abstract Union : ShapeFSharpUnion<'t> -> fields : App<'G, 't> [][] -> App<'F, 't>
 
+type ICliMutableBuilder<'F, 'G when 'F :> HKT and 'G :> HKT> =
+    inherit IFieldExtractor<'F, 'G>
+    abstract CliMutable : ShapeCliMutable<'t> -> fields : App<'G, 't> [] -> App<'F, 't>
+
 type IResolver<'F when 'F :> HKT> =
     abstract Resolve<'t> : unit -> App<'F, 't>
 
@@ -76,14 +106,24 @@ module Fold =
 
     let private unwrap (x : App<'F,_> ) : App<'F,_> = unbox x
 
-    let (|Unit|_|) (builder : IUnitBuilder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
-        match shape with
-        | Shape.Unit -> builder.Unit () |> unwrap |> Some
-        | _ -> None
-
     let (|Bool|_|) (builder : IBoolBuilder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
         match shape with
         | Shape.Bool -> builder.Bool () |> unwrap |> Some
+        | _ -> None
+
+    let (|Byte|_|) (builder : IByteBuilder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.Byte -> builder.Byte () |> unwrap |> Some
+        | _ -> None
+
+    let (|SByte|_|) (builder : ISByteBuilder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.SByte -> builder.SByte () |> unwrap |> Some
+        | _ -> None
+
+    let (|Int16|_|) (builder : IInt16Builder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.Int16 -> builder.Int16 () |> unwrap |> Some
         | _ -> None
 
     let (|Int32|_|) (builder : IInt32Builder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
@@ -91,9 +131,41 @@ module Fold =
         | Shape.Int32 -> builder.Int32 () |> unwrap |> Some
         | _ -> None
 
-    let (|Int64|_|) (builder : IInt32Builder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+    let (|Int64|_|) (builder : IInt64Builder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
         match shape with
-        | Shape.Int64 -> builder.Int32 () |> unwrap |> Some
+        | Shape.Int64 -> builder.Int64 () |> unwrap |> Some
+        | _ -> None
+
+    let (|UInt16|_|) (builder : IUInt16Builder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.UInt16 -> builder.UInt16 () |> unwrap |> Some
+        | _ -> None
+
+    let (|UInt32|_|) (builder : IUInt32Builder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.UInt32 -> builder.UInt32 () |> unwrap |> Some
+        | _ -> None
+
+    let (|UInt64|_|) (builder : IUInt64Builder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.UInt64 -> builder.UInt64 () |> unwrap |> Some
+        | _ -> None
+
+    let (|Single|_|) (builder : ISingleBuilder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.Single -> builder.Single () |> unwrap |> Some
+        | _ -> None
+
+    let (|Double|_|) (builder : IDoubleBuilder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.Single -> builder.Double () |> unwrap |> Some
+        | _ -> None
+
+    //--------------------------------------------------
+
+    let (|Unit|_|) (builder : IUnitBuilder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.Unit -> builder.Unit () |> unwrap |> Some
         | _ -> None
 
     let (|String|_|) (builder : IStringBuilder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
@@ -210,5 +282,13 @@ module Fold =
 
             let fieldss = s.UnionCases |> Array.map extractCaseFields
             builder.Union s fieldss |> Some
+
+        | _ -> None
+
+    let (|CliMutable|_|) (builder : ICliMutableBuilder<'F, 'G>) (self : IResolver<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.CliMutable (:? ShapeCliMutable<'t> as s) ->
+            let fields = s.Properties |> Array.map (handleField self builder)
+            builder.CliMutable s fields |> Some
 
         | _ -> None
