@@ -182,6 +182,9 @@ See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/maste
 
 * [FsPickler](https://github.com/mbraceproject/FsPickler/blob/c5b73fc48fa313c66eaeb8c79897253de0605d34/src/FsPickler/PicklerGeneration/PicklerGenerator.fs#L38)
 * [FSharp.AWS.DynamoDB](https://github.com/fsprojects/FSharp.AWS.DynamoDB/blob/55470a0cc8b1a54d14571f059bd2b5721f2495c7/src/FSharp.AWS.DynamoDB/Picklers/PicklerResolver.fs#L23)
+* [Logary](https://github.com/logary/logary)
+* [Equinox](https://github.com/jet/equinox)
+* [FsConfig](https://github.com/demystifyfp/FsConfig)
 
 ### Related Work
 
