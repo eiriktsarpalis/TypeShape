@@ -8,11 +8,15 @@ open TypeShape.Core
 type IBoolBuilder<'F when 'F :> HKT> =
     abstract Bool : unit -> App<'F, bool>
 
+//-------------------------------------------
+
 type IByteBuilder<'F when 'F :> HKT> =
     abstract Byte : unit -> App<'F, byte>
 
 type ISByteBuilder<'F when 'F :> HKT> =
     abstract SByte : unit -> App<'F, sbyte>
+
+//-------------------------------------------
 
 type IInt16Builder<'F when 'F :> HKT> =
     abstract Int16 : unit -> App<'F, int16>
@@ -23,6 +27,8 @@ type IInt32Builder<'F when 'F :> HKT> =
 type IInt64Builder<'F when 'F :> HKT> =
     abstract Int64 : unit -> App<'F, int64>
 
+//-------------------------------------------
+
 type IUInt16Builder<'F when 'F :> HKT> =
     abstract UInt16 : unit -> App<'F, uint16>
 
@@ -32,11 +38,16 @@ type IUInt32Builder<'F when 'F :> HKT> =
 type IUInt64Builder<'F when 'F :> HKT> =
     abstract UInt64 : unit -> App<'F, uint64>
 
+//-------------------------------------------
+
 type ISingleBuilder<'F when 'F :> HKT> =
     abstract Single : unit -> App<'F, single>
 
 type IDoubleBuilder<'F when 'F :> HKT> =
     abstract Double : unit -> App<'F, double>
+
+type IDecimalBuilder<'F when 'F :> HKT> =
+    abstract Decimal : unit -> App<'F, decimal>
 
 //-------------------------------------------
 
@@ -73,7 +84,16 @@ type IFSharpSetBuilder<'F when 'F :> HKT> =
     abstract Set : App<'F, 't> -> App<'F, Set<'t>>
 
 type IFSharpMapBuilder<'F when 'F :> HKT> =
-    abstract Map : App<'F, 'k> -> App<'F, 'm> -> App<'F, Map<'k, 'm>>
+    abstract Map : App<'F, 'k> -> App<'F, 'v> -> App<'F, Map<'k, 'v>>
+
+type INullableBuilder<'F when 'F :> HKT> =
+    abstract Nullable : App<'F, 't> -> App<'F, Nullable<'t>>
+
+type IEnumBuilder<'F when 'F :> HKT> =
+    abstract Enum<'e, 'u when 'e : enum<'u>
+                          and 'e : struct
+                          and 'e :> ValueType
+                          and 'e : (new : unit -> 'e)> : App<'F, 'u> -> App<'F, 'e>
 
 // Tuples, Records & Unions
 
@@ -158,7 +178,12 @@ module Fold =
 
     let (|Double|_|) (builder : IDoubleBuilder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
         match shape with
-        | Shape.Single -> builder.Double () |> unwrap |> Some
+        | Shape.Double -> builder.Double () |> unwrap |> Some
+        | _ -> None
+
+    let (|Decimal|_|) (builder : IDecimalBuilder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.Decimal -> builder.Decimal () |> unwrap |> Some
         | _ -> None
 
     //--------------------------------------------------
@@ -245,6 +270,30 @@ module Fold =
                     let k = self.Resolve<'k>()
                     let v = self.Resolve<'v>()
                     builder.Map k v |> unwrap |> Some 
+            }
+        | _ -> None
+
+    let (|Nullable|_|) (builder : INullableBuilder<'F>) (self : IResolver<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.Nullable s ->
+            s.Accept { new INullableVisitor<App<'F, 't> option> with
+                member __.Visit<'e when 'e : struct and 'e :> ValueType and 'e : (new : unit -> 'e)>() =
+                    let e = self.Resolve<'e>()
+                    builder.Nullable e |> unwrap |> Some
+            }
+        | _ -> None
+
+    let (|Enum|_|) (builder : IEnumBuilder<'F>) (self : IResolver<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.Enum s ->
+            s.Accept { new IEnumVisitor<App<'F, 't> option> with
+                member __.Visit<'e, 'u when 'e : enum<'u>
+                                        and 'e : struct
+                                        and 'e :> ValueType
+                                        and 'e : (new : unit -> 'e)> () =
+
+                    let e = self.Resolve<'u>()
+                    builder.Enum e : App<'F,'e> |> unwrap |> Some
             }
         | _ -> None
 

@@ -8,7 +8,6 @@ type PrettyPrinter =
 type PrettyPrinterBuilder() =
     interface IFSharpTypeBuilder<PrettyPrinter, PrettyPrinter> with
         member __.Bool () = HKT.pack(function true -> "true" | false -> "false")
-
         member __.Byte () = HKT.pack(fun i -> i.ToString())
         member __.SByte() = HKT.pack(fun i -> i.ToString())
         
@@ -22,6 +21,7 @@ type PrettyPrinterBuilder() =
 
         member __.Single () = HKT.pack(fun i -> i.ToString())
         member __.Double () = HKT.pack(fun i -> i.ToString())
+        member __.Decimal() = HKT.pack(fun i -> i.ToString())
 
         member __.Unit() = HKT.pack(fun () -> "()")
         member __.String () = HKT.pack(fun s -> sprintf "\"%s\"" s)
@@ -31,8 +31,11 @@ type PrettyPrinterBuilder() =
         member __.DateTime () = HKT.pack(fun d -> d.ToString("O"))
         member __.DateTimeOffset() = HKT.pack(fun d -> d.ToString("O"))
 
-        member __.Option (HKT.Unpack ep) = HKT.pack(function None -> "None" | Some x -> sprintf "Some(%s)" (ep x))
+        member __.Nullable (HKT.Unpack ep) = HKT.pack (function x when x.HasValue -> ep x.Value | _ -> "null")
+        member __.Enum _ = HKT.pack (fun e -> e.ToString())
         member __.Array (HKT.Unpack ep) = HKT.pack(fun xs -> xs |> Seq.map ep |> String.concat "; " |> sprintf "[|%s|]")
+
+        member __.Option (HKT.Unpack ep) = HKT.pack(function None -> "None" | Some x -> sprintf "Some(%s)" (ep x))
         member __.List (HKT.Unpack ep) = HKT.pack(fun xs -> xs |> Seq.map ep |> String.concat "; " |> sprintf "[%s]")
         member __.Set (HKT.Unpack ep) = HKT.pack(fun xs -> xs |> Seq.map ep |> String.concat "; " |> sprintf "set [%s]")
         member __.Map (HKT.Unpack kp) (HKT.Unpack vp) = 

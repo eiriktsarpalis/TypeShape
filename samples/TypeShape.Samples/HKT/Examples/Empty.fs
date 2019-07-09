@@ -28,6 +28,7 @@ type PrettyPrinterBuilder() =
 
         member __.Single () = HKT.pack(fun () -> 0.f)
         member __.Double () = HKT.pack(fun () -> 0.)
+        member __.Decimal() = HKT.pack(fun () -> 0m)
 
         member __.Unit() = HKT.pack id
         member __.String () = HKT.pack(fun () -> "")
@@ -36,8 +37,11 @@ type PrettyPrinterBuilder() =
         member __.DateTime () = HKT.pack(fun () -> DateTime.MinValue)
         member __.DateTimeOffset() = HKT.pack(fun () -> DateTimeOffset.MinValue)
 
-        member __.Option _ = HKT.pack(fun () -> None)
+        member __.Enum (HKT.Unpack e) = HKT.pack (fun () -> LanguagePrimitives.EnumOfValue(e ()))
+        member __.Nullable _ = HKT.pack (fun () -> Nullable())
         member __.Array _ = HKT.pack(fun () -> [||])
+
+        member __.Option _ = HKT.pack(fun () -> None)
         member __.List _ = HKT.pack(fun () -> [])
         member __.Set _ = HKT.pack(fun () -> Set.empty)
         member __.Map _ _ = HKT.pack(fun () -> Map.empty)

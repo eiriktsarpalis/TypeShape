@@ -19,15 +19,20 @@ type IFSharpTypeBuilder<'F, 'G when 'F :> HKT and 'G :> HKT> =
 
     inherit ISingleBuilder<'F>
     inherit IDoubleBuilder<'F>
+    inherit IDecimalBuilder<'F>
 
     inherit IUnitBuilder<'F>
     inherit IStringBuilder<'F>
     inherit IGuidBuilder<'F>
+
     inherit ITimeSpanBuilder<'F>
     inherit IDateTimeBuilder<'F>
     inherit IDateTimeOffsetBuilder<'F>
 
+    inherit INullableBuilder<'F>
+    inherit IEnumBuilder<'F>
     inherit IArrayBuilder<'F>
+
     inherit IFSharpOptionBuilder<'F>
     inherit IFSharpListBuilder<'F>
     inherit IFSharpMapBuilder<'F>
@@ -80,6 +85,7 @@ module FSharpTypeBuilder =
 
         | Fold.Single builder s -> s
         | Fold.Double builder s -> s
+        | Fold.Decimal builder s -> s
 
         | Fold.Unit builder s -> s
         | Fold.String builder s -> s
@@ -88,7 +94,10 @@ module FSharpTypeBuilder =
         | Fold.DateTime builder s -> s
         | Fold.DateTimeOffset builder s -> s
 
+        | Fold.Nullable builder self s -> s
+        | Fold.Enum builder self s -> s
         | Fold.Array builder self s -> s
+
         | Fold.FSharpOption builder self s -> s
         | Fold.FSharpList builder self s -> s
         | Fold.FSharpSet builder self s -> s

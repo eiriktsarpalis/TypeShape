@@ -28,6 +28,7 @@ type ClonerBuilder() =
 
         member __.Single () = HKT.pack id
         member __.Double () = HKT.pack id
+        member __.Decimal() = HKT.pack id
 
         member __.Unit() = HKT.pack id
         member __.String () = HKT.pack String.Copy
@@ -36,8 +37,11 @@ type ClonerBuilder() =
         member __.DateTime () = HKT.pack id
         member __.DateTimeOffset() = HKT.pack id
 
-        member __.Option (HKT.Unpack ec) = HKT.pack(Option.map ec)
+        member __.Enum _ = HKT.pack id
+        member __.Nullable (HKT.Unpack ec) = HKT.pack(function x when x.HasValue -> Nullable(ec x.Value) | x -> x)
         member __.Array (HKT.Unpack ec) = HKT.pack(Array.map ec)
+
+        member __.Option (HKT.Unpack ec) = HKT.pack(Option.map ec)
         member __.List (HKT.Unpack ec) = HKT.pack(List.map ec)
         member __.Set (HKT.Unpack ec) = HKT.pack(Set.map ec)
         member __.Map (HKT.Unpack kc) (HKT.Unpack vc) = HKT.pack(Map.toSeq >> Seq.map (fun (k,v) -> kc k, vc v) >> Map.ofSeq)
