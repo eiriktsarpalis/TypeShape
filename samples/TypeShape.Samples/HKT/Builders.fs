@@ -2,13 +2,14 @@
 
 open System
 open TypeShape.Core
+open TypeShape.Core.Utils
 
 // Generic Program builder interfaces
 
+// Primitives
+
 type IBoolBuilder<'F when 'F :> HKT> =
     abstract Bool : unit -> App<'F, bool>
-
-//-------------------------------------------
 
 type IByteBuilder<'F when 'F :> HKT> =
     abstract Byte : unit -> App<'F, byte>
@@ -71,14 +72,26 @@ type IDateTimeOffsetBuilder<'F when 'F :> HKT> =
 
 // Generic types
 
+type INullableBuilder<'F when 'F :> HKT> =
+    abstract Nullable : App<'F, 't> -> App<'F, Nullable<'t>>
+
+type IEnumBuilder<'F when 'F :> HKT> =
+    abstract Enum : App<'F, 'u> -> App<'F, 'e>
+        when 'e : enum<'u>
+        and 'e : struct
+        and 'e :> ValueType
+        and 'e : (new : unit -> 'e)
+
+type IArrayBuilder<'F when 'F :> HKT> =
+    abstract Array : App<'F, 't> -> App<'F, 't []>
+
+// F# specific generic collections
+
 type IFSharpOptionBuilder<'F when 'F :> HKT> =
     abstract Option : App<'F, 't> -> App<'F, 't option>
 
 type IFSharpListBuilder<'F when 'F :> HKT> =
     abstract List : App<'F, 't> -> App<'F, 't list>
-
-type IArrayBuilder<'F when 'F :> HKT> =
-    abstract Array : App<'F, 't> -> App<'F, 't []>
 
 type IFSharpSetBuilder<'F when 'F :> HKT> =
     abstract Set : App<'F, 't> -> App<'F, Set<'t>>
@@ -86,16 +99,7 @@ type IFSharpSetBuilder<'F when 'F :> HKT> =
 type IFSharpMapBuilder<'F when 'F :> HKT> =
     abstract Map : App<'F, 'k> -> App<'F, 'v> -> App<'F, Map<'k, 'v>>
 
-type INullableBuilder<'F when 'F :> HKT> =
-    abstract Nullable : App<'F, 't> -> App<'F, Nullable<'t>>
-
-type IEnumBuilder<'F when 'F :> HKT> =
-    abstract Enum<'e, 'u when 'e : enum<'u>
-                          and 'e : struct
-                          and 'e :> ValueType
-                          and 'e : (new : unit -> 'e)> : App<'F, 'u> -> App<'F, 'e>
-
-// Tuples, Records & Unions
+// Generic Tuples, Records & Unions
 
 type IFieldExtractor<'F, 'G when 'F :> HKT and 'G :> HKT> =
     abstract Field<'t, 'field> : ShapeMember<'t, 'field> -> App<'F, 'field> -> App<'G, 't>
@@ -116,7 +120,13 @@ type ICliMutableBuilder<'F, 'G when 'F :> HKT and 'G :> HKT> =
     inherit IFieldExtractor<'F, 'G>
     abstract CliMutable : ShapeCliMutable<'t> -> fields : App<'G, 't> [] -> App<'F, 't>
 
-type IResolver<'F when 'F :> HKT> =
+//----------------------------------
+
+type IFoldContext<'F when 'F :> HKT> =
+    abstract Fold<'t> : self:IResolver<'F> -> App<'F, 't>
+    abstract Delay<'t> : Cell<App<'F,'t>> -> App<'F,'t>
+
+and IResolver<'F when 'F :> HKT> =
     abstract Resolve<'t> : unit -> App<'F, 't>
 
 //----------------------------------------------------------------
@@ -220,12 +230,12 @@ module Fold =
 
     // Generic Types
 
-    let (|Array|_|) (builder : IArrayBuilder<'F>) (self : IResolver<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+    let (|Array|_|) (builder : IArrayBuilder<'F>) (ctx : IResolver<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
         match shape with
         | Shape.Array s when s.Rank = 1 ->
             s.Element.Accept { new ITypeVisitor<App<'F, 't> option> with
                 member __.Visit<'e> () =
-                    let rt = self.Resolve<'e> ()
+                    let rt = ctx.Resolve<'e> ()
                     builder.Array rt |> unwrap |> Some
             }
 
@@ -341,3 +351,25 @@ module Fold =
             builder.CliMutable s fields |> Some
 
         | _ -> None
+
+
+
+module FoldContext =
+
+    let private cache = new TypeCache()
+
+    let fold<'F, 't when 'F :> HKT> (folder : IFoldContext<'F>) : App<'F, 't> =
+        let mutable f = Unchecked.defaultof<App<'F, 't>>
+        if cache.TryGetValue(&f) then f
+        else
+            use ctx = cache.CreateGenerationContext()
+            let rec self =
+                { new IResolver<'F> with 
+                    member __.Resolve<'a>() = 
+                        match ctx.InitOrGetCachedValue<App<'F, 'a>> (folder.Delay) with
+                        | Cached(value = f) -> f
+                        | NotCached t ->
+                            let f = folder.Fold<'a> self
+                            ctx.Commit t f }
+
+            self.Resolve()
