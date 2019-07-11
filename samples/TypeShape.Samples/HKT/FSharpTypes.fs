@@ -46,7 +46,7 @@ type IFSharpTypeBuilder<'F, 'G when 'F :> HKT and 'G :> HKT> =
     /// Used for bootstrapping recursive types
     abstract Delay : Cell<App<'F, 't>> -> App<'F, 't>
 
-
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Fold =
     
     let (|FSharpType|_|) self (builder : IFSharpTypeBuilder<'F, 'G>) shape : App<'F, 't> option =
