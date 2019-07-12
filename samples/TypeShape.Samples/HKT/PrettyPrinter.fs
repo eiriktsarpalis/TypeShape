@@ -2,11 +2,10 @@
 
 // HKT encoding for prettyprinter types
 type PrettyPrinter =
-    interface HKT
     static member Assign(_ : App<PrettyPrinter, 'a>, _ : 'a -> string) = ()
 
 type PrettyPrinterBuilder() =
-    interface IFSharpTypeBuilder<PrettyPrinter, PrettyPrinter> with
+    interface ITypeBuilder<PrettyPrinter, PrettyPrinter> with
         member __.Bool () = HKT.pack(function true -> "true" | false -> "false")
         member __.Byte () = HKT.pack(fun i -> i.ToString())
         member __.SByte() = HKT.pack(fun i -> i.ToString())
@@ -22,6 +21,7 @@ type PrettyPrinterBuilder() =
         member __.Single () = HKT.pack(fun i -> i.ToString())
         member __.Double () = HKT.pack(fun i -> i.ToString())
         member __.Decimal() = HKT.pack(fun i -> i.ToString())
+        member __.BigInt () = HKT.pack(fun i -> i.ToString())
 
         member __.Unit() = HKT.pack(fun () -> "()")
         member __.String () = HKT.pack(fun s -> sprintf "\"%s\"" s)
@@ -75,17 +75,6 @@ type PrettyPrinterBuilder() =
                 |> String.concat "; "
                 |> fmtBracket)
 
-        member __.CliMutable shape (HKT.Unpacks fields) =
-            let name = shape.DefaultCtorInfo.DeclaringType.Name
-
-            HKT.pack(fun record ->
-                fields
-                |> Seq.zip shape.Properties
-                |> Seq.map (fun (f,fp) -> f.Label, fp record)
-                |> Seq.map (fun (label, value) -> sprintf "%s = %s" label value)
-                |> String.concat ", "
-                |> sprintf "%s(%s)" name)
-
         member __.Union shape (HKT.Unpackss fieldss) =
             HKT.pack (fun union ->
                 let tag = shape.GetTag union
@@ -97,10 +86,20 @@ type PrettyPrinterBuilder() =
                     |> String.concat ", "
                     |> sprintf "%s(%s)" case.CaseInfo.Name)
 
+        member __.CliMutable shape (HKT.Unpacks fields) =
+            let name = shape.DefaultCtorInfo.DeclaringType.Name
+
+            HKT.pack(fun record ->
+                fields
+                |> Seq.zip shape.Properties
+                |> Seq.map (fun (f,fp) -> f.Label, fp record)
+                |> Seq.map (fun (label, value) -> sprintf "%s = %s" label value)
+                |> String.concat ", "
+                |> sprintf "%s(%s)" name)
+
         member __.Delay f = HKT.pack(fun x -> HKT.unpack f.Value x)
 
-let mkPrinter<'t> () : 't -> string = FSharpTypeBuilder.fold (PrettyPrinterBuilder()) |> HKT.unpack
-
+let mkPrinter<'t> () : 't -> string = TypeBuilder.fold (PrettyPrinterBuilder()) |> HKT.unpack
 
 //----------------------
 

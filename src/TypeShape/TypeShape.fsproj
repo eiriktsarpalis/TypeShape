@@ -33,6 +33,9 @@
     <Compile Include="StagingExtensions.fs" />
     <Compile Include="SubtypeExtensions.fs" />
     <Compile Include="Utils.fs" />
+    <Compile Include="HKT\HKT.fs" />
+    <Compile Include="HKT\Builders.fs" />
+    <Compile Include="HKT\Folding.fs" />
     <Compile Include="Applications\Combinators.fs" />
     <Compile Include="Applications\Empty.fs" />
     <Compile Include="Applications\UnionContract.fs" />

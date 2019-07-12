@@ -18,12 +18,10 @@
     <Compile Include="printer.fs" />
     <Compile Include="random.fs" />
     <Compile Include="lens.fs" />
-    <Compile Include="HKT\HKT.fs" />
-    <Compile Include="HKT\Builders.fs" />
-    <Compile Include="HKT\FSharpTypes.fs" />
-    <Compile Include="HKT\Examples\PrettyPrinter.fs" />
-    <Compile Include="HKT\Examples\Empty.fs" />
-    <Compile Include="HKT\Examples\Clone.fs" />
+    <Compile Include="HKT\Common.fs" />
+    <Compile Include="HKT\PrettyPrinter.fs" />
+    <Compile Include="HKT\Empty.fs" />
+    <Compile Include="HKT\Clone.fs" />
     <None Include="test.fsx" />
     <None Include="paket.references" />
   </ItemGroup>

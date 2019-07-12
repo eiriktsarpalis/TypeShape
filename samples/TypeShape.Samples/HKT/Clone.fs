@@ -4,15 +4,13 @@ open System
 
 // HKT encoding for prettyprinter types
 type Cloner =
-    interface HKT
     static member Assign(_ : App<Cloner, 'a>, _ : 'a -> 'a) = ()
 
 type FieldCloner =
-    interface HKT
     static member Assign(_ : App<FieldCloner, 'a>, _ : 'a -> 'a -> 'a) = ()
 
 type ClonerBuilder() =
-    interface IFSharpTypeBuilder<Cloner, FieldCloner> with
+    interface ITypeBuilder<Cloner, FieldCloner> with
         member __.Bool () = HKT.pack id
 
         member __.Byte () = HKT.pack id
@@ -29,10 +27,12 @@ type ClonerBuilder() =
         member __.Single () = HKT.pack id
         member __.Double () = HKT.pack id
         member __.Decimal() = HKT.pack id
+        member __.BigInt () = HKT.pack id
 
         member __.Unit() = HKT.pack id
         member __.String () = HKT.pack String.Copy
         member __.Guid () = HKT.pack id
+
         member __.TimeSpan () = HKT.pack id
         member __.DateTime () = HKT.pack id
         member __.DateTimeOffset() = HKT.pack id
@@ -61,12 +61,6 @@ type ClonerBuilder() =
                 for f in fields do t' <- f t t'
                 t')
 
-        member __.CliMutable shape (HKT.Unpacks fields) =
-            HKT.pack(fun t ->
-                let mutable t' = shape.CreateUninitialized()
-                for f in fields do t' <- f t t'
-                t')
-
         member __.Union shape (HKT.Unpackss fieldss) =
             let tag,case = shape.UnionCases |> Seq.mapi (fun i c -> (i,c)) |> Seq.minBy (fun (_,c) -> c.Arity)
             let fields = fieldss.[tag]
@@ -75,9 +69,15 @@ type ClonerBuilder() =
                 for f in fields do t' <- f t t'
                 t')
 
+        member __.CliMutable shape (HKT.Unpacks fields) =
+            HKT.pack(fun t ->
+                let mutable t' = shape.CreateUninitialized()
+                for f in fields do t' <- f t t'
+                t')
+
         member __.Delay cell = HKT.pack(fun t -> let f = HKT.unpack cell.Value in f t)
 
-let mkCloner<'t> () : 't -> 't = FSharpTypeBuilder.fold (ClonerBuilder()) |> HKT.unpack 
+let mkCloner<'t> () : 't -> 't = TypeBuilder.fold (ClonerBuilder()) |> HKT.unpack 
 let clone t = mkCloner<'t>() t
 
 //----------------------

@@ -4,17 +4,14 @@ open System
 
 // HKT encoding for prettyprinter types
 type Empty =
-    interface HKT
     static member Assign(_ : App<Empty, 'a>, _ : unit -> 'a) = ()
 
 type EmptyFieldUpdater =
-    interface HKT
     static member Assign(_ : App<EmptyFieldUpdater, 'a>, _ : 'a -> 'a) = ()
 
 type PrettyPrinterBuilder() =
-    interface IFSharpTypeBuilder<Empty, EmptyFieldUpdater> with
+    interface ITypeBuilder<Empty, EmptyFieldUpdater> with
         member __.Bool () = HKT.pack(fun () -> false)
-
         member __.Byte () = HKT.pack(fun () -> 0uy)
         member __.SByte() = HKT.pack(fun () -> 0y)
         
@@ -29,10 +26,12 @@ type PrettyPrinterBuilder() =
         member __.Single () = HKT.pack(fun () -> 0.f)
         member __.Double () = HKT.pack(fun () -> 0.)
         member __.Decimal() = HKT.pack(fun () -> 0m)
+        member __.BigInt () = HKT.pack(fun () -> 0I)
 
         member __.Unit() = HKT.pack id
         member __.String () = HKT.pack(fun () -> "")
         member __.Guid () = HKT.pack(fun () -> Guid.Empty)
+
         member __.TimeSpan () = HKT.pack(fun () -> TimeSpan.Zero)
         member __.DateTime () = HKT.pack(fun () -> DateTime.MinValue)
         member __.DateTimeOffset() = HKT.pack(fun () -> DateTimeOffset.MinValue)
@@ -61,12 +60,6 @@ type PrettyPrinterBuilder() =
                 for f in fields do t <- f t
                 t)
 
-        member __.CliMutable shape (HKT.Unpacks fields) =
-            HKT.pack(fun () ->
-                let mutable t = shape.CreateUninitialized()
-                for f in fields do t <- f t
-                t)
-
         member __.Union shape (HKT.Unpackss fieldss) =
             let tag,case = shape.UnionCases |> Seq.mapi (fun i c -> (i,c)) |> Seq.minBy (fun (_,c) -> c.Arity)
             let fields = fieldss.[tag]
@@ -75,9 +68,15 @@ type PrettyPrinterBuilder() =
                 for f in fields do t <- f t
                 t)
 
+        member __.CliMutable shape (HKT.Unpacks fields) =
+            HKT.pack(fun () ->
+                let mutable t = shape.CreateUninitialized()
+                for f in fields do t <- f t
+                t)
+
         member __.Delay _ = HKT.pack(fun () -> Unchecked.defaultof<_>)
 
-let mkEmpty<'t> () : unit -> 't = FSharpTypeBuilder.fold (PrettyPrinterBuilder()) |> HKT.unpack 
+let mkEmpty<'t> () : unit -> 't = TypeBuilder.fold (PrettyPrinterBuilder()) |> HKT.unpack 
 let empty<'t> = mkEmpty<'t> () ()
 
 //----------------------
