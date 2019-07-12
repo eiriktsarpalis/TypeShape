@@ -170,6 +170,39 @@ module Fold =
     
         | _ -> None
 
+    let (|Array2D|_|) (builder : IArray2DBuilder<'F>) (ctx : IGenericProgram<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.Array s when s.Rank = 2 ->
+            s.Element.Accept { new ITypeVisitor<App<'F, 't> option> with
+                member __.Visit<'e> () =
+                    let rt = ctx.Resolve<'e> ()
+                    builder.Array2D rt |> unwrap |> Some
+            }
+
+        | _ -> None
+
+    let (|Array3D|_|) (builder : IArray3DBuilder<'F>) (ctx : IGenericProgram<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.Array s when s.Rank = 3 ->
+            s.Element.Accept { new ITypeVisitor<App<'F, 't> option> with
+                member __.Visit<'e> () =
+                    let rt = ctx.Resolve<'e> ()
+                    builder.Array3D rt |> unwrap |> Some
+            }
+
+        | _ -> None
+
+    let (|Array4D|_|) (builder : IArray4DBuilder<'F>) (ctx : IGenericProgram<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.Array s when s.Rank = 4 ->
+            s.Element.Accept { new ITypeVisitor<App<'F, 't> option> with
+                member __.Visit<'e> () =
+                    let rt = ctx.Resolve<'e> ()
+                    builder.Array4D rt |> unwrap |> Some
+            }
+
+        | _ -> None
+
     let (|Nullable|_|) (builder : INullableBuilder<'F>) (self : IGenericProgram<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
         match shape with
         | Shape.Nullable s ->
@@ -191,6 +224,28 @@ module Fold =
 
                     let e = self.Resolve<'u>()
                     builder.Enum e : App<'F,'e> |> unwrap |> Some
+            }
+        | _ -> None
+
+    let (|Dictionary|_|) (builder : IDictionaryBuilder<'F>) (self : IGenericProgram<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.Dictionary s ->
+            s.Accept { new IDictionaryVisitor<App<'F, 't> option> with
+                member __.Visit<'k, 'v when 'k : equality> () =
+                    let k = self.Resolve<'k>()
+                    let v = self.Resolve<'v>()
+                    builder.Dictionary k v |> unwrap |> Some
+            }
+        | _ -> None
+
+    let (|KeyValuePair|_|) (builder : IKeyValuePairBuilder<'F>) (self : IGenericProgram<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.KeyValuePair s ->
+            s.Accept { new IKeyValuePairVisitor<App<'F, 't> option> with
+                member __.Visit<'k, 'v> () =
+                    let k = self.Resolve<'k>()
+                    let v = self.Resolve<'v>()
+                    builder.KeyValuePair k v |> unwrap |> Some
             }
         | _ -> None
 
@@ -236,6 +291,17 @@ module Fold =
                     let k = self.Resolve<'k>()
                     let v = self.Resolve<'v>()
                     builder.Map k v |> unwrap |> Some 
+            }
+        | _ -> None
+
+    let (|FSharpFunc|_|) (builder : IFSharpFuncBuilder<'F>) (self : IGenericProgram<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.FSharpFunc s ->
+            s.Accept { new IFSharpFuncVisitor<App<'F, 't> option> with
+                member __.Visit<'a, 'b>() =
+                    let a = self.Resolve<'a>()
+                    let b = self.Resolve<'b>()
+                    builder.Func a b |> unwrap |> Some 
             }
         | _ -> None
     

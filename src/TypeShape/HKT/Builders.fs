@@ -1,6 +1,7 @@
 ﻿namespace TypeShape.HKT
 
 open System
+open System.Collections.Generic
 open TypeShape.Core
 
 // Builder interfaces: provides a collection of small interfaces used for
@@ -78,7 +79,7 @@ type IDateTimeOffsetBuilder<'F> =
     abstract DateTimeOffset : unit -> App<'F, DateTimeOffset>
 
 //-------------------------------------------
-// .NET Ground types
+// .NET Generic types
 
 type INullableBuilder<'F> =
     abstract Nullable : App<'F, 't> -> App<'F, Nullable<'t>>
@@ -92,6 +93,21 @@ type IEnumBuilder<'F> =
 
 type IArrayBuilder<'F> =
     abstract Array : App<'F, 't> -> App<'F, 't []>
+
+type IArray2DBuilder<'F> =
+    abstract Array2D : App<'F, 't> -> App<'F, 't[,]>
+
+type IArray3DBuilder<'F> =
+    abstract Array3D : App<'F, 't> -> App<'F, 't[,,]>
+
+type IArray4DBuilder<'F> =
+    abstract Array4D : App<'F, 't> -> App<'F, 't[,,,]>
+
+type IDictionaryBuilder<'F> =
+    abstract Dictionary : App<'F, 'k> -> App<'F, 'v> -> App<'F, Dictionary<'k, 'v>>
+
+type IKeyValuePairBuilder<'F> =
+    abstract KeyValuePair : App<'F, 'k> -> App<'F, 'v> -> App<'F, KeyValuePair<'k, 'v>>
 
 //-------------------------------------------
 // F# Generic Collections
@@ -107,6 +123,9 @@ type IFSharpSetBuilder<'F> =
 
 type IFSharpMapBuilder<'F> =
     abstract Map : App<'F, 'k> -> App<'F, 'v> -> App<'F, Map<'k, 'v>>
+
+type IFSharpFuncBuilder<'F> =
+    abstract Func : App<'F, 'a> -> App<'F, 'b> -> App<'F, 'a -> 'b>
 
 //-------------------------------------------
 // Algebraic datatypes
