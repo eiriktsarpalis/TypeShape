@@ -1,4 +1,4 @@
-# TypeShape
+# TypeShape [![Windows Build master](https://ci.appveyor.com/api/projects/status/6t6vovc2xrj8nqh9/branch/master?svg=true)](https://ci.appveyor.com/project/nessos/typeshape/branch/master) [![Docker build master](https://api.travis-ci.org/eiriktsarpalis/TypeShape.svg?branch=master)](https://travis-ci.org/eiriktsarpalis/TypeShape/branches) [![NuGet Badge](https://buildstats.info/nuget/TypeShape)](https://www.nuget.org/packages/TypeShape/)
 
 TypeShape is a small, extensible F# library for practical generic programming.
 Borrowing from ideas used in the FsPickler [implementation](http://mbraceproject.github.io/FsPickler/overview.html#Pickler-Generation),
@@ -23,7 +23,7 @@ and in `paket.references`:
 ```
 File: TypeShape.fs TypeShape
 ```
-TypeShape is also available on [![NuGet Status](http://img.shields.io/nuget/v/TypeShape.svg?style=flat)](https://www.nuget.org/packages/TypeShape/)
+TypeShape is also available on [![NuGet Badge](https://buildstats.info/nuget/TypeShape)](https://www.nuget.org/packages/TypeShape/)
 
 ### Example: Implementing a value printer
 
@@ -190,10 +190,3 @@ See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/maste
 
 * [DataType Generic Programming in F#](http://www.staff.science.uu.nl/~swier004/publications/2015-wgp.pdf), 
 * [Infers](https://github.com/Infers/Infers)
-
-### Build Status
-
-Head (branch `master`), Build & Unit tests
-
-* Windows [![Build status](https://ci.appveyor.com/api/projects/status/6t6vovc2xrj8nqh9/branch/master?svg=true)](https://ci.appveyor.com/project/nessos/typeshape/branch/master)
-* Linux [![Build Status](https://api.travis-ci.org/eiriktsarpalis/TypeShape.svg?branch=master)](https://travis-ci.org/eiriktsarpalis/TypeShape/branches)
