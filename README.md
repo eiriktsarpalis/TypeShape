@@ -175,7 +175,7 @@ See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/maste
 * [Printer.fs](samples/TypeShape.Samples/printer.fs) Pretty printer generator for common F# types.
 * [Parser.fs](samples/TypeShape.Samples/parser.fs) Parser generator for common F# types using FParsec.
 * [Equality-Comparer.fs](samples/TypeShape.Samples/equality-comparer.fs) Equality comparer generator for common F# types.
-* [Gmap.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/bdf56d8519c288d1029a41d088d5896ee159c970/samples/gmap.fsx) A gmap implementation.
+* [Gmap.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/src/TypeShape/Applications/Combinators.fs) A gmap implementation.
 * [hashcode-staged.fs](samples/TypeShape.Samples/hashcode-staged.fs) Staged generic hashcode generator.
 
 ### Projects using TypeShape
