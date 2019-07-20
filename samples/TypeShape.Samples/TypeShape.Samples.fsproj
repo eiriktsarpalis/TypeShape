@@ -22,6 +22,7 @@
     <Compile Include="HKT\PrettyPrinter.fs" />
     <Compile Include="HKT\Empty.fs" />
     <Compile Include="HKT\Clone.fs" />
+    <Compile Include="HKT\Pickler.fs" />
     <None Include="test.fsx" />
     <None Include="paket.references" />
   </ItemGroup>
