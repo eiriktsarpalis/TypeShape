@@ -1,4 +1,5 @@
 ### 8.0.0
+* Add higher-kinded type DSLs for type-safe generic programming.
 * Make shapeof<> operator return typed results and deprecate tshapeof.
 
 ### 7.1.0
