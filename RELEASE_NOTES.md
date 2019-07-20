@@ -1,3 +1,6 @@
+### 8.0.0
+* Make shapeof<> operator return typed results and deprecate tshapeof.
+
 ### 7.1.0
 * Expose IsAnonymousRecord property for F# record shapes.
 

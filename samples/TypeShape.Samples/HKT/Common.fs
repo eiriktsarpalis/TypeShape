@@ -13,7 +13,7 @@ module TypeBuilder =
         FoldContext.fold
             { new IFoldContext<'F> with 
                 member __.Fold<'t> self =
-                    match tshapeof<'t> with
+                    match shapeof<'t> with
                     | Fold.FSharpType builder self s -> s
                     | Fold.CliMutable builder self s -> s
                     | _ -> failwithf "Type %O not recognized as an F# data type." typeof<'t>

@@ -165,10 +165,7 @@ type TypeShape with
     static member Create<'T>() : TypeShape<'T> = new TypeShape<'T>()
 
 /// Creates a type shape instance for given type
-let shapeof<'T> = TypeShape.Create<'T>() :> TypeShape
-
-/// Typed variation of the shapeof operator
-let tshapeof<'T> = TypeShape.Create<'T>()
+let shapeof<'T> = TypeShape.Create<'T>()
 
 //------------------------
 // Section: Core BCL types
@@ -190,7 +187,7 @@ type private ShapeEnum<'Enum, 'Underlying when 'Enum : enum<'Underlying>
                                            and 'Enum :> ValueType
                                            and 'Enum : (new : unit -> 'Enum)>() =
     interface IShapeEnum with
-        member __.Underlying = shapeof<'Underlying>
+        member __.Underlying = shapeof<'Underlying> :> _
         member __.Accept v = v.Visit<'Enum, 'Underlying> ()
 
 // Nullable types
@@ -204,7 +201,7 @@ type IShapeNullable =
 
 type private ShapeNullable<'T when 'T : (new : unit -> 'T) and 'T :> ValueType and 'T : struct> () =
     interface IShapeNullable with
-        member __.Element = shapeof<'T>
+        member __.Element = shapeof<'T> :> _
         member __.Accept v = v.Visit<'T> ()
 
 
@@ -292,8 +289,8 @@ type IShapeFSharpFunc =
 
 type private ShapeFSharpFunc<'Domain, 'CoDomain> () =
     interface IShapeFSharpFunc with
-        member __.Domain = shapeof<'Domain>
-        member __.CoDomain = shapeof<'CoDomain>
+        member __.Domain = shapeof<'Domain> :> _
+        member __.CoDomain = shapeof<'CoDomain> :> _
         member __.Accept v = v.Visit<'Domain, 'CoDomain> ()
 
 // System.Exception
@@ -325,7 +322,7 @@ type IShapeEnumerable =
 
 type private ShapeEnumerable<'Enum, 'T when 'Enum :> seq<'T>> () =
     interface IShapeEnumerable with
-        member __.Element = shapeof<'T>
+        member __.Element = shapeof<'T> :> _
         member __.Accept v = v.Visit<'Enum, 'T> ()
 
 // Collection
@@ -339,7 +336,7 @@ type IShapeCollection =
 
 type private ShapeCollection<'Collection, 'T when 'Collection :> ICollection<'T>> () =
     interface IShapeCollection with
-        member __.Element = shapeof<'T>
+        member __.Element = shapeof<'T> :> _
         member __.Accept v = v.Visit<'Collection, 'T> ()
 
 // KeyValuePair
@@ -354,8 +351,8 @@ type IShapeKeyValuePair =
 
 type private ShapeKeyValuePair<'K,'V> () =
     interface IShapeKeyValuePair with
-        member __.Key = shapeof<'K>
-        member __.Value = shapeof<'V>
+        member __.Key = shapeof<'K> :> _
+        member __.Value = shapeof<'V> :> _
         member __.Accept v = v.Visit<'K, 'V> ()
 
 // System.Array
@@ -368,7 +365,7 @@ type IShapeArray =
 type private ShapeArray<'T>(rank : int) =
     interface IShapeArray with
         member __.Rank = rank
-        member __.Element = shapeof<'T>
+        member __.Element = shapeof<'T> :> _
 
 type ISystemArrayVisitor<'R> =
     abstract Visit<'Array when 'Array :> System.Array> : unit -> 'R
@@ -395,7 +392,7 @@ type IShapeResizeArray =
 
 type private ShapeResizeArray<'T> () =
     interface IShapeResizeArray with
-        member __.Element = shapeof<'T>
+        member __.Element = shapeof<'T> :> _
 
 
 // System.Collections.Dictionary
@@ -410,8 +407,8 @@ type IShapeDictionary =
 
 type private ShapeDictionary<'K, 'V when 'K : equality> () =
     interface IShapeDictionary with
-        member __.Key = shapeof<'K>
-        member __.Value = shapeof<'V>
+        member __.Key = shapeof<'K> :> _
+        member __.Value = shapeof<'V> :> _
         member __.Accept v = v.Visit<'K, 'V> ()
 
 // System.Collections.HashSet
@@ -425,7 +422,7 @@ type IShapeHashSet =
 
 type private ShapeHashSet<'T when 'T : equality> () =
     interface IShapeHashSet with
-        member __.Element = shapeof<'T>
+        member __.Element = shapeof<'T> :> _
         member __.Accept v = v.Visit<'T> ()
 
 // F# Set
@@ -439,7 +436,7 @@ type IShapeFSharpSet =
 
 type private ShapeFSharpSet<'T when 'T : comparison> () =
     interface IShapeFSharpSet with
-        member __.Element = shapeof<'T>
+        member __.Element = shapeof<'T> :> _
         member __.Accept v = v.Visit<'T> ()
 
 // F# Map
@@ -454,8 +451,8 @@ type IShapeFSharpMap =
 
 type private ShapeFSharpMap<'K, 'V when 'K : comparison> () =
     interface IShapeFSharpMap with
-        member __.Key = shapeof<'K>
-        member __.Value = shapeof<'V>
+        member __.Key = shapeof<'K> :> _
+        member __.Value = shapeof<'V> :> _
         member __.Accept v = v.Visit<'K, 'V>()
 
 // F# ref
@@ -465,7 +462,7 @@ type IShapeFSharpRef =
 
 type private ShapeFSharpRef<'T> () =
     interface IShapeFSharpRef with
-        member __.Element = shapeof<'T>
+        member __.Element = shapeof<'T> :> _
 
 // F# option
 
@@ -474,7 +471,7 @@ type IShapeFSharpOption =
 
 type private ShapeFSharpOption<'T> () =
     interface IShapeFSharpOption with
-        member __.Element = shapeof<'T>
+        member __.Element = shapeof<'T> :> _
 
 // F# List
 
@@ -483,7 +480,7 @@ type IShapeFSharpList =
 
 type private ShapeFSharpList<'T> () =
     interface IShapeFSharpList with
-        member __.Element = shapeof<'T>
+        member __.Element = shapeof<'T> :> _
 
 //-----------------------------
 // Section: Member-based Shapes
@@ -859,7 +856,7 @@ and ReadOnlyMember<'DeclaringType, 'MemberType> internal (label : string, member
 
     interface IShapeReadOnlyMember<'DeclaringType> with
         member s.Label = label
-        member s.Member = shapeof<'MemberType>
+        member s.Member = shapeof<'MemberType> :> _
         member s.MemberInfo = memberInfo
         member s.IsStructMember = isStructMember
         member s.IsPublic = isPublicMember
@@ -961,7 +958,7 @@ and [<Sealed>] ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : C
         member __.IsPublic = ctorInfo.IsPublic
         member __.Arity = arity
         member __.ConstructorInfo = ctorInfo
-        member __.Arguments = shapeof<'CtorArgs>
+        member __.Arguments = shapeof<'CtorArgs> :> _
         member __.Accept v = v.Visit __
 
 and IConstructorVisitor<'CtorType, 'R> =

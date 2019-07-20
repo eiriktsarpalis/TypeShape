@@ -57,9 +57,9 @@ module private GIterator =
                     let fIter = mkIteratorCached<'E, 'F> ctx
                     fun c t -> shape.Get t |> fIter c }
 
-        match shapeof<'T> with
+        match shapeof<'T> :> TypeShape with
         | :? TypeShape<'E> -> wrap(fun c (t:'E) -> c.Action t)
-        | Shape.SubtypeOf (tshapeof<'E>) s ->
+        | Shape.SubtypeOf (shapeof<'E>) s ->
             s.Accept { new ISubtypeWitnessVisitor<'E, Iterator<'E,'T>> with
                 member __.Visit(witness) =
                     wrap(fun c t -> c.Action (witness.Upcast t))
@@ -206,7 +206,7 @@ module private GMapper =
                         let tgtField = fMapper s c f srcField 
                         shape.Set tgt tgtField }
 
-        match shapeof<'T> with
+        match shapeof<'T> :> TypeShape with
         | :? TypeShape<'E> -> wrap(fun _ _ f (t:'E) -> f t)
         | Shape.Enum s ->
             s.Accept { new IEnumVisitor<Mapper<'E,'T>> with
