@@ -23,11 +23,9 @@ and IDelayBuilder<'F> =
 [<RequireQualifiedAccess>]
 module FoldContext =
 
-    let private cache = new TypeCache()
-
     /// Builds a generic program using supplied folding context.
     /// Folding is performed recursively and all intermediate results are cached.
-    let fold<'F, 't> (folder : IFoldContext<'F>) : App<'F, 't> =
+    let fold<'F, 't> (cache : TypeCache) (folder : IFoldContext<'F>) : App<'F, 't> =
         let mutable f = Unchecked.defaultof<App<'F, 't>>
         if cache.TryGetValue(&f) then f
         else
