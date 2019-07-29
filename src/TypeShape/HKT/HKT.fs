@@ -4,6 +4,7 @@
 open System.ComponentModel
 
 /// HKT encoding that encapsulates an underlying materialized value.
+[<Struct>]
 type App<'F, 't> = private App of payload : obj
 /// HKT encoding that encapsulates an underlying materialized value.
 and  App<'F, 't1, 't2> = App<'F, Tup<'t1, 't2>>
@@ -24,7 +25,7 @@ module HKT =
     [<EditorBrowsable(EditorBrowsableState.Never)>]
     module Unsafe =
         // unsafe public methods required by the SRTP methods
-        let pack value = App value
+        let pack value = App<_,_>.App value
         let unpack (App value) = value :?> _
 
     /// Packs a materialized value into an encoded HKT instance.
