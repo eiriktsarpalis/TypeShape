@@ -38,6 +38,6 @@ group Build
   source https://api.nuget.org/v3/index.json
   framework: net461
 
-  nuget FAKE ~> 4.0
+  nuget FAKE ~> 5.8.4
 
   github fsharp/FAKE modules/Octokit/Octokit.fsx

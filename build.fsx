@@ -6,9 +6,13 @@
 #r @"packages/build/FAKE/tools/FakeLib.dll"
 #load "paket-files/build/fsharp/FAKE/modules/Octokit/Octokit.fsx"
 
-open Fake
-open Fake.Git
-open Fake.ReleaseNotesHelper
+open Fake.Core
+open Fake.Core.TargetOperators
+open Fake.DotNet
+open Fake.IO
+open Fake.IO.FileSystemOperators
+open Fake.IO.Globbing.Operators
+open Fake.Tools
 open System
 
 // --------------------------------------------------------------------------------------
@@ -30,7 +34,7 @@ let gitHome = "https://github.com/" + gitOwner
 let gitName = "TypeShape"
 
 let testFramework = 
-    match getBuildParam "testFramework" with
+    match Environment.environVarOrDefault "testFramework" "" with
     | x when String.IsNullOrWhiteSpace x -> None
     | x -> Some x
 
@@ -39,66 +43,73 @@ let testFramework =
 // --------------------------------------------------------------------------------------
 
 // Read additional information from the release notes document
-let release = LoadReleaseNotes "RELEASE_NOTES.md"
+let release = ReleaseNotes.load "RELEASE_NOTES.md"
 
 // --------------------------------------------------------------------------------------
 // Clean build results
 
-Target "Clean" (fun _ ->
-    CleanDirs [ "bin" ; artifactsDir ; "temp" ]
+Target.create "Clean" (fun _ ->
+    Shell.cleanDirs [ "bin" ; artifactsDir ; "temp" ]
 )
 
-Target "CleanDocs" (fun _ ->
-    CleanDirs ["docs/output"]
+Target.create "CleanDocs" (fun _ ->
+    Shell.cleanDirs ["docs/output"]
 )
 
 // --------------------------------------------------------------------------------------
 // Build library & test project
 
-Target "Build" DoNothing
+Target.create "Build" ignore
 
 let buildWithConfiguration config =
-    DotNetCli.Build(fun c ->
+    DotNet.build(fun c ->
         { c with
-            Project = __SOURCE_DIRECTORY__
-            Configuration = config
-            AdditionalArgs = 
-                [ 
-                    "-p:GenerateAssemblyInfo=true"
-                    "-p:Version=" + release.AssemblyVersion 
-                ]
-        })
+            Configuration = DotNet.BuildConfiguration.fromString config
+            Common =
+                { c.Common with
+                    CustomParams =
+                        [ "-p:GenerateAssemblyInfo=true"
+                          "-p:Version=" + release.AssemblyVersion ]
+                        |> String.concat " "
+                        |> Some
+                }
+        }) __SOURCE_DIRECTORY__
 
-Target "Build.Emit" (fun _ -> buildWithConfiguration "Release")
-Target "Build.NoEmit" (fun _ -> buildWithConfiguration "Release-NoEmit")
+Target.create "Build.Emit" (fun _ -> buildWithConfiguration "Release")
+Target.create "Build.NoEmit" (fun _ -> buildWithConfiguration "Release-NoEmit")
 
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner & kill test runner when complete
 
 let runTests config (proj : string) =
-    DotNetCli.Test (fun c ->
+    DotNet.test (fun c ->
         { c with
-            Project = proj
-            Configuration = config
-            AdditionalArgs =
-                [
-                    yield "--no-build"
-                    yield "--blame"
-                    match testFramework with Some f -> yield "--framework" ; yield f | None -> ()
-                    yield "-p:ParallelizeAssemblies=true"
-                    yield "-p:ParallelizeTestCollections=true"
-                    yield "--"
-                    if EnvironmentHelper.isMono then yield "RunConfiguration.DisableAppDomain=true" // https://github.com/xunit/xunit/issues/1357
-                ] })
+            Configuration = DotNet.BuildConfiguration.fromString config
+            Common =
+                { c.Common with
+                    CustomParams =
+                        [
+                            yield "--no-build"
+                            yield "--blame"
+                            match testFramework with Some f -> yield "--framework" ; yield f | None -> ()
+                            yield "-p:ParallelizeAssemblies=true"
+                            yield "-p:ParallelizeTestCollections=true"
+                            yield "--"
+                            if Environment.isMono then yield "RunConfiguration.DisableAppDomain=true" // https://github.com/xunit/xunit/issues/1357
+                        ]
+                        |> String.concat " "
+                        |> Some 
+                }
+        }) proj
 
-Target "RunTests" DoNothing
+Target.create "RunTests" ignore
 
-Target "RunTests.Release" (fun _ ->
+Target.create "RunTests.Release" (fun _ ->
     for proj in !! testProjects do
         runTests "Release" proj
 )
 
-Target "RunTests.Release-NoEmit" (fun _ ->
+Target.create "RunTests.Release-NoEmit" (fun _ ->
     for proj in !! testProjects do
         runTests "Release-NoEmit" proj
 )
@@ -106,24 +117,28 @@ Target "RunTests.Release-NoEmit" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Build a NuGet package
 
-Target "NuGet.Bundle" (fun _ ->
-    Paket.Pack(fun p ->
+Target.create "NuGet.Bundle" (fun _ ->
+    Paket.pack(fun p ->
         { p with
             OutputPath = artifactsDir
             Version = release.NugetVersion
             BuildPlatform = "AnyCpu"
-            ReleaseNotes = toLines release.Notes })
+            ReleaseNotes = String.toLines release.Notes })
 )
 
-Target "NuGet.ValidateSourceLink" (fun _ ->
+Target.create "NuGet.ValidateSourceLink" (fun _ ->
     for nupkg in !! (artifactsDir @@ "*.nupkg") do
-        DotNetCli.RunCommand
-            (fun p -> { p with WorkingDir = __SOURCE_DIRECTORY__ @@ "tests" @@ "TypeShape.Tests" } )
-            (sprintf "sourcelink test %s" nupkg)
+        let p =
+            DotNet.exec
+                (fun p -> { p with WorkingDirectory =  __SOURCE_DIRECTORY__ @@ "tests" @@ "TypeShape.Tests" })
+                "sourcelink"
+                (sprintf "test %s" nupkg)
+
+        if not p.OK then failwithf "failed to validate sourcelink: %A" p.Errors
 )
 
-Target "NuGet.Push" (fun _ ->
-    Paket.Push(fun p ->
+Target.create "NuGet.Push" (fun _ ->
+    Paket.push(fun p ->
         { p with
             WorkingDir = artifactsDir })
 )
@@ -133,7 +148,7 @@ Target "NuGet.Push" (fun _ ->
 
 open Octokit
 
-Target "ReleaseGithub" (fun _ ->
+Target.create "ReleaseGithub" (fun _ ->
     let remote =
         Git.CommandHelper.getGitResult "" "remote -v"
         |> Seq.filter (fun (s: string) -> s.EndsWith("(push)"))
@@ -141,23 +156,23 @@ Target "ReleaseGithub" (fun _ ->
         |> function None -> gitHome + "/" + gitName | Some (s: string) -> s.Split().[0]
 
     //StageAll ""
-    Git.Commit.Commit "" (sprintf "Bump version to %s" release.NugetVersion)
-    Branches.pushBranch "" remote (Information.getBranchName "")
+    Git.Commit.exec "" (sprintf "Bump version to %s" release.NugetVersion)
+    Git.Branches.pushBranch "" remote (Git.Information.getBranchName "")
 
-    Branches.tag "" release.NugetVersion
-    Branches.pushTag "" remote release.NugetVersion
+    Git.Branches.tag "" release.NugetVersion
+    Git.Branches.pushTag "" remote release.NugetVersion
 
     let client =
         match Environment.GetEnvironmentVariable "OctokitToken" with
         | null -> 
             let user =
-                match getBuildParam "github-user" with
+                match Environment.environVarOrDefault "github-user" "" with
                 | s when not (String.IsNullOrWhiteSpace s) -> s
-                | _ -> getUserInput "Username: "
+                | _ -> UserInput.getUserInput "Username: "
             let pw =
-                match getBuildParam "github-pw" with
+                match Environment.environVarOrDefault "github-pw" "" with
                 | s when not (String.IsNullOrWhiteSpace s) -> s
-                | _ -> getUserPassword "Password: "
+                | _ -> UserInput.getUserPassword "Password: "
 
             createClient user pw
         | token -> createClientWithToken token
@@ -169,14 +184,14 @@ Target "ReleaseGithub" (fun _ ->
     |> Async.RunSynchronously
 )
 
-Target "BuildPackage" DoNothing
+Target.create "BuildPackage" ignore
 
 // --------------------------------------------------------------------------------------
 // Run all targets by default. Invoke 'build <Target>' to override
 
-Target "Default" DoNothing
-Target "Bundle"  DoNothing
-Target "Release" DoNothing
+Target.create "Default" ignore
+Target.create "Bundle"  ignore
+Target.create "Release" ignore
 
 "Clean"
   ==> "Build.Emit"
@@ -197,4 +212,4 @@ Target "Release" DoNothing
   ==> "ReleaseGithub"
   ==> "Release"
 
-RunTargetOrDefault "Default"
+Target.runOrDefault "Default"
