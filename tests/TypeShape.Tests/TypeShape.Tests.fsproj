@@ -17,6 +17,9 @@
     <Compile Include="UnionContractTests.fs" />
     <None Include="paket.references" />
     <None Include="Script.fsx" />
+    <Content Include="xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
