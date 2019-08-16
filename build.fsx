@@ -65,14 +65,11 @@ let buildWithConfiguration config =
     DotNet.build(fun c ->
         { c with
             Configuration = DotNet.BuildConfiguration.fromString config
-            Common =
-                { c.Common with
-                    CustomParams =
-                        [ "-p:GenerateAssemblyInfo=true"
-                          "-p:Version=" + release.AssemblyVersion ]
-                        |> String.concat " "
-                        |> Some
-                }
+
+            MSBuildParams =
+                { c.MSBuildParams with
+                    Properties = [("GenerateAssemblyInfo", "true"); ("Version", "release.AssemblyVersion")] }
+
         }) __SOURCE_DIRECTORY__
 
 Target.create "Build.Emit" (fun _ -> buildWithConfiguration "Release")
@@ -85,21 +82,17 @@ let runTests config (proj : string) =
     DotNet.test (fun c ->
         { c with
             Configuration = DotNet.BuildConfiguration.fromString config
-            Common =
-                { c.Common with
-                    CustomParams =
-                        [
-                            yield "--no-build"
-                            yield "--blame"
-                            match testFramework with Some f -> yield "--framework" ; yield f | None -> ()
-                            yield "-p:ParallelizeAssemblies=true"
-                            yield "-p:ParallelizeTestCollections=true"
-                            yield "--"
-                            if not Environment.isWindows then yield "RunConfiguration.DisableAppDomain=true" // https://github.com/xunit/xunit/issues/1357
-                        ]
-                        |> String.concat " "
-                        |> Some 
-                }
+            NoBuild = true
+            // Blame = true
+            Framework = testFramework
+
+            MSBuildParams =
+                { c.MSBuildParams with
+                    Properties = [("ParallelizeAssemblies", "true"); ("ParallelizeTestCollections", "true")] }
+
+            RunSettingsArguments = 
+                if Environment.isWindows then None
+                else Some "RunConfiguration.DisableAppDomain=true" // https://github.com/xunit/xunit/issues/1357
         }) proj
 
 Target.create "RunTests" ignore
