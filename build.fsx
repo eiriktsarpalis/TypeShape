@@ -95,7 +95,7 @@ let runTests config (proj : string) =
                             yield "-p:ParallelizeAssemblies=true"
                             yield "-p:ParallelizeTestCollections=true"
                             yield "--"
-                            if Environment.isMono then yield "RunConfiguration.DisableAppDomain=true" // https://github.com/xunit/xunit/issues/1357
+                            if not Environment.isWindows then yield "RunConfiguration.DisableAppDomain=true" // https://github.com/xunit/xunit/issues/1357
                         ]
                         |> String.concat " "
                         |> Some 
