@@ -92,7 +92,7 @@ let runTests config (proj : string) =
 
             RunSettingsArguments = 
                 if Environment.isWindows then None
-                else Some "RunConfiguration.DisableAppDomain=true" // https://github.com/xunit/xunit/issues/1357
+                else Some " -- RunConfiguration.DisableAppDomain=true" // https://github.com/xunit/xunit/issues/1357
         }) proj
 
 Target.create "RunTests" ignore
