@@ -68,7 +68,7 @@ let buildWithConfiguration config =
 
             MSBuildParams =
                 { c.MSBuildParams with
-                    Properties = [("GenerateAssemblyInfo", "true"); ("Version", "release.AssemblyVersion")] }
+                    Properties = [("GenerateAssemblyInfo", "true"); ("Version", release.AssemblyVersion)] }
 
         }) __SOURCE_DIRECTORY__
 
