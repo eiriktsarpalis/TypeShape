@@ -68,6 +68,12 @@ type PickerBuilder() =
                 unpickle = fun r -> match r true with AsNumber i -> sbyte i | t -> invalidTok t
             }
 
+        member __.Char() =
+            HKT.pack {
+                pickle = fun k c -> k (String (string c))
+                unpickle = fun r -> match r true with String s -> s.[0] | t -> invalidTok t
+            }
+
         member __.Int16 () =
             HKT.pack {
                 pickle = fun k b -> k (Number (decimal b))

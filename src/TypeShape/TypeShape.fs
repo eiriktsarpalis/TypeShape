@@ -1875,7 +1875,8 @@ module Shape =
 
     /// Recognizes POCO shapes, .NET types that are either classes or structs
     let (|Poco|_|) (s : TypeShape) =
-        if s.Type.IsClass || s.Type.IsValueType then
+        if s.Type.IsPrimitive then None
+        elif s.Type.IsClass || s.Type.IsValueType then
             let isNullable = 
                 match s.ShapeInfo with
                 | Generic(td,_) -> td = typedefof<Nullable<_>>

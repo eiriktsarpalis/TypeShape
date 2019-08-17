@@ -680,6 +680,16 @@ module GenericCloneStaged =
                 c(t) = t }
         |> Check.GenericPredicate false false 100 1
 
+module GenericCloneHKT =
+
+    [<Fact>]
+    let ``HKT-clone should produce equal values`` () =
+        { new Predicate with
+            member __.Invoke (t : 'T) =
+                let c = HktClone.mkCloner<'T>()
+                if c(t) <> t then failwithf "%A != %A" (c t) t else true}
+        |> Check.GenericPredicate false false 100 10
+
 module GenericEmpty =
 
     [<Fact>]

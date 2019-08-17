@@ -1,6 +1,7 @@
 ﻿namespace TypeShape.HKT
 
 // Lightweight HKT encoding adapted from https://github.com/palladin/Higher/
+
 open System.ComponentModel
 
 /// HKT encoding that encapsulates an underlying materialized value.
@@ -15,6 +16,7 @@ and  App<'F, 't1, 't2, 't3, 't4> = App<'F, Tup<'t1, 't2, 't3, 't4>>
 /// HKT encoding that encapsulates an underlying materialized value.
 and  App<'F, 't1, 't2, 't3, 't4, 't5> = App<'F, Tup<'t1, 't2, 't3, 't4, 't5>>
 
+// uninhabited types encoding type-level tuples
 and [<EditorBrowsable(EditorBrowsableState.Never)>] Tup<'T1, 'T2> = class end
 and [<EditorBrowsable(EditorBrowsableState.Never)>] Tup<'T1, 'T2, 'T3> = class end
 and [<EditorBrowsable(EditorBrowsableState.Never)>] Tup<'T1, 'T2, 'T3, 'T4> = class end

@@ -1,6 +1,8 @@
-﻿module TypeShape.HKT.Clone
+﻿module TypeShape.Tests.HktClone
 
 open System
+open TypeShape.Core
+open TypeShape.HKT
 
 // HKT encoding for prettyprinter types
 type Cloner =
@@ -9,8 +11,28 @@ type Cloner =
 type FieldCloner =
     static member Assign(_ : App<FieldCloner, 'a>, _ : 'a -> 'a -> 'a) = ()
 
-type ClonerBuilder() =
-    interface ITypeBuilder<Cloner, FieldCloner> with
+type IClonerBuilder =
+    inherit IFSharpTypeBuilder<Cloner, FieldCloner>
+    inherit ICliMutableBuilder<Cloner, FieldCloner>
+    inherit IPocoBuilder<Cloner, FieldCloner>
+    inherit IDelayBuilder<Cloner>
+
+let private cache = new TypeShape.Core.Utils.TypeCache()
+
+let fold (builder : IClonerBuilder) =
+    FoldContext.fold cache
+        { new IFoldContext<Cloner> with 
+            member __.Fold<'t> self =
+                match shapeof<'t> with
+                | Fold.FSharpType builder self s -> s
+                | Fold.CliMutable builder self s -> s
+                | Fold.Poco builder self s -> s
+                | _ -> failwithf "Type %A not recognized as cloneable" typeof<'t>
+
+            member __.Delay c = builder.Delay c }
+
+type ClonerBuilder () =
+    interface IClonerBuilder with
         member __.Bool () = HKT.pack id
         member __.Byte () = HKT.pack id
         member __.SByte() = HKT.pack id
@@ -75,15 +97,13 @@ type ClonerBuilder() =
                 for f in fields do t' <- f t t'
                 t')
 
+        member __.Poco shape (HKT.Unpacks fields) =
+            HKT.pack(fun t ->
+                let mutable t' = shape.CreateUninitialized()
+                for f in fields do t' <- f t t'
+                t')
+
         member __.Delay cell = HKT.pack(fun t -> let f = HKT.unpack cell.Value in f t)
 
-let mkCloner<'t> () : 't -> 't = TypeBuilder.fold (ClonerBuilder()) |> HKT.unpack 
+let mkCloner<'t> () : 't -> 't = fold (ClonerBuilder()) |> HKT.unpack 
 let clone t = mkCloner<'t>() t
-
-//----------------------
-
-open System
-
-type P = Z | S of P
-
-clone (42, Some "42", {| x = 2 ; y = S(S(S Z)) |})

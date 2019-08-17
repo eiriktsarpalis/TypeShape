@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="StagedClone.fs" />
+    <Compile Include="HktClone.fs" />
     <Compile Include="GenericTester.fs" />
     <Compile Include="Tests.fs" />
     <Compile Include="UnionContractTests.fs" />

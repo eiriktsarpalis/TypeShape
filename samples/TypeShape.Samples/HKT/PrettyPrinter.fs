@@ -9,6 +9,7 @@ type PrettyPrinterBuilder() =
         member __.Bool () = HKT.pack(function true -> "true" | false -> "false")
         member __.Byte () = HKT.pack(fun i -> i.ToString())
         member __.SByte() = HKT.pack(fun i -> i.ToString())
+        member __.Char () = HKT.pack(fun i -> i.ToString())
         
         member __.Int16 () = HKT.pack(fun i -> i.ToString())
         member __.Int32 () = HKT.pack(fun i -> i.ToString())

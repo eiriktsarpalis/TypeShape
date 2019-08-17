@@ -65,6 +65,11 @@ module Fold =
         | Shape.SByte -> builder.SByte () |> unwrap |> Some
         | _ -> None
 
+    let (|Char|_|) (builder : ICharBuilder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.Char -> builder.Char() |> unwrap |> Some
+        | _ -> None
+
     //------------------------------------
     
     let (|Int16|_|) (builder : IInt16Builder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
@@ -362,6 +367,7 @@ module Fold =
         | Bool builder s -> Some s
         | Byte builder s -> Some s
         | SByte builder s -> Some s
+        | Char builder s -> Some s
 
         | Int16 builder s -> Some s
         | Int32 builder s -> Some s

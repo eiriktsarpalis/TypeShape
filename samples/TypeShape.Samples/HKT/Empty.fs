@@ -14,6 +14,7 @@ type PrettyPrinterBuilder() =
         member __.Bool () = HKT.pack(fun () -> false)
         member __.Byte () = HKT.pack(fun () -> 0uy)
         member __.SByte() = HKT.pack(fun () -> 0y)
+        member __.Char () = HKT.pack(fun () -> '\u0000')
         
         member __.Int16 () = HKT.pack(fun () -> 0s)
         member __.Int32 () = HKT.pack(fun () -> 0)

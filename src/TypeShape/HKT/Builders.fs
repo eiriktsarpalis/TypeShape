@@ -21,6 +21,9 @@ type IByteBuilder<'F> =
 type ISByteBuilder<'F> =
     abstract SByte : unit -> App<'F, sbyte>
 
+type ICharBuilder<'F> =
+    abstract Char : unit -> App<'F, char>
+
 //-------------------------------------------
 
 type IInt16Builder<'F> =
@@ -169,6 +172,7 @@ type IFSharpTypeBuilder<'F, 'G> =
     inherit IBoolBuilder<'F>
     inherit IByteBuilder<'F>
     inherit ISByteBuilder<'F>
+    inherit ICharBuilder<'F>
 
     inherit IInt16Builder<'F>
     inherit IInt32Builder<'F>
