@@ -8,6 +8,8 @@ cd `dirname $0`
 
 which fake > /dev/null 2>&1 || (echo "fake-cli not found in PATH. Run 'dotnet tool install -g fake-cli'" && exit 1)
 
+OS=${OS:-"unknown"}
+
 run() {
   if [ "$OS" != "Windows_NT" ]
   then
