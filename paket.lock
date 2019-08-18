@@ -823,10 +823,11 @@ RESTRICTION: == net461
 NUGET
   remote: https://api.nuget.org/v3/index.json
     FAKE (5.8.4)
+    Fake.Api.Github (5.16)
     Octokit (0.32)
 GITHUB
   remote: fsharp/FAKE
-    modules/Octokit/Octokit.fsx (ceb1805bc258a624fd98f9bd9beebafa03452b7d)
+    modules/Octokit/Octokit.fsx (b588a7081be4a3793a310a5bb7ec5f2e89d8601b)
       Octokit (>= 0.20)
 GROUP Legacy
 STORAGE: NONE

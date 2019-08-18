@@ -2,9 +2,9 @@
 // FAKE build script
 // --------------------------------------------------------------------------------------
 
-#nowarn "85"
 #r @"packages/build/FAKE/tools/FakeLib.dll"
-#load "paket-files/build/fsharp/FAKE/modules/Octokit/Octokit.fsx"
+#r @"packages/build/Octokit/lib/net45/Octokit.dll"
+#r @"packages/build/Fake.Api.Github/lib/net462/Fake.Api.GitHub.dll"
 
 open Fake.Core
 open Fake.Core.TargetOperators
@@ -13,6 +13,7 @@ open Fake.IO
 open Fake.IO.FileSystemOperators
 open Fake.IO.Globbing.Operators
 open Fake.Tools
+open Fake.Api
 open System
 
 // --------------------------------------------------------------------------------------
@@ -139,8 +140,6 @@ Target.create "NuGet.Push" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Release Scripts
 
-open Octokit
-
 Target.create "ReleaseGithub" (fun _ ->
     let remote =
         Git.CommandHelper.getGitResult "" "remote -v"
@@ -167,13 +166,12 @@ Target.create "ReleaseGithub" (fun _ ->
                 | s when not (String.IsNullOrWhiteSpace s) -> s
                 | _ -> UserInput.getUserPassword "Password: "
 
-            createClient user pw
-        | token -> createClientWithToken token
+            GitHub.createClient user pw
+        | token -> GitHub.createClientWithToken token
 
-    // release on github
     client
-    |> createDraft gitOwner gitName release.NugetVersion (release.SemVer.PreRelease <> None) release.Notes
-    |> releaseDraft
+    |> GitHub.draftNewRelease gitOwner gitName release.NugetVersion (release.SemVer.PreRelease <> None) release.Notes
+    |> GitHub.publishDraft
     |> Async.RunSynchronously
 )
 
