@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if [ -z "$*" ] ; then
-	ARGS=Bundle
+	ARGS="-t Bundle"
 else
 	ARGS="$@"
 fi
@@ -15,4 +15,4 @@ docker build -t $IMAGE_LABEL .
 docker run -t --rm \
            -e NUGET_KEY=$NUGET_KEY \
 		   $IMAGE_LABEL \
-		   ./build.sh $ARGS
+		   ./build.sh "$ARGS"
