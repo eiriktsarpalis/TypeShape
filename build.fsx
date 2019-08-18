@@ -2,9 +2,8 @@
 // FAKE build script
 // --------------------------------------------------------------------------------------
 
-#r @"packages/build/FAKE/tools/FakeLib.dll"
-#r @"packages/build/Octokit/lib/net45/Octokit.dll"
-#r @"packages/build/Fake.Api.Github/lib/net462/Fake.Api.GitHub.dll"
+#r "paket: groupref build //"
+#load "./.fake/build.fsx/intellisense.fsx"
 
 open Fake.Core
 open Fake.Core.TargetOperators

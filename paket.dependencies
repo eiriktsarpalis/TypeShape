@@ -36,9 +36,14 @@ group Legacy
 
 group Build
   source https://api.nuget.org/v3/index.json
-  framework: net461
+  storage: none
 
-  nuget FAKE ~> 5.8.4
-  nuget Fake.Api.Github ~> 5.16.0
-
-  github fsharp/FAKE modules/Octokit/Octokit.fsx
+  nuget Fake.Core               ~> 5.16.0
+  nuget Fake.Core.UserInput	    ~> 5.16.0
+  nuget Fake.Core.ReleaseNotes  ~> 5.16.0
+  nuget Fake.Core.Target        ~> 5.16.0
+  nuget Fake.IO.FileSystem      ~> 5.16.0
+  nuget Fake.DotNet.Cli	        ~> 5.16.0
+  nuget Fake.DotNet.Paket       ~> 5.16.0
+  nuget Fake.Tools.Git          ~> 5.16.0
+  nuget Fake.Api.Github         ~> 5.16.0
