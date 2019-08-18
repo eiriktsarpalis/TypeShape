@@ -17,7 +17,7 @@ See my [slides](http://eiriktsarpalis.github.io/typeshape/) for a more thorough 
 To incorporate TypeShape in your project place the following line in your
 `paket.dependencies` file:
 ```
-github eiriktsarpalis/TypeShape:2.10 src/TypeShape/TypeShape.fs
+github eiriktsarpalis/TypeShape:7.1 src/TypeShape/TypeShape.fs
 ```
 and in `paket.references`:
 ```
