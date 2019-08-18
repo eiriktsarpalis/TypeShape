@@ -6,4 +6,5 @@ RUN dotnet tool install -g fake-cli
 WORKDIR /app
 COPY . .
 
-CMD ./build.sh -t Bundle
+ENV TARGET=Bundle
+CMD ./build.sh -t $TARGET

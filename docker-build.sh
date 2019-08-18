@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-if [ -z "$*" ] ; then
-	ARGS="-t Bundle"
+if [ -z $1 ] ; then
+	TARGET="Bundle"
 else
-	ARGS="$@"
+	TARGET=$1
 fi
 
 IMAGE_LABEL="typeshape-build:$RANDOM"
@@ -14,5 +14,5 @@ docker build -t $IMAGE_LABEL .
 # dotnet build, test & nuget publish
 docker run -t --rm \
            -e NUGET_KEY=$NUGET_KEY \
-		   $IMAGE_LABEL \
-		   ./build.sh "$ARGS"
+		   -e TARGET=$TARGET \
+		   $IMAGE_LABEL
