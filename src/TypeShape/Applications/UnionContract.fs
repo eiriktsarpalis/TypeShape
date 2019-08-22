@@ -9,7 +9,7 @@ open TypeShape.Core.Utils
 /// see the <a href="https://eiriktsarpalis.wordpress.com/2018/10/30/a-contract-pattern-for-schemaless-datastores">A Contract Pattern for Schemaless DataStores</a> blog article for an overview
 type IUnionContract = interface end
 
-/// Generic encoding abstraction for serializing/deserializing 
+/// Generic encoding abstraction for serializing/deserializing
 /// to a fixed format type, e.g. string, byte[], Newtonsoft JsonValue etc
 type IEncoder<'Format> =
     /// 'Null' format value to be used for union cases without a payload
@@ -33,7 +33,7 @@ type EncodedUnion<'Encoding> =
         Payload  : 'Encoding
     }
 
-/// Provides an encoder implementation for a sum of events
+/// Provides an encoder implementation for a union of events
 [<AbstractClass>]
 type UnionContractEncoder<'Union, 'Format> internal () =
     /// Gets the union case string identifier for given union instance
@@ -57,7 +57,7 @@ module private Impl =
         let shape =
             match shapeof<'Union> with
             | Shape.FSharpUnion (:? ShapeFSharpUnion<'Union> as s) -> s
-            | _ -> 
+            | _ ->
                 sprintf "Type '%O' is not an F# union" typeof<'Union>
                 |> invalidArg "Union"
 
@@ -65,8 +65,8 @@ module private Impl =
             field.Accept {
                 new IMemberVisitor<'Union, ('Union -> 'Format) * ('Union -> 'Format -> 'Union)> with
                     member __.Visit(sfield : ShapeMember<'Union, 'Field>) =
-                        let enc u = 
-                            let f = sfield.Get u 
+                        let enc u =
+                            let f = sfield.Get u
                             encoder.Encode f
 
                         let dec u f =
@@ -111,15 +111,15 @@ module private Impl =
 
                     enc, dec
 
-                | None -> 
+                | None ->
                     let enc _ = { CaseName = label ; Payload = encoder.Empty }
                     let dec _ = scase.CreateUninitialized()
                     enc, dec
 
             label, mkCaseEncDec
 
-        let labels, encoderFactories = 
-            shape.UnionCases 
+        let labels, encoderFactories =
+            shape.UnionCases
             |> Array.map genUnionCaseEncoder
             |> Array.unzip
 
@@ -179,7 +179,7 @@ module private Impl =
                         let msg = sprintf "Unrecognized case name '%O.%s'" typeof<'Union> e.CaseName
                         raise <| FormatException msg
                     | tag -> caseDecoders.[tag] e.Payload
-                
+
                 member __.TryDecode e =
                     match labelIndex.TryFindIndex e.CaseName with
                     |  -1 -> None
@@ -194,13 +194,13 @@ type UnionContractEncoder =
 
     /// <summary>
     ///     Given a primite object encoder instance, generates
-    ///     an F# union encoder which constructs and deconstructs
-    ///     DU instances into a flat structure. All union cases must
+    ///     an F# union encoder that constructs and deconstructs
+    ///     DU instances into a flat structure. By default, all union cases must
     ///     contain exactly one field.
     /// </summary>
-    /// <param name="encoder">Encoder used for converting union case payloads into given format.</param>
+    /// <param name="encoder">Encoder used for converting union case payloads into given 'Format.</param>
     /// <param name="requireRecordFields">Fail encoder generation if union cases contain fields that are not F# records. Defaults to false.</param>
     /// <param name="allowNullaryCases">Fail encoder generation if union contains nullary cases. Defaults to true.</param>
-    static member Create<'Union, 'Format when 'Union :> IUnionContract>(encoder : IEncoder<'Format>, ?requireRecordFields : bool, ?allowNullaryCases : bool) : UnionContractEncoder<'Union, 'Format> = 
+    static member Create<'Union, 'Format when 'Union :> IUnionContract>(encoder : IEncoder<'Format>, ?requireRecordFields : bool, ?allowNullaryCases : bool) : UnionContractEncoder<'Union, 'Format> =
         let config = { requireRecordPayloads = defaultArg requireRecordFields false ; allowNullaryCases = defaultArg allowNullaryCases true }
         EncoderFactory<'Union, 'Format>.Create config encoder
