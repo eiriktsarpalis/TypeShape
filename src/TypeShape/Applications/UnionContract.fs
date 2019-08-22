@@ -1,4 +1,4 @@
-﻿module TypeShape.UnionContract
+module TypeShape.UnionContract
 
 open System
 open System.Runtime.Serialization
@@ -6,6 +6,7 @@ open TypeShape.Core
 open TypeShape.Core.Utils
 
 /// Marker interface for tagging union contract types
+/// see the <a href="https://eiriktsarpalis.wordpress.com/2018/10/30/a-contract-pattern-for-schemaless-datastores">A Contract Pattern for Schemaless DataStores</a> blog article for an overview
 type IUnionContract = interface end
 
 /// Generic encoding abstraction for serializing/deserializing 
