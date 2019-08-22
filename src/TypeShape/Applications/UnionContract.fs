@@ -97,7 +97,7 @@ module private Impl =
                 | [| |] -> None
                 | [| field |] -> Some field
                 | _ ->
-                    sprintf "union case %O.%O has more than one fields." typeof<'Union> scase.CaseInfo.Name
+                    sprintf "union case %O.%O has more than one field." typeof<'Union> scase.CaseInfo.Name
                     |> invalidArg "Union"
 
             let mkCaseEncDec encoder =
