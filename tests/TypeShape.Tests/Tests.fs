@@ -662,13 +662,53 @@ let ``Empty should update definitions on new registrations`` () =
 
     test <@ empty<Empty<int> * Empty<string>> = (Empty -1, Empty "otherString") @>
 
+
+[<Fact>]
+let ``Shape-Poco should not match primitives`` () =
+    test 
+        <@
+            match shapeof<int> with
+            | Shape.Poco _ -> false
+            | _ -> true
+        @>
+
+[<Fact>]
+let ``Shape-Poco should not match enums`` () =
+    test 
+        <@
+            match shapeof<System.Reflection.BindingFlags> with
+            | Shape.Poco _ -> false
+            | _ -> true
+        @>
+
+[<Fact>]
+let ``Shape-Poco should not match interfaces`` () =
+    test 
+        <@
+            match shapeof<ITypeVisitor<int>> with
+            | Shape.Poco _ -> false
+            | _ -> true
+        @>
+
 #if !NETCOREAPP2_2
 [<Fact>]
-let ``Reproduce Issue 23`` () =
+let ``Shape-Poco should handle write-only properties`` () =
     // https://github.com/eiriktsarpalis/TypeShape/issues/23
-    match shapeof<System.Security.PermissionSet> with
-    | Shape.Poco p -> p
-    | _ -> Unchecked.defaultof<_>
+    test
+        <@
+            match shapeof<System.Security.PermissionSet> with
+            | Shape.Poco _ -> true
+            | _ -> false
+        @>
+
+[<Fact>]
+let ``Shape-Poco should not match MarshalByRef types`` () =
+    test 
+        <@
+            match shapeof<System.MarshalByRefObject> with
+            | Shape.Poco _ -> false
+            | _ -> true
+        @>
 #endif
 
 module GenericClone =

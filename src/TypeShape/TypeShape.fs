@@ -1877,19 +1877,28 @@ module Shape =
 
     /// Recognizes POCO shapes, .NET types that are either classes or structs
     let (|Poco|_|) (s : TypeShape) =
-        if s.Type.IsPrimitive then None
-        elif s.Type.IsClass || s.Type.IsValueType then
-            let isNullable = 
+        let isPocoClass (t : Type) = 
+            t.IsClass && 
+            not t.IsAbstract && 
+            not t.IsMarshalByRef
+
+        let isPocoStruct (t : Type) =
+            t.IsValueType &&
+            not t.IsPrimitive &&
+            not t.IsEnum
+
+        if isPocoClass s.Type || isPocoStruct s.Type then
+            let isNullable () =
                 match s.ShapeInfo with
                 | Generic(td,_) -> td = typedefof<Nullable<_>>
                 | _ -> false
 
-            let hasPointers = 
-                s.Type.GetFields allInstanceMembers 
+            let hasPointers () =
+                s.Type.GetFields allInstanceMembers
                 |> Seq.map (fun f -> f.FieldType)
                 |> Seq.exists (fun t -> t.IsByRef || t.IsPointer)
 
-            if isNullable || hasPointers then None // do not recognize if type has pointer fields
+            if isNullable() || hasPointers() then None // do not recognize if type has pointer fields
             else
                 Activator.CreateInstanceGeneric<ShapePoco<_>>([|s.Type|], [||])
                 :?> IShapePoco
