@@ -1400,7 +1400,9 @@ and [<Sealed>] ShapePoco<'Poco> private () =
 
     let properties =
         typeof<'Poco>.GetProperties(allInstanceMembers)
-        |> Array.map (fun p -> mkMemberUntyped<'Poco> p.Name p [|p|])
+        |> Seq.filter (fun p -> p.CanRead)
+        |> Seq.map (fun p -> mkMemberUntyped<'Poco> p.Name p [|p|])
+        |> Seq.toArray
 
     /// True iff POCO is a struct
     member __.IsStruct = isStruct

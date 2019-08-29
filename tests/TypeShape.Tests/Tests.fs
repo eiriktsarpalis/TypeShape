@@ -662,6 +662,15 @@ let ``Empty should update definitions on new registrations`` () =
 
     test <@ empty<Empty<int> * Empty<string>> = (Empty -1, Empty "otherString") @>
 
+#if !NETCOREAPP2_2
+[<Fact>]
+let ``Reproduce Issue 23`` () =
+    // https://github.com/eiriktsarpalis/TypeShape/issues/23
+    match shapeof<System.Security.PermissionSet> with
+    | Shape.Poco p -> p
+    | _ -> Unchecked.defaultof<_>
+#endif
+
 module GenericClone =
 
     [<Fact>]
