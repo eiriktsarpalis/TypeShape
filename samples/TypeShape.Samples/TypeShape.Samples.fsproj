@@ -23,6 +23,7 @@
     <Compile Include="HKT\Empty.fs" />
     <Compile Include="HKT\Clone.fs" />
     <Compile Include="HKT\Pickler.fs" />
+    <Compile Include="HKT\Typeclassopedia.fs" />
     <None Include="test.fsx" />
     <None Include="paket.references" />
   </ItemGroup>

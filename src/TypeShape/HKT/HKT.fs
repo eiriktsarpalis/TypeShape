@@ -5,7 +5,7 @@
 open System.ComponentModel
 
 /// HKT encoding that encapsulates an underlying materialized value.
-[<Struct>]
+[<Struct; NoEquality; NoComparison>]
 type App<'F, 't> = private App of payload : obj
 /// HKT encoding that encapsulates an underlying materialized value.
 and  App<'F, 't1, 't2> = App<'F, Tup<'t1, 't2>>
