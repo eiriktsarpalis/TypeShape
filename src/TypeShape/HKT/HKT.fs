@@ -5,19 +5,20 @@
 open System.ComponentModel
 
 /// HKT encoding that encapsulates an underlying materialized value.
-[<Struct; StructuredFormatDisplay("{Payload}"); NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type App<'F, 't> [<EditorBrowsable(EditorBrowsableState.Never)>] (payload : obj) =
     [<EditorBrowsable(EditorBrowsableState.Never)>] 
     member __.Payload = payload
+    override __.ToString() = match payload with null -> "null" | p -> p.ToString()
 
 /// HKT encoding that encapsulates an underlying materialized value.
-and  App<'F, 't1, 't2> = App<'F, Tup<'t1, 't2>>
+and App<'F, 't1, 't2> = App<'F, Tup<'t1, 't2>>
 /// HKT encoding that encapsulates an underlying materialized value.
-and  App<'F, 't1, 't2, 't3> = App<'F, Tup<'t1, 't2, 't3>>
+and App<'F, 't1, 't2, 't3> = App<'F, Tup<'t1, 't2, 't3>>
 /// HKT encoding that encapsulates an underlying materialized value.
-and  App<'F, 't1, 't2, 't3, 't4> = App<'F, Tup<'t1, 't2, 't3, 't4>>
+and App<'F, 't1, 't2, 't3, 't4> = App<'F, Tup<'t1, 't2, 't3, 't4>>
 /// HKT encoding that encapsulates an underlying materialized value.
-and  App<'F, 't1, 't2, 't3, 't4, 't5> = App<'F, Tup<'t1, 't2, 't3, 't4, 't5>>
+and App<'F, 't1, 't2, 't3, 't4, 't5> = App<'F, Tup<'t1, 't2, 't3, 't4, 't5>>
 
 // uninhabited types encoding type-level tuples
 and [<EditorBrowsable(EditorBrowsableState.Never)>] Tup<'T1, 'T2> = class end
