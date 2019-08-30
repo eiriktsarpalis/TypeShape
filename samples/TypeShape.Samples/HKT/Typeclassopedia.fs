@@ -70,17 +70,13 @@ type Option() =
     override __.Return x = HKT.pack (Some x)
     override __.Bind (HKT.Unpack x, f) = HKT.pack (Option.bind (f >> HKT.unpack) x)
 
-
 let o1 = HKT.pack (Some 42) : App<Option, _>
-let o2 = HKT.pack None : App<Option, _>
+let o2 = HKT.pack None : App<Option, string>
 
 functorFlow o1 |> HKT.unpack
-functorFlow o2 |> HKT.unpack
-
+appZip o1 o1 |> HKT.unpack
 appZip o1 o2 |> HKT.unpack
-
 monadExpr o1 |> HKT.unpack
-monadExpr o2 |> HKT.unpack
 
 // List monad
 
