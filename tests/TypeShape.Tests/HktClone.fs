@@ -20,7 +20,7 @@ type IClonerBuilder =
 let private cache = new TypeShape.Core.Utils.TypeCache()
 
 let fold (builder : IClonerBuilder) =
-    FoldContext.fold cache
+    FoldContext.fold (Some cache)
         { new IFoldContext<Cloner> with 
             member __.Fold<'t> self =
                 match shapeof<'t> with

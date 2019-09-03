@@ -24,12 +24,9 @@ and IDelayBuilder<'F> =
 module FoldContext =
 
     /// Builds a generic program using supplied folding context.
-    /// Folding is performed recursively and all intermediate results are cached.
-    let fold<'F, 't> (cache : TypeCache) (folder : IFoldContext<'F>) : App<'F, 't> =
-        let mutable f = Unchecked.defaultof<App<'F, 't>>
-        if cache.TryGetValue(&f) then f
-        else
-            use ctx = cache.CreateGenerationContext()
+    /// Folding is performed recursively. Optionally accepts a cache instance for storing generated programs.
+    let fold<'F, 't> (cache : TypeCache option) (folder : IFoldContext<'F>) : App<'F, 't> =
+        let resolve (ctx : TypeGenerationContext) =
             let rec self =
                 { new IGenericProgram<'F> with 
                     member __.Resolve<'a>() = 
@@ -41,6 +38,14 @@ module FoldContext =
 
             self.Resolve()
 
+        match cache with
+        | None -> resolve (new TypeGenerationContext())
+        | Some cache ->
+            let mutable f = Unchecked.defaultof<App<'F, 't>>
+            if cache.TryGetValue(&f) then f
+            else
+                use ctx = cache.CreateGenerationContext()
+                resolve ctx
 
 /// TypeShape-driven generic program folding 
 module Fold =
