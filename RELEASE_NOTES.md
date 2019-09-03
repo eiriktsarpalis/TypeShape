@@ -1,6 +1,7 @@
 ### 8.0.0
 * Add higher-kinded type DSLs for type-safe generic programming.
 * Make shapeof<> operator return typed results and deprecate tshapeof.
+* Make TypeShape<T> instances singletons.
 
 ### 7.1.0
 * Expose IsAnonymousRecord property for F# record shapes.
