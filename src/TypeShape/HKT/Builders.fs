@@ -118,6 +118,9 @@ type IKeyValuePairBuilder<'F> =
 type IFSharpOptionBuilder<'F> =
     abstract Option : App<'F, 't> -> App<'F, 't option>
 
+type ITuple2Builder<'F> =
+    abstract Tuple2 : App<'F, 't> -> App<'F, 's> -> App<'F, 't * 's>
+
 type IFSharpListBuilder<'F> =
     abstract List : App<'F, 't> -> App<'F, 't list>
 

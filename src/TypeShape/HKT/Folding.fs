@@ -312,6 +312,24 @@ module Fold =
                     builder.Func a b |> unwrap |> Some 
             }
         | _ -> None
+
+    let (|Tuple2|_|) (builder : ITuple2Builder<'F>) (self : IGenericProgram<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.Tuple s when s.Elements.Length = 2 ->
+            let l,r = s.Elements.[0].Member, s.Elements.[1].Member
+
+            l.Accept {
+                new ITypeVisitor<App<'F, 't> option> with
+                    member __.Visit<'a> () =
+                        r.Accept {
+                            new ITypeVisitor<App<'F, 't> option> with
+                                member __.Visit<'b> () =
+                                    let la = self.Resolve<'a>()
+                                    let ra = self.Resolve<'b>()
+                                    builder.Tuple2 la ra |> unwrap |> Some
+                        }
+            }
+        | _ -> None
     
     //------------------------------------
     // Algebraic Data Types
