@@ -12,6 +12,7 @@ module internal TypeShape
 
 open System
 open System.Collections.Generic
+open System.ComponentModel
 open System.Runtime.Serialization
 open System.Reflection
 
@@ -37,17 +38,17 @@ type ITypeVisitor<'R> =
 /// Encapsulates a type variable that can be accessed using type shape visitors
 [<AbstractClass>]
 type TypeShape =
-    [<CompilerMessage("TypeShape constructor should not be consumed.", 4224)>]
+    [<CompilerMessage("TypeShape constructor should not be consumed.", 4224); EditorBrowsable(EditorBrowsableState.Never)>]
     internal new () = { }
     abstract Type : Type
     abstract ShapeInfo : TypeShapeInfo
     abstract Accept : ITypeVisitor<'R> -> 'R
-    override s.ToString() = sprintf "TypeShape [%O]" s.Type
 
 /// Encapsulates a type variable that can be accessed using type shape visitors
 [<Sealed>]
-type TypeShape<'T> () =
+type TypeShape<'T> private () =
     inherit TypeShape()
+
     static let shapeInfo =
         let t = typeof<'T>
         if t.IsEnum then
@@ -58,6 +59,9 @@ type TypeShape<'T> () =
             Generic(t.GetGenericTypeDefinition(), t.GetGenericArguments())
         else
             Basic t
+
+    [<EditorBrowsable(EditorBrowsableState.Never)>]
+    static member val internal Instance = new TypeShape<'T>()
         
     override __.Type = typeof<'T>
     override __.ShapeInfo = shapeInfo
@@ -128,7 +132,8 @@ module private TypeShapeImpl =
         elif typ.IsByRef || typ.IsPointer then raise <| UnsupportedShape typ
         else 
             let gt = genShapeTy.MakeGenericType [|typ|]
-            Activator.CreateInstance gt :?> TypeShape
+            let instance = gt.GetProperty("Instance", BindingFlags.NonPublic ||| BindingFlags.Static)
+            instance.GetValue(null) :?> TypeShape
 
 type Activator with
     /// Generic edition of the activator method which support type parameters and private types
@@ -162,10 +167,10 @@ type TypeShape with
     /// <summary>
     ///     Creates a type shape instance for given type
     /// </summary>
-    static member Create<'T>() : TypeShape<'T> = new TypeShape<'T>()
+    static member Create<'T>() : TypeShape<'T> = TypeShape<'T>.Instance
 
 /// Creates a type shape instance for given type
-let shapeof<'T> = TypeShape.Create<'T>()
+let shapeof<'T> = TypeShape<'T>.Instance
 
 //------------------------
 // Section: Core BCL types
