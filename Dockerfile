@@ -1,4 +1,4 @@
-FROM eiriktsarpalis/dotnet-sdk-mono:3.0.100-buster
+FROM eiriktsarpalis/dotnet-sdk-mono:2.2.401-stretch
 
 RUN dotnet tool install -g fake-cli
 
