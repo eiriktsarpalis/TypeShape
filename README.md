@@ -200,7 +200,7 @@ type IMyTypesBuilder<'F> =
 ```
 
 The interface `MyTypeBuilder<'F>` denotes a "higher-kinded" generic program builder
-which supports combinations of boolean, integer, string, optional, list and tuple types. 
+which supports combinations of boolean, integer, string, optional, list and pair types. 
 
 Next, we need to define how interface implementations are to be folded:
 
