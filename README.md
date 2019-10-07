@@ -178,6 +178,83 @@ See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/maste
 * [Gmap.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/src/TypeShape/Applications/Combinators.fs) A gmap implementation.
 * [hashcode-staged.fs](samples/TypeShape.Samples/hashcode-staged.fs) Staged generic hashcode generator.
 
+### Using the Higher-Kinded Type API (Experimental)
+
+As of TypeShape 8 it is possible to avail of an experimental higher-kinded type flavour of the api,
+which can be used to author fully type-safe programs for most common applications.
+Please see [my original article](https://eiriktsarpalis.wordpress.com/2019/07/02/applying-the-tagless-final-pattern-in-f-generic-programs/) on the subject for background and motivation.
+
+To use the new approach, we first need to specify which types we would like our generic program to support:
+
+```fsharp
+open TypeShape.HKT
+
+type IMyTypesBuilder<'F> =
+    inherit IBoolBuilder<'F>
+    inherit IInt32Builder<'F>
+    inherit IStringBuilder<'F>
+
+    inherit IFSharpOptionBuilder<'F>
+    inherit IFSharpListBuilder<'F>
+    inherit ITuple2Builder<'F>
+```
+
+The interface `MyTypeBuilder<'F>` denotes a "higher-kinded" generic program builder
+which supports combinations of boolean, integer, string, optional, list and tuple types. 
+
+Next, we need to define how interface implementations are to be folded:
+
+```fsharp
+let mkGenericProgram (builder : IMyTypesBuilder<'F>) =
+    let rec self =
+        { new IGenericProgram<'F> with
+            member __.Resolve<'a> () : App<'F, 'a> = 
+                match shapeof<'a> with
+                | Fold.Bool builder r -> r
+                | Fold.Int32 builder r -> r
+                | Fold.String builder r -> r
+                | Fold.Tuple2 builder self r -> r
+                | Fold.FSharpOption builder self r -> r
+                | Fold.FSharpList builder self r -> r
+                | _ -> failwithf "I do not know how to fold type %O" typeof<'a> }
+
+    self
+```
+
+This piece of boilerplate composes built-in `Fold.*` active patterns,
+which contain folding logic for the individual builders inherited by the interface.
+
+Let's now provide a pretty-printer implementation for our interface:
+
+```fsharp
+// Higher-Kinded encoding
+type PrettyPrinter =
+    static member Assign(_ : App<PrettyPrinter, 'a>, _ : 'a -> string) = ()
+
+// Implementing the interface
+let prettyPrinterBuilder =
+    { new IMyTypesBuilder<PrettyPrinter> with
+        member __.Bool () = HKT.pack (function false -> "false" | true -> "true")
+        member __.Int32 () = HKT.pack (sprintf "%d")
+        member __.String () = HKT.pack (sprintf "\"%s\"")
+
+        member __.Option (HKT.Unpack elemPrinter) = HKT.pack(function None -> "None" | Some a -> sprintf "Some(%s)" (elemPrinter a))
+        member __.Tuple2 (HKT.Unpack left) (HKT.Unpack right) = HKT.pack(fun (a,b) -> sprintf "(%s, %s)" (left a) (right b))
+        member __.List (HKT.Unpack elemPrinter) = HKT.pack(Seq.map elemPrinter >> String.concat "; " >> sprintf "[%s]") }
+```
+
+Putting it all together gives us a working pretty-printer:
+
+```fsharp
+let prettyPrint<'t> : 't -> string = (mkGenericProgram prettyPrinterBuilder).Resolve<'t> () |> HKT.unpack
+
+prettyPrint 42
+prettyPrint (Some false)
+prettyPrint (Some "test", [Some 42; None; Some -1])
+```
+
+Please check the [samples/HKT](https://github.com/eiriktsarpalis/TypeShape/tree/23dabf9e863464c08a3ca82ad452695615f62708/samples/TypeShape.Samples/HKT) folder for real-world examples of the above.
+
 ### Projects using TypeShape
 
 * [FsPickler](https://github.com/mbraceproject/FsPickler/blob/c5b73fc48fa313c66eaeb8c79897253de0605d34/src/FsPickler/PicklerGeneration/PicklerGenerator.fs#L38)
