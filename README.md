@@ -180,7 +180,7 @@ See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/maste
 
 ### Using the Higher-Kinded Type API (Experimental)
 
-As of TypeShape 8 it is possible to avail of an experimental higher-kinded type flavour of the api,
+As of [TypeShape 8](https://github.com/eiriktsarpalis/TypeShape/releases/tag/8.0.0) it is possible to avail of an experimental higher-kinded type flavour of the api,
 which can be used to author fully type-safe programs for most common applications.
 Please see [my original article](https://eiriktsarpalis.wordpress.com/2019/07/02/applying-the-tagless-final-pattern-in-f-generic-programs/) on the subject for background and motivation.
 
