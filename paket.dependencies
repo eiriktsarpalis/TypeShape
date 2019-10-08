@@ -44,6 +44,6 @@ group Build
   nuget Fake.Core.Target        ~> 5.16.0
   nuget Fake.IO.FileSystem      ~> 5.16.0
   nuget Fake.DotNet.Cli	        ~> 5.16.0
-  nuget Fake.DotNet.Paket       ~> 5.16.0
+  nuget Fake.DotNet.Paket          5.16.0 # pin due mono issue
   nuget Fake.Tools.Git          ~> 5.16.0
   nuget Fake.Api.Github         ~> 5.16.0
