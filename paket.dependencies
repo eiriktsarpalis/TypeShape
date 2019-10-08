@@ -10,7 +10,6 @@ nuget FSharp.Core >= 4.3.2 lowest_matching: true
 nuget System.Reflection.Emit.Lightweight >= 4.3 lowest_matching: true
 
 nuget Microsoft.SourceLink.GitHub prerelease copy_local:true
-clitool dotnet-sourcelink
 
 # testing dependencies; NB intentionally kept in Main group
 nuget Microsoft.NET.Test.Sdk ~> 15.8

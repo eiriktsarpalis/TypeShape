@@ -6,5 +6,4 @@ Microsoft.Net.Test.SDK
 FsCheck
 FsCheck.Xunit
 Unquote
-dotnet-sourcelink
 FSharp.Quotations.Evaluator

@@ -195,3 +195,6 @@ xunit*.html
 
 # exclude artifacts folder
 artifacts/
+
+# exclude tools folder
+tools/

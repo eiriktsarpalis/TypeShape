@@ -120,14 +120,13 @@ Target.create "NuGet.Bundle" (fun _ ->
 )
 
 Target.create "NuGet.ValidateSourceLink" (fun _ ->
-    for nupkg in !! (artifactsDir @@ "*.nupkg") do
-        let p =
-            DotNet.exec
-                (fun p -> { p with WorkingDirectory =  __SOURCE_DIRECTORY__ @@ "tests" @@ "TypeShape.Tests" })
-                "sourcelink"
-                (sprintf "test %s" nupkg)
+    Directory.ensure "tools"
+    let p = DotNet.exec id "tool" "update --tool-path tools sourcelink"
+    if not p.OK then failwithf "failed to install sourcelink cli tool"
 
-        if not p.OK then failwithf "failed to validate sourcelink: %A" p.Errors
+    for nupkg in !! (artifactsDir @@ "*.nupkg") do
+        let p = Shell.Exec("sourcelink", (sprintf "test %s" nupkg), "tools")
+        if p <> 0 then failwithf "failed to validate sourcelink for %s" nupkg
 )
 
 Target.create "NuGet.Push" (fun _ ->
