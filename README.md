@@ -206,19 +206,16 @@ Next, we need to define how interface implementations are to be folded:
 
 ```fsharp
 let mkGenericProgram (builder : IMyTypesBuilder<'F>) =
-    let rec self =
-        { new IGenericProgram<'F> with
-            member __.Resolve<'a> () : App<'F, 'a> = 
-                match shapeof<'a> with
-                | Fold.Bool builder r -> r
-                | Fold.Int32 builder r -> r
-                | Fold.String builder r -> r
-                | Fold.Tuple2 builder self r -> r
-                | Fold.FSharpOption builder self r -> r
-                | Fold.FSharpList builder self r -> r
-                | _ -> failwithf "I do not know how to fold type %O" typeof<'a> }
-
-    self
+    { new IGenericProgram<'F> with
+        member this.Resolve<'a> () : App<'F, 'a> = 
+            match shapeof<'a> with
+            | Fold.Bool builder r -> r
+            | Fold.Int32 builder r -> r
+            | Fold.String builder r -> r
+            | Fold.Tuple2 builder this r -> r
+            | Fold.FSharpOption builder this r -> r
+            | Fold.FSharpList builder this r -> r
+            | _ -> failwithf "I do not know how to fold type %O" typeof<'a> }
 ```
 
 This piece of boilerplate composes built-in `Fold.*` active patterns,
