@@ -120,12 +120,19 @@ Target.create "NuGet.Bundle" (fun _ ->
 )
 
 Target.create "NuGet.ValidateSourceLink" (fun _ ->
-    Directory.ensure "tools"
-    let p = DotNet.exec id "tool" "update --tool-path tools sourcelink"
-    if not p.OK then failwithf "failed to install sourcelink cli tool"
+    do
+        let toolPath = __SOURCE_DIRECTORY__ @@ "tools"
+        Directory.ensure toolPath
+        let p = DotNet.exec id "tool" (sprintf "update --tool-path %s sourcelink" toolPath)
+        if not p.OK then failwith "failed to install sourcelink cli tool"
+        
+        // include tools folder to PATH
+        let sep = if Environment.isWindows then ";" else ":"
+        let path = Environment.GetEnvironmentVariable("PATH")
+        Environment.SetEnvironmentVariable("PATH", toolPath + sep + path)
 
     for nupkg in !! (artifactsDir @@ "*.nupkg") do
-        let p = Shell.Exec("sourcelink", (sprintf "test %s" nupkg), "tools")
+        let p = Shell.Exec("sourcelink", args = sprintf "test %s" nupkg)
         if p <> 0 then failwithf "failed to validate sourcelink for %s" nupkg
 )
 
