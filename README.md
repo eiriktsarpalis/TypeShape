@@ -220,6 +220,7 @@ let mkGenericProgram (builder : IMyTypesBuilder<'F>) =
 
 This piece of boilerplate composes built-in `Fold.*` active patterns,
 which contain folding logic for the individual builders inherited by the interface.
+Note that the order of composition can be significant (e.g. folding with `FSharpOption` before `FSharpUnion`).
 
 Let's now provide a pretty-printer implementation for our interface:
 
