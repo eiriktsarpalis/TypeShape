@@ -3,6 +3,9 @@
 open TypeShape.Core
 open TypeShape.HKT
 
+// Interface defining the context of supported types in the samples
+// Contains common F# values, DTOs with getters and setters
+// and supports recursive types via IDelayBuilder.
 type ITypeBuilder<'F, 'G> =
     inherit IFSharpTypeBuilder<'F, 'G>
     inherit ICliMutableBuilder<'F, 'G>
@@ -11,6 +14,7 @@ type ITypeBuilder<'F, 'G> =
 module TypeBuilder =
     let private cache = new TypeShape.Core.Utils.TypeCache()
 
+    /// folds ITypeBuilder instances using caching of intermediate generated values
     let fold (builder : ITypeBuilder<'F, 'G>) =
         FoldContext.fold (Some cache)
             { new IFoldContext<'F> with 

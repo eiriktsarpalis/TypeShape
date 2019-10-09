@@ -6,6 +6,7 @@ open System
 type Empty =
     static member Assign(_ : App<Empty, 'a>, _ : unit -> 'a) = ()
 
+// HKT encoding for field accessor
 type EmptyFieldUpdater =
     static member Assign(_ : App<EmptyFieldUpdater, 'a>, _ : 'a -> 'a) = ()
 

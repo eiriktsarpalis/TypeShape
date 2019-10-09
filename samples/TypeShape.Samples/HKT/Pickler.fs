@@ -20,21 +20,25 @@ and Token =
     | StartArray
     | EndArray
 
-//--------------------------------------------------
-
-and Pickler =
-    static member Assign(_ : App<Pickler, 'a>, _ : Pickler<'a>) = ()
-
-
-type FieldPickler<'T> = 
+// Pickler for a field of type 'T which has been existentially packed
+and FieldPickler<'T> = 
     { 
         label : string
         fpickle : (Token -> unit) -> 'T -> unit
         funpickle : (bool -> Token) -> 'T -> 'T
     }
 
-and FieldPickler =
+//--------------------------------------------------
+
+// HKT encoding for pickler
+type Pickler =
+    static member Assign(_ : App<Pickler, 'a>, _ : Pickler<'a>) = ()
+
+// HKT encoding for field pickler
+type FieldPickler =
     static member Assign(_ : App<FieldPickler, 'a>, _ : FieldPickler<'a>) = ()
+
+//--------------------------------------------------
 
 type PickerBuilder() =
     let invalidTok tok = failwithf "invalid token sequence %A" tok

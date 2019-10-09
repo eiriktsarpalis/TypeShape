@@ -6,6 +6,7 @@ open System
 type Cloner =
     static member Assign(_ : App<Cloner, 'a>, _ : 'a -> 'a) = ()
 
+// HKT encoding for field cloning accessor
 type FieldCloner =
     static member Assign(_ : App<FieldCloner, 'a>, _ : 'a -> 'a -> 'a) = ()
 
