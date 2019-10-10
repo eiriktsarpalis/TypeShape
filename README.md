@@ -17,7 +17,7 @@ See my [slides](http://eiriktsarpalis.github.io/typeshape/) for a more thorough 
 To incorporate TypeShape in your project place the following line in your
 `paket.dependencies` file:
 ```
-github eiriktsarpalis/TypeShape:7.1 src/TypeShape/TypeShape.fs
+github eiriktsarpalis/TypeShape:8.0 src/TypeShape/TypeShape.fs
 ```
 and in `paket.references`:
 ```
@@ -175,8 +175,8 @@ See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/maste
 * [Printer.fs](samples/TypeShape.Samples/printer.fs) Pretty printer generator for common F# types.
 * [Parser.fs](samples/TypeShape.Samples/parser.fs) Parser generator for common F# types using FParsec.
 * [Equality-Comparer.fs](samples/TypeShape.Samples/equality-comparer.fs) Equality comparer generator for common F# types.
-* [Gmap.fsx](https://github.com/eiriktsarpalis/TypeShape/blob/master/src/TypeShape/Applications/Combinators.fs) A gmap implementation.
 * [hashcode-staged.fs](samples/TypeShape.Samples/hashcode-staged.fs) Staged generic hashcode generator.
+* [Gmap](https://github.com/eiriktsarpalis/TypeShape/blob/master/src/TypeShape/Applications/Combinators.fs#L304) There are set of `gmap` related functions within the `TypeShape.Generic` module in the Nuget package. 
 
 ### Using the Higher-Kinded Type API (Experimental)
 
@@ -258,7 +258,7 @@ Please check the [samples/HKT](https://github.com/eiriktsarpalis/TypeShape/tree/
 * [FsPickler](https://github.com/mbraceproject/FsPickler/blob/c5b73fc48fa313c66eaeb8c79897253de0605d34/src/FsPickler/PicklerGeneration/PicklerGenerator.fs#L38)
 * [FSharp.AWS.DynamoDB](https://github.com/fsprojects/FSharp.AWS.DynamoDB/blob/55470a0cc8b1a54d14571f059bd2b5721f2495c7/src/FSharp.AWS.DynamoDB/Picklers/PicklerResolver.fs#L23)
 * [Logary](https://github.com/logary/logary)
-* [Equinox](https://github.com/jet/equinox)
+* [Equinox/FsCodec](https://github.com/jet/FsCodec)
 * [FsConfig](https://github.com/demystifyfp/FsConfig)
 
 ### Related Work
