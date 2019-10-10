@@ -1,5 +1,7 @@
 module Printer
 
+#nowarn "20"
+
 open System
 open TypeShape.Core
 open TypeShape.Core.Utils

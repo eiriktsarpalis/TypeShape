@@ -198,3 +198,6 @@ artifacts/
 
 # exclude tools folder
 tools/
+
+# BenchmarkDotNet artifacts
+BenchmarkDotNet.Artifacts
