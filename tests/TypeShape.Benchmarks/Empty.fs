@@ -60,7 +60,7 @@ type EmptyBenchmark() =
 
     [<Benchmark(Description = "Baseline Empty", Baseline = true)>]
     member __.Baseline() = baselineEmpty() |> ignore
-    [<Benchmark(Description = "Reflection Empty", Baseline = true)>]
+    [<Benchmark(Description = "Reflection Empty")>]
     member __.Reflection() = baselineEmpty() |> ignore
     [<Benchmark(Description = "TypeShape Empty")>]
     member __.TypeShape() = typeShapeEmpty() |> ignore
