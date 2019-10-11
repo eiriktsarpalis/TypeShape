@@ -1,110 +1,152 @@
 ﻿module TypeShape.HKT.PrettyPrinter
 
+open System
+open System.Text
+
+#nowarn "20"
+
 // HKT encoding for prettyprinter types
 type PrettyPrinter =
-    static member Assign(_ : App<PrettyPrinter, 'a>, _ : 'a -> string) = ()
+    static member Assign(_ : App<PrettyPrinter, 'a>, _ : Action<StringBuilder, 'a>) = ()
+
+[<AutoOpen>]
+module private Helpers =
+
+    type Act<'a> = Action<StringBuilder, 'a>
+
+    let inline append (sb : StringBuilder) (value : string) = sb.Append(value) |> ignore
+    let inline appendSeq (sb : StringBuilder) xs (f : Action<StringBuilder, 'a>) =
+        let mutable first = true
+        for x in xs do
+            if first then first <- false else sb.Append "; " |> ignore
+            f.Invoke(sb, x)
 
 type PrettyPrinterBuilder() =
     interface ITypeBuilder<PrettyPrinter, PrettyPrinter> with
-        member __.Bool () = HKT.pack(function true -> "true" | false -> "false")
-        member __.Byte () = HKT.pack(fun i -> i.ToString())
-        member __.SByte() = HKT.pack(fun i -> i.ToString())
-        member __.Char () = HKT.pack(fun i -> i.ToString())
+        member __.Bool () = HKT.pack(Act(fun s b -> append s (if b then "true" else "false")))
+        member __.Byte () = HKT.pack(Act(fun s b -> s.Append(b).Append("uy") |> ignore))
+        member __.SByte() = HKT.pack(Act(fun s b -> s.Append(b).Append("y") |> ignore))
+        member __.Char () = HKT.pack(Act(fun s c -> s.Append('\'').Append(c).Append('\'') |> ignore))
         
-        member __.Int16 () = HKT.pack(fun i -> i.ToString())
-        member __.Int32 () = HKT.pack(fun i -> i.ToString())
-        member __.Int64 () = HKT.pack(fun i -> i.ToString())
+        member __.Int16 () = HKT.pack(Act(fun s i -> s.Append(i).Append('s') |> ignore))
+        member __.Int32 () = HKT.pack(Act(fun s i -> s.Append(i) |> ignore))
+        member __.Int64 () = HKT.pack(Act(fun s i -> s.Append(i).Append('L') |> ignore))
 
-        member __.UInt16 () = HKT.pack(fun i -> i.ToString())
-        member __.UInt32 () = HKT.pack(fun i -> i.ToString())
-        member __.UInt64 () = HKT.pack(fun i -> i.ToString())
+        member __.UInt16 () = HKT.pack(Act(fun s i -> s.Append(i).Append("us") |> ignore))
+        member __.UInt32 () = HKT.pack(Act(fun s i -> s.Append(i).Append('u' ) |> ignore))
+        member __.UInt64 () = HKT.pack(Act(fun s i -> s.Append(i).Append("uL") |> ignore))
 
-        member __.Single () = HKT.pack(fun i -> i.ToString())
-        member __.Double () = HKT.pack(fun i -> i.ToString())
-        member __.Decimal() = HKT.pack(fun i -> i.ToString())
-        member __.BigInt () = HKT.pack(fun i -> i.ToString())
+        member __.Single () = HKT.pack(Act(fun s f -> s.Append(f).Append('f') |> ignore))
+        member __.Double () = HKT.pack(Act(fun s f -> s.Append(f) |> ignore))
+        member __.Decimal() = HKT.pack(Act(fun s f -> s.Append(f).Append('M') |> ignore))
+        member __.BigInt () = HKT.pack(Act(fun s f -> s.Append(f).Append('I') |> ignore))
 
-        member __.Unit() = HKT.pack(fun () -> "()")
-        member __.String () = HKT.pack(fun s -> sprintf "\"%s\"" s)
-        member __.Guid () = HKT.pack(fun g -> g.ToString("N"))
+        member __.Unit() = HKT.pack(Act(fun s () -> append s "()"))
+        member __.String () = HKT.pack(Act(fun s str -> s.Append('"').Append(str).Append('"') |> ignore))
+        member __.Guid () = HKT.pack(Act(fun s g -> s.Append(g) |> ignore))
 
-        member __.TimeSpan () = HKT.pack(fun t -> t.ToString())
-        member __.DateTime () = HKT.pack(fun d -> d.ToString("O"))
-        member __.DateTimeOffset() = HKT.pack(fun d -> d.ToString("O"))
+        member __.TimeSpan () = HKT.pack(Act(fun s t -> s.Append(t) |> ignore))
+        member __.DateTime () = HKT.pack(Act(fun s d -> s.Append(d) |> ignore))
+        member __.DateTimeOffset() = HKT.pack(Act(fun s d -> s.Append(d) |> ignore))
 
-        member __.Nullable (HKT.Unpack ep) = HKT.pack (function x when x.HasValue -> ep x.Value | _ -> "null")
-        member __.Enum _ = HKT.pack (fun e -> e.ToString())
-        member __.Array (HKT.Unpack ep) = HKT.pack(fun xs -> xs |> Seq.map ep |> String.concat "; " |> sprintf "[|%s|]")
+        member __.Nullable (HKT.Unpack ep) = HKT.pack(Act(fun s x -> if x.HasValue then ep.Invoke(s, x.Value) else append s "null"))
+        member __.Enum _ = HKT.pack(Act(fun s e -> s.Append e |> ignore))
+        member __.Array (HKT.Unpack ep) = HKT.pack(Act(fun s xs -> append s "[|" ; appendSeq s xs ep ; append s "|]"))
 
-        member __.Option (HKT.Unpack ep) = HKT.pack(function None -> "None" | Some x -> sprintf "Some(%s)" (ep x))
-        member __.List (HKT.Unpack ep) = HKT.pack(fun xs -> xs |> Seq.map ep |> String.concat "; " |> sprintf "[%s]")
-        member __.Set (HKT.Unpack ep) = HKT.pack(fun xs -> xs |> Seq.map ep |> String.concat "; " |> sprintf "set [%s]")
+        member __.Option (HKT.Unpack ep) = HKT.pack(Act(fun s x -> match x with None -> append s "None" | Some x -> append s "Some(" ; ep.Invoke(s, x) ; append s ")"))
+        member __.List (HKT.Unpack ep) = HKT.pack(Act(fun s xs -> append s "[" ; appendSeq s xs ep ; append s "]"))
+        member __.Set (HKT.Unpack ep) = HKT.pack(Act(fun s xs -> append s "set [" ; appendSeq s xs ep ; append s "]"))
         member __.Map (HKT.Unpack kp) (HKT.Unpack vp) = 
-            HKT.pack(fun xs -> 
-                xs 
-                |> Map.toSeq 
-                |> Seq.map (fun (k,v) -> sprintf "(%s, %s)" (kp k) (vp v)) 
-                |> String.concat ";" 
-                |> sprintf "map [%s]")
+            HKT.pack(Act(fun s xs -> 
+                let mutable first = true
+                append s "map ["
+                for kv in xs do
+                    if first then first <- false else append s "; "
 
-        member __.Field shape (HKT.Unpack fp) = HKT.pack(fun t -> fp (shape.Get t))
+                    append s "("
+                    kp.Invoke(s, kv.Key)
+                    append s ", "
+                    vp.Invoke(s, kv.Value)
+                    append s ")"
+                append s "]"))
+
+        member __.Field shape (HKT.Unpack fp) = HKT.pack(Act(fun s t -> fp.Invoke(s, shape.Get t)))
 
         member __.Tuple shape (HKT.Unpacks fields) =
-            let fmtBracket =
-                if shape.IsStructTuple 
-                then sprintf "struct(%s)"
-                else sprintf "(%s)"
-
-            HKT.pack(fun tuple ->
-                fields
-                |> Seq.map (fun f -> f tuple)
-                |> String.concat ", "
-                |> fmtBracket)
+            let isStruct = shape.IsStructTuple
+            HKT.pack(Act(fun s tuple ->
+                if isStruct then append s "struct(" else append s "("
+                let mutable isFirst = true
+                for f in fields do
+                    if isFirst then isFirst <- false else append s ", "
+                    f.Invoke(s, tuple)
+                append s ")"))
 
         member __.Record shape (HKT.Unpacks fields) =
-            let fmtBracket = 
-                match shape.IsAnonymousRecord, shape.IsStructRecord with
-                | true, true -> sprintf "struct {| %s |}"
-                | true, false -> sprintf "{| %s |}"
-                | _ -> sprintf "{ %s }"
+            let isAnon = shape.IsAnonymousRecord
+            let isStruct = shape.IsStructRecord
+            let fieldLabels = 
+                shape.Fields 
+                |> Array.map (fun f -> f.Label)
+                |> Array.zip fields
 
-            HKT.pack(fun record ->
-                fields
-                |> Seq.zip shape.Fields
-                |> Seq.map (fun (f,fp) -> f.Label, fp record)
-                |> Seq.map (fun (label, value) -> sprintf "%s = %s" label value)
-                |> String.concat "; "
-                |> fmtBracket)
+            HKT.pack(Act(fun s record ->
+                if isAnon then 
+                    if isStruct 
+                    then append s "struct {|"
+                    else append s "{|"
+                else append s "{"
+
+                let mutable isFirst = true
+                for field,label in fieldLabels  do
+                    if isFirst then isFirst <- false else append s "; "
+                    append s label
+                    append s " = "
+                    field.Invoke(s, record)
+               
+                if isAnon then append s "|}" else append s "}"))
 
         member __.Union shape (HKT.Unpackss fieldss) =
-            HKT.pack (fun union ->
+            HKT.pack(Act(fun s union ->
                 let tag = shape.GetTag union
                 let case = shape.UnionCases.[tag]
-                if case.Fields.Length = 0 then case.CaseInfo.Name
-                else
-                    fieldss.[tag]
-                    |> Seq.map (fun f -> f union)
-                    |> String.concat ", "
-                    |> sprintf "%s(%s)" case.CaseInfo.Name)
+                append s case.CaseInfo.Name
+                if case.Fields.Length > 0 then
+                    append s "("
+                    let mutable first = true
+                    for f in fieldss.[tag] do
+                        if first then first <- false else append s ", "
+                        f.Invoke(s, union)
+                    append s ")"))
 
         member __.CliMutable shape (HKT.Unpacks fields) =
             let name = shape.DefaultCtorInfo.DeclaringType.Name
+            let fieldProps =
+                shape.Properties
+                |> Array.map (fun p -> p.Label)
+                |> Array.zip fields
 
-            HKT.pack(fun record ->
-                fields
-                |> Seq.zip shape.Properties
-                |> Seq.map (fun (f,fp) -> f.Label, fp record)
-                |> Seq.map (fun (label, value) -> sprintf "%s = %s" label value)
-                |> String.concat ", "
-                |> sprintf "%s(%s)" name)
+            HKT.pack(Act(fun s record ->
+                append s name
+                append s "("
+                let mutable first = true
+                for f, label in fieldProps do
+                    if first then first <- false else append s ", "
+                    append s label
+                    append s " = "
+                    f.Invoke(s, record)
+                append s ")"))
 
-        member __.Delay f = HKT.pack(fun x -> HKT.unpack f.Value x)
+        member __.Delay f = HKT.pack(Act(fun s x -> (HKT.unpack f.Value).Invoke(s, x)))
 
-let mkPrinter<'t> () : 't -> string = TypeBuilder.fold (PrettyPrinterBuilder()) |> HKT.unpack
+let mkPrinter<'t> () : 't -> string = 
+    let action = TypeBuilder.fold (PrettyPrinterBuilder()) |> HKT.unpack
+    fun t ->
+        let sb = new StringBuilder()
+        action.Invoke(sb, t)
+        sb.ToString()
 
 //----------------------
-
-open System
 
 type P = Z | S of P
 
