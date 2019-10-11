@@ -1,7 +1,7 @@
 # Performance
 
-TypeShape is a library intended for real-world applications, and as such performance is a significant aspect of its design.
-In this article I present a few benchmarks comparing genering programming approaches for common applications.
+TypeShape is intended for real-world applications, and as such performance is a significant aspect of its design.
+In this article I present a few benchmarks comparing generic programming approaches for common applications.
 
 Unless otherwise stated, all benchmarks use [BenchmarkDotNet](https://benchmarkdotnet.org/) running .NET Core 3.0 on Linux:
 ```
