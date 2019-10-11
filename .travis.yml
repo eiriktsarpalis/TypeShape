@@ -5,4 +5,5 @@ services:
   - docker
 
 script:
+  - make --version
   - ./docker-build.sh Bundle
