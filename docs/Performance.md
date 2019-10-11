@@ -130,3 +130,7 @@ For this benchmark we will be comparing the following implementations:
 |   &#39;Baseline Union Encoder&#39; |    701.4 ns |  13.95 ns |  24.06 ns |  1.00 |    0.00 |
 | &#39;Reflection Union Encoder&#39; | 10,867.8 ns | 210.06 ns | 196.49 ns | 15.66 |    0.62 |
 |  &#39;TypeShape Union Encoder&#39; |  2,363.3 ns |  45.65 ns |  50.74 ns |  3.43 |    0.17 |
+
+## FsPickler
+
+FsPickler serialization is driven by TypeShape. Please see the relevant [performance page](https://github.com/mbraceproject/FsPickler/wiki/.NET-Core-Benchmarks) in that repo.
