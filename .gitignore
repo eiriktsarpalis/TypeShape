@@ -201,3 +201,6 @@ tools/
 
 # BenchmarkDotNet artifacts
 BenchmarkDotNet.Artifacts
+
+# ionide
+.ionide/
