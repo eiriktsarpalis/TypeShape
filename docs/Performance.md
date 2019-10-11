@@ -100,12 +100,33 @@ It can be thought of as safe version of `Unchecked.defaultof<'T>` which can be u
 ```
 
 For the purposes of this benchmark, we'll be comparing:
-* [A bespoke implementation of `empty` for the tested type](https://github.com/eiriktsarpalis/TypeShape/blob/57845c26d55d2d0ac9b4a2ead47cee446dbd2db7/tests/TypeShape.Benchmarks/Empty.fs#L16-L17),
-* [The standard TypeShape implementation of `empty`](https://github.com/eiriktsarpalis/TypeShape/blob/57845c26d55d2d0ac9b4a2ead47cee446dbd2db7/src/TypeShape/Applications/Empty.fs).
+* [A bespoke implementation of `empty` for the tested type](https://github.com/eiriktsarpalis/TypeShape/blob/08a90e8a5bbb8fc1293037a10d0c6b8ef55c518e/tests/TypeShape.Benchmarks/Empty.fs#L20-L21),
+* [A reflection-based generic implementation of `empty`](https://github.com/eiriktsarpalis/TypeShape/blob/08a90e8a5bbb8fc1293037a10d0c6b8ef55c518e/tests/TypeShape.Benchmarks/Empty.fs#L23-L54),
+* [The standard TypeShape implementation of `empty`](https://github.com/eiriktsarpalis/TypeShape/blob/08a90e8a5bbb8fc1293037a10d0c6b8ef55c518e/src/TypeShape/Applications/Empty.fs).
 
 ### Results
 
-|            Method |     Mean |     Error |    StdDev | Ratio | RatioSD |
-|------------------ |---------:|----------:|----------:|------:|--------:|
-|  &#39;Baseline Empty&#39; | 113.8 ns |  2.670 ns |  7.872 ns |  1.00 |    0.00 |
-| &#39;TypeShape Empty&#39; | 856.5 ns | 16.596 ns | 17.043 ns |  7.55 |    0.56 |
+|             Method |       Mean |     Error |    StdDev | Ratio | RatioSD |
+|------------------- |-----------:|----------:|----------:|------:|--------:|
+|   'Baseline Empty' |   113.4 ns |  3.126 ns |  8.969 ns |  1.00 |    0.00 |
+| 'Reflection Empty' | 3,955.1 ns | 76.374 ns | 71.441 ns | 32.35 |    2.92 |
+|  'TypeShape Empty' |   815.3 ns | 16.177 ns | 21.596 ns |  7.02 |    0.76 |
+
+## UnionContract
+
+`UnionContract` is an implementation of a [contract pattern for schemaless datastores](https://eiriktsarpalis.wordpress.com/2018/10/30/a-contract-pattern-for-schemaless-datastores/). 
+It is used for encoding discriminated unions into data that can be easily embedded in common database storage formats.
+
+For this benchmark we will be comparing the following implementations:
+
+* [A bespoke union encoder for the type under test](https://github.com/eiriktsarpalis/TypeShape/blob/08a90e8a5bbb8fc1293037a10d0c6b8ef55c518e/tests/TypeShape.Benchmarks/UnionContract.fs#L36-L66),
+* [A reflection-based generic union encoder](https://github.com/eiriktsarpalis/TypeShape/blob/08a90e8a5bbb8fc1293037a10d0c6b8ef55c518e/tests/TypeShape.Benchmarks/UnionContract.fs#L68-L87),
+* [The TypeShape-based generic union encoder](https://github.com/eiriktsarpalis/TypeShape/blob/08a90e8a5bbb8fc1293037a10d0c6b8ef55c518e/src/TypeShape/Applications/UnionContract.fs).
+
+### Results
+
+|                     Method |        Mean |     Error |    StdDev | Ratio | RatioSD |
+|--------------------------- |------------:|----------:|----------:|------:|--------:|
+|   &#39;Baseline Union Encoder&#39; |    701.4 ns |  13.95 ns |  24.06 ns |  1.00 |    0.00 |
+| &#39;Reflection Union Encoder&#39; | 10,867.8 ns | 210.06 ns | 196.49 ns | 15.66 |    0.62 |
+|  &#39;TypeShape Union Encoder&#39; |  2,363.3 ns |  45.65 ns |  50.74 ns |  3.43 |    0.17 |
