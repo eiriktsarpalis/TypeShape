@@ -10,7 +10,10 @@ The library uses reflection to derive the algebraic structure of a given
 `System.Type` instance and then applies a variant of the visitor pattern
 to provide relevant type information per shape.
 
-See my [slides](http://eiriktsarpalis.github.io/typeshape/) for a more thorough introduction to the concept.
+TypeShape can provide significant performance improvements compared to equivalent reflection-based approaches.
+Please see the [performance page](https://github.com/eiriktsarpalis/TypeShape/blob/master/docs/Performance.md) for more details and benchmarks.
+
+Please see my [article](https://eiriktsarpalis.wordpress.com/2016/08/05/typeshape-practical-generic-programming-in-f/) and [slides](http://eiriktsarpalis.github.io/typeshape/) for a more thorough introduction to the concept.
 
 ### Installing
 
@@ -29,7 +32,7 @@ TypeShape is also available on [![NuGet Badge](https://buildstats.info/nuget/Typ
 
 ```fsharp
 open System
-open TypeShape
+open TypeShape.Core
 
 let rec mkPrinter<'T> () : 'T -> string =
     let wrap(p : 'a -> string) = unbox<'T -> string> p
@@ -71,7 +74,7 @@ let rec mkPrinter<'T> () : 'T -> string =
                    let fieldPrinter = mkPrinter<'Field>()
                    fieldPrinter << shape.Get }
 
-        let elemPrinters : ('T -> string) [] = s.Fields |> Array.map mkElemPrinter
+        let elemPrinters : ('T -> string) [] = shape.Elements |> Array.map mkElemPrinter
 
         fun (r:'T) ->
             elemPrinters
@@ -91,6 +94,7 @@ let rec mkPrinter<'T> () : 'T -> string =
 
 let p = mkPrinter<int * bool option * string list * int []> ()
 p (42, Some false, ["string"], [|1;2;3;4;5|])
+// val it : string = "(42, Some (false), ["string"], [|1; 2; 3; 4; 5|])"
 ```
 
 ### Records, Unions and POCOs
@@ -162,11 +166,6 @@ See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/maste
 * [Equality-Comparer.fs](samples/TypeShape.Samples/equality-comparer.fs) Equality comparer generator for common F# types.
 * [hashcode-staged.fs](samples/TypeShape.Samples/hashcode-staged.fs) Staged generic hashcode generator.
 * [Gmap](https://github.com/eiriktsarpalis/TypeShape/blob/master/src/TypeShape/Applications/Combinators.fs#L304) There are set of `gmap` related functions within the `TypeShape.Generic` module in the Nuget package. 
-
-### Performance
-
-TypeShape can provide significant performance improvements compared to equivalent reflection-based approaches.
-Please see the [performance page](https://github.com/eiriktsarpalis/TypeShape/blob/master/docs/Performance.md) for more details and benchmarks.
 
 ### Using the Higher-Kinded Type API (Experimental)
 
