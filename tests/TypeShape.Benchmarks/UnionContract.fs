@@ -14,7 +14,7 @@ type CashUsed = { id: string ; value: bool }
 type CreditsUsed = { id: string ; value: bool }
 type CartItemRemoved = { id : string ; retail_sku_id : string ; date : DateTimeOffset }
 
-type BasicEventSum =
+type TestUnionContract =
     | NullaryEvent of unit
     | CartCreated of CartCreated
     | AddressUpdated of AddressUpdated
@@ -29,14 +29,14 @@ with
 
 
 /// Union encoder/decoder interface
-type IEncoder =
-    abstract Encode : BasicEventSum -> EncodedUnion<obj>
-    abstract Decode : EncodedUnion<obj> -> BasicEventSum
+type IUnionEncoder =
+    abstract Encode : TestUnionContract -> EncodedUnion<obj>
+    abstract Decode : EncodedUnion<obj> -> TestUnionContract
 
 // baseline bespoke implementation
 let baselineEncoder =
-    { new IEncoder with
-        member __.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
+    { new IUnionEncoder with
+        member __.Encode(sum : TestUnionContract): EncodedUnion<obj> = 
             let inline mkEnc name payload = { CaseName = name ; Payload = box payload }
             match sum with
             | NullaryEvent () -> mkEnc "NullaryEvent" ()
@@ -49,7 +49,7 @@ let baselineEncoder =
             | InlinedCase c -> mkEnc "InlinedCase" c
             | Old_Stuff c -> mkEnc "Legacy" c
 
-        member __.Decode(e : EncodedUnion<obj>): BasicEventSum = 
+        member __.Decode(e : EncodedUnion<obj>): TestUnionContract = 
             let inline getValue() = e.Payload :?> 'a
 
             match e.CaseName with
@@ -67,33 +67,33 @@ let baselineEncoder =
 
 // reflection-driven union encoder
 let reflectionEncoder =
-    let tagReader = FSharpValue.PreComputeUnionTagReader(typeof<BasicEventSum>)
-    let ucis = FSharpType.GetUnionCases(typeof<BasicEventSum>)
+    let tagReader = FSharpValue.PreComputeUnionTagReader(typeof<TestUnionContract>)
+    let ucis = FSharpType.GetUnionCases(typeof<TestUnionContract>)
     let ctors = ucis |> Array.map FSharpValue.PreComputeUnionConstructor
     let readers = ucis |> Array.map FSharpValue.PreComputeUnionReader
-    { new IEncoder with
-        member __.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
+    { new IUnionEncoder with
+        member __.Encode(sum : TestUnionContract): EncodedUnion<obj> = 
             let tag = tagReader sum
             let name = ucis.[tag].Name
             let reader = readers.[tag]
             let values = reader sum
             { CaseName = name ; Payload = values.[0] }
 
-        member __.Decode(e : EncodedUnion<obj>): BasicEventSum =
+        member __.Decode(e : EncodedUnion<obj>): TestUnionContract =
             let tag = ucis |> Array.findIndex (fun u -> e.CaseName = u.Name)
             let ctor = ctors.[tag]
             let values = [|e.Payload|]
-            ctor values :?> BasicEventSum
+            ctor values :?> TestUnionContract
     }
 
 // typeshape-driven encoder
 let typeShapeEncoder = 
-    let encoder = UnionContractEncoder.Create<BasicEventSum,_>(BoxEncoder()) 
-    { new IEncoder with
-        member __.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
+    let encoder = UnionContractEncoder.Create<TestUnionContract,_>(BoxEncoder()) 
+    { new IUnionEncoder with
+        member __.Encode(sum : TestUnionContract): EncodedUnion<obj> = 
             encoder.Encode sum
 
-        member __.Decode(e : EncodedUnion<obj>): BasicEventSum =
+        member __.Decode(e : EncodedUnion<obj>): TestUnionContract =
             encoder.Decode e }
 
 let testValues =
@@ -106,9 +106,10 @@ let testValues =
         CreditsUsed { id = "customerId" ; value = true }
         InlinedCase 42
         CartCreated { id = "cartId" ; client_id = "clientId" }
-        CashUsed { id = "cashId" ; value = false } |]
+        CashUsed { id = "cashId" ; value = false } 
+        Old_Stuff { id = "cartId" ; retail_sku_id = "" ; date = DateTimeOffset() } |]
 
-let inline testEncoderRoundtrip (encoder : IEncoder) =
+let inline testEncoderRoundtrip (encoder : IUnionEncoder) =
     for v in testValues do
         let e = encoder.Encode v
         let _ = encoder.Decode e
