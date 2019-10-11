@@ -92,21 +92,6 @@ let rec mkPrinter<'T> () : 'T -> string =
 let p = mkPrinter<int * bool option * string list * int []> ()
 p (42, Some false, ["string"], [|1;2;3;4;5|])
 ```
-Let's see how the value printer compares to sprintf:
-```fsharp
-#time "on"
-
-type TestType = (int list * string option * string) * (bool * unit)
-let value : TestType = (([1 .. 5], None, "42"), (false, ()))
-
-let p1 = sprintf "%A" : TestType -> string
-let p2 = mkPrinter<TestType>()
-
-// Real: 00:00:00.442, CPU: 00:00:00.437, GC gen0: 31, gen1: 0, gen2: 0
-for i = 1 to 1000 do ignore <| p1 value
-// Real: 00:00:00.006, CPU: 00:00:00.000, GC gen0: 2, gen1: 1, gen2: 0
-for i = 1 to 1000 do ignore <| p2 value
-```
 
 ### Records, Unions and POCOs
 
@@ -177,6 +162,11 @@ See the project [samples](https://github.com/eiriktsarpalis/TypeShape/tree/maste
 * [Equality-Comparer.fs](samples/TypeShape.Samples/equality-comparer.fs) Equality comparer generator for common F# types.
 * [hashcode-staged.fs](samples/TypeShape.Samples/hashcode-staged.fs) Staged generic hashcode generator.
 * [Gmap](https://github.com/eiriktsarpalis/TypeShape/blob/master/src/TypeShape/Applications/Combinators.fs#L304) There are set of `gmap` related functions within the `TypeShape.Generic` module in the Nuget package. 
+
+### Performance
+
+TypeShape can provide significant performance improvements compared to equivalent reflection-based approaches.
+Please see the [performance page](https://github.com/eiriktsarpalis/TypeShape/blob/master/docs/Performance.md) for more details and benchmarks.
 
 ### Using the Higher-Kinded Type API (Experimental)
 
