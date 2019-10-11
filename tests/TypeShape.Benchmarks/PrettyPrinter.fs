@@ -1,33 +1,48 @@
 ﻿module TypeShape.Benchmarks.PrettyPrinter
 
 open System
+open System.Text
 open BenchmarkDotNet.Attributes
 
-type Record =
-    { A : string ; B : int ; C : bool }
+// Type to be tested
+type TestType = (struct(Record list list * string list [] * Union []))
 
-type Union =
+and Record = { A : string ; B : int ; C : bool }
+
+and Union =
     | A of int
     | B
     | C of string * int
 
-type TestType = (struct(Record list list * string list [] * Union []))
+// Value to be tested
+let testValue : TestType = 
+    struct(
+        [  [{ A = "value" ; B = 42 ; C = false }]; []; [{ A = "A'" ; B = 0 ; C = true }] ],
+        [| [] ; ["A";"B"] |], 
+        [| A 42; B; B ; C("value", 0) |])
 
+
+// efficient, handwritten pretty-printer for the test type
 let baselinePrinter ((rss, sss, us) : TestType) =
-    let sb = new System.Text.StringBuilder()
+    let sb = new StringBuilder()
     let inline append (x:string) = sb.Append x |> ignore
 
     let printRecord (r : Record) = 
-        append "{ "
-        append "A = " ; append "\"" ; append r.A ; append "\"" ; append "; " ;
-        append "B = " ; sb.Append(r.B) |> ignore ; append "; " ;
-        append "C = " ; sb.Append(r.C) |> ignore ; append " }"
+        append "{ " ;
+            append "A = " ; append "\"" ; append r.A ; append "\"" ; append "; " ;
+            append "B = " ; sb.Append(r.B) |> ignore ; append "; " ;
+            append "C = " ; sb.Append(r.C) |> ignore ;
+        append " }"
 
     let printUnion (u : Union) =
         match u with
         | A n -> append "A " ; sb.Append(n) |> ignore
         | B -> append "B"
-        | C(x,y) -> append "C (" ; append "\"" ; append x ; append "\", " ; sb.Append(y) |> ignore ; append ")"
+        | C(x,y) ->
+            append "C (" ;
+                append "\"" ; append x ; append "\", " ;
+                sb.Append(y) |> ignore ;
+            append ")"
 
     append "("
     append "["
@@ -69,16 +84,12 @@ let baselinePrinter ((rss, sss, us) : TestType) =
 
     sb.ToString()
 
+// FSharp.Core pretty-printer
 let fsharpCorePrinter (value : TestType) =
     sprintf "%A" value
 
+// TypeShape pretty-printer
 let typeShapePrinter = TypeShape.HKT.PrettyPrinter.mkPrinter<TestType>()
-
-let testValue : TestType = 
-    struct(
-        [ [{ A = "value" ; B = 42 ; C = false }]; []; [{A = "A'" ; B = 0 ; C = true}] ],
-        [| [] ; ["A";"B"] |], 
-        [|A 42; B; B ; C("value", 0)|])
 
 type PrettyPrinterBenchmarks() =
     [<Benchmark(Description = "Baseline PrettyPrinter", Baseline = true)>]
