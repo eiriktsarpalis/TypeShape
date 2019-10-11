@@ -1,11 +1,8 @@
 ﻿module TypeShape.Benchmarks.UnionEncoder
 
 open System
-open System.Reflection
 open System.Runtime.Serialization
-open System.Collections.Generic
 open FSharp.Reflection
-open FsCheck
 open TypeShape.UnionContract
 open BenchmarkDotNet.Attributes
 
@@ -31,13 +28,15 @@ with
     interface IUnionContract
 
 
+/// Union encoder/decoder interface
 type IEncoder =
     abstract Encode : BasicEventSum -> EncodedUnion<obj>
     abstract Decode : EncodedUnion<obj> -> BasicEventSum
 
+// baseline bespoke implementation
 let baselineEncoder =
     { new IEncoder with
-        member this.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
+        member __.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
             let inline mkEnc name payload = { CaseName = name ; Payload = box payload }
             match sum with
             | NullaryEvent () -> mkEnc "NullaryEvent" ()
@@ -50,7 +49,7 @@ let baselineEncoder =
             | InlinedCase c -> mkEnc "InlinedCase" c
             | Old_Stuff c -> mkEnc "Legacy" c
 
-        member this.Decode(e : EncodedUnion<obj>): BasicEventSum = 
+        member __.Decode(e : EncodedUnion<obj>): BasicEventSum = 
             let inline getValue() = e.Payload :?> 'a
 
             match e.CaseName with
@@ -66,53 +65,54 @@ let baselineEncoder =
             | _ -> failwith "unrecognized case name"
     }
 
+// reflection-driven union encoder
 let reflectionEncoder =
     let tagReader = FSharpValue.PreComputeUnionTagReader(typeof<BasicEventSum>)
     let ucis = FSharpType.GetUnionCases(typeof<BasicEventSum>)
-    let fieldss = ucis |> Array.map (fun u -> u.GetFields() |> Array.map (fun f -> f.Name))
     let ctors = ucis |> Array.map FSharpValue.PreComputeUnionConstructor
     let readers = ucis |> Array.map FSharpValue.PreComputeUnionReader
     { new IEncoder with
-        member this.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
+        member __.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
             let tag = tagReader sum
             let name = ucis.[tag].Name
             let reader = readers.[tag]
             let values = reader sum
             { CaseName = name ; Payload = values.[0] }
 
-        member this.Decode(e : EncodedUnion<obj>): BasicEventSum =
+        member __.Decode(e : EncodedUnion<obj>): BasicEventSum =
             let tag = ucis |> Array.findIndex (fun u -> e.CaseName = u.Name)
             let ctor = ctors.[tag]
             let values = [|e.Payload|]
             ctor values :?> BasicEventSum
     }
 
+// typeshape-driven encoder
 let typeShapeEncoder = 
     let encoder = UnionContractEncoder.Create<BasicEventSum,_>(BoxEncoder()) 
     { new IEncoder with
-        member this.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
+        member __.Encode(sum : BasicEventSum): EncodedUnion<obj> = 
             encoder.Encode sum
 
-        member this.Decode(e : EncodedUnion<obj>): BasicEventSum =
+        member __.Decode(e : EncodedUnion<obj>): BasicEventSum =
             encoder.Decode e }
 
-let valuePool =
-    let values =
-        Arb.from<BasicEventSum>.Generator 
-        |> Gen.sampleWithSeed (Rnd(2018UL)) 10 20
-
-    let i = ref 0
-    fun () ->
-        let v = values.[!i % values.Length]
-        do incr i
-        v
+let testValues =
+    [|  NullaryEvent ()
+        CartCreated { id = "cartId" ; client_id = "clientId" }
+        AddressUpdated { id = "clientId" ; address = "address" }
+        ItemReturnWaived { id = "cartId" ; item_id = "itemId" ; value = false }
+        CashUsed { id = "cartId" ; value = true }
+        CartItemRemoved { id = "cartId" ; retail_sku_id = "" ; date = DateTimeOffset() }
+        CreditsUsed { id = "customerId" ; value = true }
+        InlinedCase 42
+        CartCreated { id = "cartId" ; client_id = "clientId" }
+        CashUsed { id = "cashId" ; value = false } |]
 
 let inline testEncoderRoundtrip (encoder : IEncoder) =
-    let v = valuePool()
-    let e = encoder.Encode v
-    let v' = encoder.Decode e
-    ()
-    
+    for v in testValues do
+        let e = encoder.Encode v
+        let _ = encoder.Decode e
+        ()
 
 type UnionContractBenchmark() =
     
