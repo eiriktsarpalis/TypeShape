@@ -11,7 +11,7 @@ The library uses reflection to derive the algebraic structure of a given
 to provide relevant type information per shape.
 
 TypeShape can provide significant performance improvements compared to equivalent reflection-based approaches.
-Please see the [performance page](https://github.com/eiriktsarpalis/TypeShape/blob/master/docs/Performance.md) for more details and benchmarks.
+See the [performance page](https://github.com/eiriktsarpalis/TypeShape/blob/master/docs/Performance.md) for more details and benchmarks.
 
 Please see my [article](https://eiriktsarpalis.wordpress.com/2016/08/05/typeshape-practical-generic-programming-in-f/) and [slides](http://eiriktsarpalis.github.io/typeshape/) for a more thorough introduction to the concept.
 
