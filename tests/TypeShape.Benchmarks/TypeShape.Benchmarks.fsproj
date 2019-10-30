@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFrameworks>netcoreapp3.0;net461</TargetFrameworks>
+    <Configurations>Debug;Release;Debug-NoEmit;Release-NoEmit</Configurations>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\samples\TypeShape.Samples\HKT\Common.fs" Link="Implementations\Common.fs" />
