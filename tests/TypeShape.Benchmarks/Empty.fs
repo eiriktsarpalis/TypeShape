@@ -56,6 +56,7 @@ let reflectionEmpty = mkReflectionEmpty typeof<TestType>
 // typeshape implementation    
 let typeShapeEmpty () = notEmpty<TestType>
 
+[<MemoryDiagnoser>]
 type EmptyBenchmark() =
 
     [<Benchmark(Description = "Baseline Empty", Baseline = true)>]

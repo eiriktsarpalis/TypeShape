@@ -38,6 +38,7 @@ let testValue : TestType =
     let ss = [for i in 1 .. 100 -> string i]
     struct([rs; []], [|ss|], [|1 .. 20|])
 
+[<MemoryDiagnoser>]
 type CloneBenchmarks() =
     [<Benchmark(Description = "Baseline Cloner", Baseline = true)>]
     member __.Baseline() = baselineCloner testValue |> ignore

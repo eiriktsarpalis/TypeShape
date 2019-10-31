@@ -115,6 +115,7 @@ let inline testEncoderRoundtrip (encoder : IUnionEncoder) =
         let _ = encoder.Decode e
         ()
 
+[<MemoryDiagnoser>]
 type UnionContractBenchmark() =
     
     [<Benchmark(Description = "Baseline Union Encoder", Baseline = true)>]
