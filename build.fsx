@@ -111,35 +111,22 @@ Target.create "RunTests.Release-NoEmit" (fun _ ->
 // Build a NuGet package
 
 Target.create "NuGet.Bundle" (fun _ ->
-    Paket.pack(fun p ->
-        { p with
-            OutputPath = artifactsDir
-            Version = release.NugetVersion
-            BuildPlatform = "AnyCpu"
-            ReleaseNotes = String.toLines release.Notes })
+    let releaseNotes = String.toLines release.Notes |> System.Net.WebUtility.HtmlEncode
+    let paketArgs = sprintf "pack --version %s --release-notes \"%s\" \"%s\"" release.NugetVersion releaseNotes artifactsDir
+    let p = DotNet.exec id "paket" paketArgs
+    if not p.OK then failwith "failed to pack projects"
 )
 
 Target.create "NuGet.ValidateSourceLink" (fun _ ->
-    do
-        let toolPath = __SOURCE_DIRECTORY__ @@ "tools"
-        Directory.ensure toolPath
-        let p = DotNet.exec id "tool" (sprintf "update --tool-path %s sourcelink" toolPath)
-        if not p.OK then failwith "failed to install sourcelink cli tool"
-        
-        // include tools folder to PATH
-        let sep = if Environment.isWindows then ";" else ":"
-        let path = Environment.GetEnvironmentVariable("PATH")
-        Environment.SetEnvironmentVariable("PATH", toolPath + sep + path)
-
     for nupkg in !! (artifactsDir @@ "*.nupkg") do
-        let p = Shell.Exec("sourcelink", args = sprintf "test %s" nupkg)
-        if p <> 0 then failwithf "failed to validate sourcelink for %s" nupkg
+        let p = DotNet.exec id "sourcelink" (sprintf "test %s" nupkg)
+        if not p.OK then failwithf "failed to validate sourcelink for %s" nupkg
 )
 
 Target.create "NuGet.Push" (fun _ ->
-    Paket.push(fun p ->
-        { p with
-            WorkingDir = artifactsDir })
+    let paketArgs = sprintf "pack push \"%s\"" artifactsDir
+    let p = DotNet.exec id "paket" paketArgs
+    if not p.OK then failwith "failed to pack projects"
 )
 
 // --------------------------------------------------------------------------------------
