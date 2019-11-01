@@ -22,9 +22,6 @@ open System
 // Folder to deposit deploy artifacts
 let artifactsDir = __SOURCE_DIRECTORY__ @@ "artifacts"
 
-// Pattern specifying assemblies to be tested
-let testProjects = "tests/*.Tests/*.??proj"
-
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted
 let gitOwner = "eiriktsarpalis"
@@ -78,7 +75,7 @@ Target.create "Build.NoEmit" (fun _ -> buildWithConfiguration "Release-NoEmit")
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner & kill test runner when complete
 
-let runTests config (proj : string) =
+let runTests config =
     DotNet.test (fun c ->
         { c with
             Configuration = DotNet.BuildConfiguration.fromString config
@@ -93,19 +90,11 @@ let runTests config (proj : string) =
             RunSettingsArguments = 
                 if Environment.isWindows then None
                 else Some " -- RunConfiguration.DisableAppDomain=true" // https://github.com/xunit/xunit/issues/1357
-        }) proj
+        }) __SOURCE_DIRECTORY__
 
 Target.create "RunTests" ignore
-
-Target.create "RunTests.Release" (fun _ ->
-    for proj in !! testProjects do
-        runTests "Release" proj
-)
-
-Target.create "RunTests.Release-NoEmit" (fun _ ->
-    for proj in !! testProjects do
-        runTests "Release-NoEmit" proj
-)
+Target.create "RunTests.Release" (fun _ -> runTests "Release")
+Target.create "RunTests.Release-NoEmit" (fun _ -> runTests "Release-NoEmit")
 
 // --------------------------------------------------------------------------------------
 // Build a NuGet package
