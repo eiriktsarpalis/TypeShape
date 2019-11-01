@@ -13,13 +13,12 @@ type TestType = (struct(Record list list * string list [] * int []))
 
 let baselineCloner : TestType -> TestType =
     fun (struct(v1,v2,v3)) ->
-        let cloneStr x = String.Copy x
 
         let cloneRecord (r : Record) =
-            { A = cloneStr r.A ; B = r.B ; C = r.C }
+            { A = r.A ; B = r.B ; C = r.C }
 
         let v1' = v1 |> List.map (List.map cloneRecord)
-        let v2' = v2 |> Array.map (List.map cloneStr)
+        let v2' = v2 |> Array.map (List.map id)
         let v3' = v3 |> Array.map id
         struct(v1',v2',v3')
 

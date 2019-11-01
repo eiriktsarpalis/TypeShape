@@ -40,7 +40,7 @@ let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
     | Shape.Unit
     | Shape.Decimal
     | Shape.Enum _ -> <@ %e @>
-    | Shape.String -> wrap <@ match (% unwrap e) : string with null -> null | s -> String.Copy s @>
+    | Shape.String -> wrap <@ %e @>
     | Shape.Nullable s ->
         s.Accept { new INullableVisitor<Expr<'T>> with
             member __.Visit<'t when 't : (new : unit -> 't) 

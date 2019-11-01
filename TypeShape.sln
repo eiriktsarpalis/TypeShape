@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2027
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29431.150
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TypeShape", "src\TypeShape\TypeShape.fsproj", "{8609D2FB-063F-45FE-94E2-FF251792C495}"
 EndProject
@@ -14,6 +14,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{5BA0
 		build.cmd = build.cmd
 		build.fsx = build.fsx
 		build.sh = build.sh
+		Directory.Build.props = Directory.Build.props
 		docker-build.sh = docker-build.sh
 		Dockerfile = Dockerfile
 		LICENSE.txt = LICENSE.txt
@@ -40,7 +41,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{07CC7F
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TypeShape.Benchmarks", "tests\TypeShape.Benchmarks\TypeShape.Benchmarks.fsproj", "{6DCE45EB-7822-4CE7-8856-E053257C0D5F}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape.Samples", "samples\TypeShape.Samples\TypeShape.Samples.fsproj", "{83BDFFE6-DCBF-468C-B640-D30C41855748}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TypeShape.Samples", "samples\TypeShape.Samples\TypeShape.Samples.fsproj", "{83BDFFE6-DCBF-468C-B640-D30C41855748}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
