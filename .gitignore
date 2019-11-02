@@ -183,7 +183,7 @@ nuget/*.nupkg
 release.cmd
 release.sh
 localpackages/
-paket-files
+paket-files/
 *.orig
 docs/content/license.md
 docs/content/release-notes.md

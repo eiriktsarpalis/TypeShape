@@ -65,7 +65,7 @@ let buildWithConfiguration config =
 
             MSBuildParams =
                 { c.MSBuildParams with
-                    Properties = [("GenerateAssemblyInfo", "true"); ("Version", release.AssemblyVersion)] }
+                    Properties = [("Version", release.NugetVersion)] }
 
         }) __SOURCE_DIRECTORY__
 
@@ -80,7 +80,7 @@ let runTests config =
         { c with
             Configuration = DotNet.BuildConfiguration.fromString config
             NoBuild = true
-            // Blame = true
+            Blame = true
             Framework = testFramework
 
             MSBuildParams =
@@ -101,9 +101,16 @@ Target.create "RunTests.Release-NoEmit" (fun _ -> runTests "Release-NoEmit")
 
 Target.create "NuGet.Bundle" (fun _ ->
     let releaseNotes = String.toLines release.Notes |> System.Net.WebUtility.HtmlEncode
-    let paketArgs = sprintf "pack --version %s --release-notes \"%s\" \"%s\"" release.NugetVersion releaseNotes artifactsDir
-    let p = DotNet.exec id "paket" paketArgs
-    if not p.OK then failwith "failed to pack projects"
+    DotNet.pack (fun pack ->
+        { pack with
+            OutputPath = Some artifactsDir 
+            Configuration = DotNet.BuildConfiguration.Release
+            MSBuildParams =
+                { pack.MSBuildParams with
+                    Properties = 
+                        [("Version", release.NugetVersion)
+                         ("PackageReleaseNotes", releaseNotes)] }
+        }) __SOURCE_DIRECTORY__
 )
 
 Target.create "NuGet.ValidateSourceLink" (fun _ ->
@@ -113,9 +120,13 @@ Target.create "NuGet.ValidateSourceLink" (fun _ ->
 )
 
 Target.create "NuGet.Push" (fun _ ->
-    let paketArgs = sprintf "pack push \"%s\"" artifactsDir
-    let p = DotNet.exec id "paket" paketArgs
-    if not p.OK then failwith "failed to pack projects"
+    DotNet.nugetPush (fun opts ->
+        { opts with
+            PushParams =
+                { opts.PushParams with
+                    Source = Some "https://api.nuget.org/v3/index.json"
+                    ApiKey = Some (Environment.GetEnvironmentVariable "NUGET_KEY") }
+        }) (artifactsDir + "/*")
 )
 
 // --------------------------------------------------------------------------------------

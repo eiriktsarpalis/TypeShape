@@ -3,4 +3,29 @@
     <IsPackable>false</IsPackable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
+
+  <!-- NuGet Metadata -->
+  <PropertyGroup>
+    <Description>Practical Generic Programming for F#</Description>
+    <Authors>Eirik Tsarpalis</Authors>
+    <Copyright>2019</Copyright>
+    <PackageTags>fsharp, f#, polytypic</PackageTags>
+    <RepositoryUrl>https://github.com/eiriktsarpalis/TypeShape</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/eiriktsarpalis/TypeShape</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <!-- SourceLink Options -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <!--<IncludeSymbols>true</IncludeSymbols>-->
+    <!--<SymbolPackageFormat>snupkg</SymbolPackageFormat>-->
+  </PropertyGroup>
+
+  <!-- P2P nuget inlining workaround: c.f. http://yer.ac/blog/2019/09/05/dotnet-pack-project-reference-and-nuget-dependency/ -->
+  <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
+    <ItemGroup>
+      <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths->WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
+    </ItemGroup>
+  </Target>
 </Project>

@@ -3,16 +3,16 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
     <Configurations>Debug;Release;Debug-NoEmit;Release-NoEmit</Configurations>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>true</IsPackable>
+    <!-- workaround for inlining p2p references in nuget; include custom target from Directory.Build.props -->
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
   </PropertyGroup>
 
   <PropertyGroup>
     <WarningLevel>5</WarningLevel>
     <NoWarn>52,1178</NoWarn>
     <OtherFlags>--warnon:1182</OtherFlags>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsAsErrors />
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
@@ -42,21 +42,11 @@
     <Compile Include="Applications\Sizeof.fs" />
     <Compile Include="Applications\Clone.fs" />
     <None Include="paket.references" />
-    <None Include="paket.template" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <ProjectReference Include="..\TypeShape.CSharp\TypeShape.CSharp.csproj" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <!--Optional: Declare that the Repository URL can be published to NuSpec-->
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <!--Optional: Embed source files that are not tracked by the source control manager to the PDB-->
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <!--Optional: Include PDB in the built .nupkg-->
-    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
-  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TypeShape.CSharp\TypeShape.CSharp.csproj" PrivateAssets="all" />
+  </ItemGroup>
 
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
