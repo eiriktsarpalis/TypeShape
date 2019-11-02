@@ -10,21 +10,25 @@ namespace TypeShape.Core
     public class SubtypeWitness<TSubtype, TBase> where TSubtype : TBase
     {
         /// <summary>
-        ///     Upcasts supplied value
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns>The upcast value</returns>
-        public TBase Upcast(TSubtype value) { return (TBase)value; }
-
-        /// <summary>
         ///     Returns true if value matches the subtype type.
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        public bool IsSubtype(TBase value)
-        {
-            return value is TSubtype;
-        }
+        public bool IsSubtype(TBase value) => value is TSubtype;
+
+        /// <summary>
+        ///     Upcasts supplied value
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns>The upcast value</returns>
+        public TBase Upcast(TSubtype value) => (TBase)value;
+
+        /// <summary>
+        ///     Unsafe downcast
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public TSubtype Downcast(TBase value) => (TSubtype)value;
 
         /// <summary>
         ///     Safe downcast
@@ -41,19 +45,9 @@ namespace TypeShape.Core
             }
             else
             {
-                result = default(TSubtype);
+                result = default;
                 return false;
             }
-        }
-
-        /// <summary>
-        ///     Unsafe downcast
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public TSubtype Downcast(TBase value)
-        {
-            return (TSubtype)value;
         }
     }
 
