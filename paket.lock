@@ -976,15 +976,3 @@ NUGET
       System.Xml.ReaderWriter (>= 4.3) - restriction: && (< monoandroid) (< monotouch) (< net46) (>= netstandard1.3) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)
       System.Xml.XmlDocument (>= 4.3) - restriction: || (&& (< monoandroid) (< monotouch) (>= netstandard1.3) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)) (>= net46)
       System.Xml.XPath (>= 4.3) - restriction: || (&& (< monoandroid) (< monotouch) (>= netstandard1.3) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)) (>= net46)
-
-GROUP Legacy
-STORAGE: NONE
-RESTRICTION: == net45
-NUGET
-  remote: https://api.nuget.org/v3/index.json
-    FSharp.Core (3.1.2)
-    Microsoft.Build.Tasks.Git (1.0.0-beta2-19367-01) - copy_local: true
-    Microsoft.SourceLink.Common (1.0.0-beta2-19367-01) - copy_local: true
-    Microsoft.SourceLink.GitHub (1.0.0-beta2-19367-01) - copy_local: true
-      Microsoft.Build.Tasks.Git (>= 1.0.0-beta2-19367-01)
-      Microsoft.SourceLink.Common (>= 1.0.0-beta2-19367-01)

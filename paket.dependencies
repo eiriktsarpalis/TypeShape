@@ -25,14 +25,6 @@ nuget FSharp.Data ~> 3.0
 nuget FParsec
 nuget FSharp.Quotations.Evaluator
 
-group Legacy
-  source https://api.nuget.org/v3/index.json
-  framework: net45
-  storage: none
-
-  nuget FSharp.Core >= 3.1.2 lowest_matching: true
-  nuget Microsoft.SourceLink.GitHub prerelease copy_local:true
-
 group Build
   source https://api.nuget.org/v3/index.json
   storage: none
