@@ -1,3 +1,6 @@
+### 8.0.1
+* Surface correct target frameworks in nuget package.
+
 ### 8.0.0
 * Add higher-kinded type DSLs for type-safe generic programming.
 * Make shapeof<> operator return typed results and deprecate tshapeof.
