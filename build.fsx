@@ -124,6 +124,7 @@ Target.create "NuGet.Push" (fun _ ->
         { opts with
             PushParams =
                 { opts.PushParams with
+                    NoSymbols = true
                     Source = Some "https://api.nuget.org/v3/index.json"
                     ApiKey = Some (Environment.GetEnvironmentVariable "NUGET_KEY") }
         }) (artifactsDir + "/*")
