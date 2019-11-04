@@ -901,7 +901,7 @@ NUGET
       System.Threading.Tasks.Extensions (>= 4.5.2) - restriction: >= netstandard2.0
       System.ValueTuple (>= 4.5) - restriction: >= netstandard2.0
     BenchmarkDotNet.Annotations (0.12) - restriction: >= netstandard2.0
-    CommandLineParser (2.6) - restriction: >= netstandard2.0
+    CommandLineParser (2.4.3)
     FParsec (1.0.3)
       FSharp.Core (>= 4.0.0.1) - restriction: >= net40
       FSharp.Core (>= 4.2.3) - restriction: && (< net40) (>= netstandard1.6)

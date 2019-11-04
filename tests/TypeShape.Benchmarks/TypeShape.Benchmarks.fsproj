@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFrameworks>netcoreapp3.0;net472</TargetFrameworks>
     <Configurations>Debug;Release;Debug-NoEmit;Release-NoEmit</Configurations>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <!--<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>-->
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\samples\TypeShape.Samples\HKT\Common.fs" Link="Implementations\Common.fs" />
