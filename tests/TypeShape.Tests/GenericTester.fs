@@ -17,9 +17,9 @@ type TypeAlg =
     | Map of TypeAlg
     | Set of TypeAlg
     | BinTree of TypeAlg
-    | Tuple of NonEmptyArray<TypeAlg>
-    | Record of NonEmptyArray<TypeAlg>
-    | Union of NonEmptyArray<TypeAlg>
+    | Tuple of isStruct:bool * elems:NonEmptyArray<TypeAlg>
+    | Record of isStruct:bool * fields:NonEmptyArray<TypeAlg>
+    | Union of isStruct:bool * fields:NonEmptyArray<TypeAlg>
 
 and Primitive =
     | Bool
@@ -88,41 +88,108 @@ module Implementation =
         { Field1 : 'F1 ; Field2 : 'F2 ; Field3 : 'F3 ; Field4 : 'F4
           Field5 : 'F5 ; Field6 : 'F6 ; Field7 : 'F7 }
 
+    // Anonymous struct record implementation
+
+    [<Struct>]
+    type SRecord<'F1> = 
+        { Field1 : 'F1 }
+
+    [<Struct>]
+    type SRecord<'F1, 'F2> = 
+        { Field1 : 'F1 ; Field2 : 'F2 }
+
+    [<Struct>]
+    type SRecord<'F1, 'F2, 'F3> = 
+        { Field1 : 'F1 ; Field2 : 'F2 ; Field3 : 'F3 }
+
+    [<Struct>]
+    type SRecord<'F1, 'F2, 'F3, 'F4> = 
+        { Field1 : 'F1 ; Field2 : 'F2 ; Field3 : 'F3 ; Field4 : 'F4 }
+
+    [<Struct>]
+    type SRecord<'F1, 'F2, 'F3, 'F4, 'F5> =
+        { Field1 : 'F1 ; Field2 : 'F2 ; Field3 : 'F3 ; Field4 : 'F4
+          Field5 : 'F5 }
+
+    [<Struct>]
+    type SRecord<'F1, 'F2, 'F3, 'F4, 'F5, 'F6> =
+        { Field1 : 'F1 ; Field2 : 'F2 ; Field3 : 'F3 ; Field4 : 'F4
+          Field5 : 'F5 ; Field6 : 'F6 }
+
+    [<Struct>]
+    type SRecord<'F1, 'F2, 'F3, 'F4, 'F5, 'F6, 'F7> =
+        { Field1 : 'F1 ; Field2 : 'F2 ; Field3 : 'F3 ; Field4 : 'F4
+          Field5 : 'F5 ; Field6 : 'F6 ; Field7 : 'F7 }
+
     // Anonymous union implementation
 
     /// Single-case anonymous union
-    type Singular<'T> = Singular of 'T
+    type Choice<'T> = Choice1Of1 of 'T
+
+    [<Struct>] type SChoice<'F1> = Choice1Of1 of f1:'F1
+    [<Struct>] type SChoice<'F1, 'F2> = Choice1Of2 of f1:'F1 | Choice2Of2 of f2:'F2
+    [<Struct>] type SChoice<'F1, 'F2, 'F3> = Choice1Of3 of f1:'F1 | Choice2Of3 of f2:'F2 | Choice3Of3 of f3:'F3
+    [<Struct>] type SChoice<'F1, 'F2, 'F3, 'F4> = Choice1Of4 of f1:'F1 | Choice2Of4 of f2:'F2 | Choice3Of4 of f3:'F3 | Choice4Of4 of f4:'F4
+    [<Struct>] type SChoice<'F1, 'F2, 'F3, 'F4, 'F5> = Choice1Of5 of f1:'F1 | Choice2Of5 of f2:'F2 | Choice3Of5 of f3:'F3 | Choice4Of5 of f4:'F4 | Choice5Of5 of f5:'F5
+    [<Struct>] type SChoice<'F1, 'F2, 'F3, 'F4, 'F5, 'F6> = Choice1Of6 of f1:'F1 | Choice2Of6 of f2:'F2 | Choice3Of6 of f3:'F3 | Choice4Of6 of f4:'F4 | Choice5Of6 of f5:'F5 | Choice6Of6 of f6:'F6
+    [<Struct>] type SChoice<'F1, 'F2, 'F3, 'F4, 'F5, 'F6, 'F7> = Choice1Of7 of f1:'F1 | Choice2Of7 of f2:'F2 | Choice3Of7 of f3:'F3 | Choice4Of7 of f4:'F4 | Choice5Of7 of f5:'F5 | Choice6Of7 of f6:'F6 | Choice7Of7 of f7:'F7
 
     type FSharpType with
-        static member MakeUnionType (args : Type[]) =
-            match args.Length with
-            | 0 -> invalidArg "args" "must be non-empty array"
-            | 1 -> typedefof<Singular<_>>.MakeGenericType args
-            | 2 -> typedefof<Choice<_,_>>.MakeGenericType args
-            | 3 -> typedefof<Choice<_,_,_>>.MakeGenericType args
-            | 4 -> typedefof<Choice<_,_,_,_>>.MakeGenericType args
-            | 5 -> typedefof<Choice<_,_,_,_,_>>.MakeGenericType args
-            | 6 -> typedefof<Choice<_,_,_,_,_,_>>.MakeGenericType args
-            | 7 -> typedefof<Choice<_,_,_,_,_,_,_>>.MakeGenericType args
-            | _ ->
+        static member MakeUnionType isStruct (args : Type[]) =
+            match isStruct, args.Length with
+            | false, 0 -> invalidArg "args" "must be non-empty array"
+            | false, 1 -> typedefof<Choice<_>>.MakeGenericType args
+            | false, 2 -> typedefof<Choice<_,_>>.MakeGenericType args
+            | false, 3 -> typedefof<Choice<_,_,_>>.MakeGenericType args
+            | false, 4 -> typedefof<Choice<_,_,_,_>>.MakeGenericType args
+            | false, 5 -> typedefof<Choice<_,_,_,_,_>>.MakeGenericType args
+            | false, 6 -> typedefof<Choice<_,_,_,_,_,_>>.MakeGenericType args
+            | false, 7 -> typedefof<Choice<_,_,_,_,_,_,_>>.MakeGenericType args
+            | false, _ ->
                 let first, rest = args.[..5], args.[5..]
-                let restUnion = FSharpType.MakeUnionType rest
-                FSharpType.MakeUnionType (Array.append first [|restUnion|])
+                let restUnion = FSharpType.MakeUnionType false rest
+                FSharpType.MakeUnionType false (Array.append first [|restUnion|])
 
-        static member MakeRecordType (args : Type[]) =
-            match args.Length with
-            | 0 -> invalidArg "args" "must be non-empty array"
-            | 1 -> typedefof<Record<_>>.MakeGenericType args
-            | 2 -> typedefof<Record<_,_>>.MakeGenericType args
-            | 3 -> typedefof<Record<_,_,_>>.MakeGenericType args
-            | 4 -> typedefof<Record<_,_,_,_>>.MakeGenericType args
-            | 5 -> typedefof<Record<_,_,_,_,_>>.MakeGenericType args
-            | 6 -> typedefof<Record<_,_,_,_,_,_>>.MakeGenericType args
-            | 7 -> typedefof<Record<_,_,_,_,_,_,_>>.MakeGenericType args
-            | _ ->
+            | true, 0 -> invalidArg "args" "must be non-empty array"
+            | true, 1 -> typedefof<SChoice<_>>.MakeGenericType args
+            | true, 2 -> typedefof<SChoice<_,_>>.MakeGenericType args
+            | true, 3 -> typedefof<SChoice<_,_,_>>.MakeGenericType args
+            | true, 4 -> typedefof<SChoice<_,_,_,_>>.MakeGenericType args
+            | true, 5 -> typedefof<SChoice<_,_,_,_,_>>.MakeGenericType args
+            | true, 6 -> typedefof<SChoice<_,_,_,_,_,_>>.MakeGenericType args
+            | true, 7 -> typedefof<SChoice<_,_,_,_,_,_,_>>.MakeGenericType args
+            | true, _ ->
                 let first, rest = args.[..5], args.[5..]
-                let restRecord = FSharpType.MakeRecordType rest
-                FSharpType.MakeRecordType (Array.append first [|restRecord|])
+                let restUnion = FSharpType.MakeUnionType false rest
+                FSharpType.MakeUnionType false (Array.append first [|restUnion|])
+
+        static member MakeRecordType isStruct (args : Type[]) =
+            match isStruct, args.Length with
+            | true, 0 -> invalidArg "args" "must be non-empty array"
+            | true, 1 -> typedefof<Record<_>>.MakeGenericType args
+            | true, 2 -> typedefof<Record<_,_>>.MakeGenericType args
+            | true, 3 -> typedefof<Record<_,_,_>>.MakeGenericType args
+            | true, 4 -> typedefof<Record<_,_,_,_>>.MakeGenericType args
+            | true, 5 -> typedefof<Record<_,_,_,_,_>>.MakeGenericType args
+            | true, 6 -> typedefof<Record<_,_,_,_,_,_>>.MakeGenericType args
+            | true, 7 -> typedefof<Record<_,_,_,_,_,_,_>>.MakeGenericType args
+            | true, _ ->
+                let first, rest = args.[..5], args.[5..]
+                let restRecord = FSharpType.MakeRecordType true rest
+                FSharpType.MakeRecordType true (Array.append first [|restRecord|])
+
+            | false, 0 -> invalidArg "args" "must be non-empty array"
+            | false, 1 -> typedefof<SRecord<_>>.MakeGenericType args
+            | false, 2 -> typedefof<SRecord<_,_>>.MakeGenericType args
+            | false, 3 -> typedefof<SRecord<_,_,_>>.MakeGenericType args
+            | false, 4 -> typedefof<SRecord<_,_,_,_>>.MakeGenericType args
+            | false, 5 -> typedefof<SRecord<_,_,_,_,_>>.MakeGenericType args
+            | false, 6 -> typedefof<SRecord<_,_,_,_,_,_>>.MakeGenericType args
+            | false, 7 -> typedefof<SRecord<_,_,_,_,_,_,_>>.MakeGenericType args
+            | false, _ ->
+                let first, rest = args.[..5], args.[5..]
+                let restRecord = FSharpType.MakeRecordType false rest
+                FSharpType.MakeRecordType false (Array.append first [|restRecord|])
 
 
     // FsCheck Generators
@@ -160,16 +227,23 @@ module Implementation =
             | Array t -> sprintf "%s []" (typeAlg t)
             | Map t -> sprintf "Map<string, %s>" (typeAlg t)
             | Set t -> sprintf "Set<%s>" (typeAlg t)
-            | Tuple (NonEmptyArray [|t|]) -> sprintf "Tuple<%s>" (typeAlg t)
-            | Tuple (NonEmptyArray ts) -> 
-                ts |> Seq.map typeAlg |> String.concat " * " |> sprintf "(%s)"
-            | Union (NonEmptyArray ts) -> 
-                ts |> Seq.map typeAlg |> String.concat " + " |> sprintf "(%s)"
-            | Record (NonEmptyArray ts) -> 
+            | Tuple (isStruct, NonEmptyArray ts) ->
+                ts 
+                |> Seq.map typeAlg 
+                |> String.concat " * " 
+                |> if isStruct then sprintf "struct (%s)" else sprintf "(%s)"
+
+            | Union (isStruct, NonEmptyArray ts) -> 
+                ts 
+                |> Seq.map typeAlg 
+                |> String.concat " + " 
+                |> if isStruct then sprintf "struct (%s)" else sprintf "(%s)"
+
+            | Record (isStruct, NonEmptyArray ts) -> 
                 ts 
                 |> Seq.mapi (fun i t -> sprintf "Field%d : %s" i (typeAlg t)) 
                 |> String.concat " ; " 
-                |> sprintf "{ %s }"
+                |> if isStruct then sprintf "struct { %s }" else sprintf "{ %s }"
 
             | BinTree t -> typeAlg t |> sprintf "BinTree<%s>"
 
@@ -204,6 +278,8 @@ module Implementation =
 
     module Mapper =
 
+        let private structTupleAssembly = typeof<struct(int * int)>.Assembly
+
         let rec typeAlg tAlg =
             match tAlg with
             | Primitive t -> primitive t
@@ -215,9 +291,10 @@ module Implementation =
             | Map ta -> typedefof<Map<_,_>>.MakeGenericType [|typeof<string> ; typeAlg ta|]
             | Set ta -> typedefof<Set<_>>.MakeGenericType [|typeAlg ta|]
             | BinTree ta -> typedefof<BinTree<_>>.MakeGenericType [|typeAlg ta|]
-            | Tuple (NonEmptyArray ts) -> ts |> Array.map typeAlg |> FSharpType.MakeTupleType
-            | Union (NonEmptyArray ts) -> ts |> Array.map typeAlg |> FSharpType.MakeUnionType
-            | Record (NonEmptyArray ts) -> ts |> Array.map typeAlg |> FSharpType.MakeRecordType
+            | Tuple (isStruct = false; elems = NonEmptyArray ts) -> ts |> Array.map typeAlg |> FSharpType.MakeTupleType
+            | Tuple (isStruct = true ; elems = NonEmptyArray ts) -> ts |> Array.map typeAlg |> FSharpType.MakeTupleType
+            | Union (isStruct, NonEmptyArray ts) -> ts |> Array.map typeAlg |> FSharpType.MakeUnionType isStruct
+            | Record (isStruct, NonEmptyArray ts) -> ts |> Array.map typeAlg |> FSharpType.MakeRecordType isStruct
 
         and primitive t =
             match t with

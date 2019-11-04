@@ -1,5 +1,7 @@
-﻿FParsec
-FsCheck
-Unquote
-FSharp.Quotations.Evaluator
-FSharp.Data
+﻿group Test
+  FSharp.Core
+  FParsec
+  FsCheck
+  Unquote
+  FSharp.Quotations.Evaluator
+  FSharp.Data
