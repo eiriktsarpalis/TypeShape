@@ -9,7 +9,7 @@ open TypeShape.Tests.StagedClone
 type Record =
     { A : string ; B : int ; C : bool }
 
-type TestType = (struct(Record list list * string list [] * int []))
+type TestType = (struct(Record list list * string list [] * int option []))
 
 let baselineCloner : TestType -> TestType =
     fun (struct(v1,v2,v3)) ->
@@ -33,9 +33,9 @@ let compiledStagedCloner : TestType -> TestType =
 
 
 let testValue : TestType =
-    let rs = [ for i in 1 .. 20 -> { A = sprintf "lorem ipsum %d" i ; B = i ; C = i % 2 = 0 } ]
-    let ss = [for i in 1 .. 100 -> string i]
-    struct([rs; []], [|ss|], [|1 .. 20|])
+    let rs = [ for i in 1 .. 100 -> { A = sprintf "lorem ipsum %d" i ; B = i ; C = i % 2 = 0 } ]
+    let ss = [for i in 1 .. 20 -> string i]
+    struct([rs; []], [|ss|], [|for i in 1 .. 20 -> Some i|])
 
 [<MemoryDiagnoser>]
 type CloneBenchmarks() =

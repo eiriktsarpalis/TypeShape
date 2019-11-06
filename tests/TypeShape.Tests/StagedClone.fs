@@ -65,6 +65,11 @@ let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
                 else
                     wrap <@ Array.map (% stageCloner self) (% unwrap e) :'t[] @> }
 
+    | Shape.FSharpOption s ->
+        s.Element.Accept { new ITypeVisitor<Expr<'T>> with
+            member __.Visit<'t> () =
+                wrap <@ Option.map (% stageCloner self) (% unwrap e) : 't option @> }
+
     | Shape.FSharpList s ->
         s.Element.Accept { new ITypeVisitor<Expr<'T>> with
             member __.Visit<'t> () =
