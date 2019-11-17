@@ -121,24 +121,19 @@ module private TypeShapeImpl =
             | null -> false
             | bt -> isInterfaceAssignableFrom iface bt
 
-    type private TypeShapeActivator =
-        static member GetInstance<'T> () = TypeShape<'T>.Instance
-
     let private canon = Type.GetType "System.__Canon"
-    let private shapeInstanceGenericMethod = typeof<TypeShapeActivator>.GetMethod("GetInstance", BindingFlags.NonPublic ||| BindingFlags.Static)
+    let private genShapeTy = typedefof<TypeShape<_>>
 
     let resolveTypeShape(typ : Type) =
         if typ = null then raise <| ArgumentNullException("TypeShape: System.Type cannot be null.")
-        if typ.IsGenericTypeDefinition ||
-           typ.IsGenericParameter ||
-           typ = canon || 
-           typ.IsByRef || 
-           typ.IsPointer 
-        then 
-            raise <| UnsupportedShape typ
+        if typ.IsGenericTypeDefinition then raise <| UnsupportedShape typ
+        elif typ.IsGenericParameter then raise <| UnsupportedShape typ
+        elif typ = canon then raise <| UnsupportedShape typ
+        elif typ.IsByRef || typ.IsPointer then raise <| UnsupportedShape typ
         else 
-            let instanceMethod = shapeInstanceGenericMethod.MakeGenericMethod(typ)
-            instanceMethod.Invoke(null, [||]) :?> TypeShape
+            let gt = genShapeTy.MakeGenericType [|typ|]
+            let instance = gt.GetProperty("Instance", BindingFlags.NonPublic ||| BindingFlags.Static)
+            instance.GetValue(null) :?> TypeShape
 
 type Activator with
     /// Generic edition of the activator method which support type parameters and private types
