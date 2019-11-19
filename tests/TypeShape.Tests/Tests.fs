@@ -614,8 +614,8 @@ let ``Should support struct tuples``() =
 
 
     testStructTuple (struct(1,"2"))
-    testStructTuple (struct(1,"3",2,"4",5,"5",6,"7",8,"9",10))
-    testStructTuple (struct(1,"3",2,"4",5,"5",6,"7",8,"9",10,"11",12,"13",14,"15",16,"17"))
+    testStructTuple (struct(1,"2",3,"4",5,"6",7,"8",9,"10",11))
+    testStructTuple (struct(1,"2",3,"4",5,"6",7,"8",9,"10",11,"12",13,"14",15,"16",17,"18"))
 
 type MixedCase = | One of OneId:int
 [<Fact>]

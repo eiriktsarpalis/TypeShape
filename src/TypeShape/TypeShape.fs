@@ -121,19 +121,25 @@ module private TypeShapeImpl =
             | null -> false
             | bt -> isInterfaceAssignableFrom iface bt
 
+    type private ReflectionHelper =
+        static member GetInstance<'T>() = TypeShape<'T>.Instance
+    
     let private canon = Type.GetType "System.__Canon"
-    let private genShapeTy = typedefof<TypeShape<_>>
+    let private genInstanceGetter = typeof<ReflectionHelper>.GetMethod("GetInstance", BindingFlags.NonPublic ||| BindingFlags.Static)
 
     let resolveTypeShape(typ : Type) =
         if typ = null then raise <| ArgumentNullException("TypeShape: System.Type cannot be null.")
-        if typ.IsGenericTypeDefinition then raise <| UnsupportedShape typ
-        elif typ.IsGenericParameter then raise <| UnsupportedShape typ
-        elif typ = canon then raise <| UnsupportedShape typ
-        elif typ.IsByRef || typ.IsPointer then raise <| UnsupportedShape typ
-        else 
-            let gt = genShapeTy.MakeGenericType [|typ|]
-            let instance = gt.GetProperty("Instance", BindingFlags.NonPublic ||| BindingFlags.Static)
-            instance.GetValue(null) :?> TypeShape
+
+        if  typ.IsGenericTypeDefinition ||
+            typ.IsGenericParameter ||
+            typ = canon ||
+            typ.IsByRef ||
+            typ.IsPointer 
+        then 
+            raise <| UnsupportedShape typ
+
+        let genInstanceGetter = genInstanceGetter.MakeGenericMethod [|typ|]
+        genInstanceGetter.Invoke(null, [||]) :?> TypeShape
 
 type Activator with
     /// Generic edition of the activator method which support type parameters and private types
@@ -535,36 +541,39 @@ module private MemberUtils =
         | :? PropertyInfo as p -> p.SetValue(obj, value, null)
         | _ -> invalidMember m
 
-    let inline project<'Record, 'Member> (path : MemberInfo[]) (value:'Record) =
+    let inline project<'Type, 'Member> (path : MemberInfo[]) (value:'Type) =
         let mutable obj = box value
-        for m in path do
-            obj <- getValue obj m
-
+        for i = 0 to path.Length - 1 do
+            obj <- getValue obj path.[i]
         obj :?> 'Member
 
-    let inline inject<'Record, 'Member> (isStructMember : bool) (path : MemberInfo[]) 
-                                        (r : 'Record) (value : 'Member) =
-        let mutable obj = box r
+    let inline inject<'Type, 'Member> (isStructMember : bool) (path : MemberInfo[]) 
+                                        (instance : 'Type) (value : 'Member) =
         let n = path.Length
         if isStructMember then
-            let valueStack = Array.zeroCreate<obj> (n - 1)
-            for i = 0 to n - 2 do
-                valueStack.[i] <- obj
-                obj <- getValue obj path.[i]
+            // we are trying to update a nested struct (e.g. a struct tuple of large arity)
+            // in order to ensure that the change gets propagated to the original copy
+            // we must box and update every intermediate value
+            let rec update (i : int) (instance : obj) =
+                if i < n - 1 then
+                    let nested = getValue instance path.[i]
+                    let updated = update (i + 1) nested
+                    setValue instance path.[i] updated
+                    instance
+                else
+                    setValue instance path.[i] value
+                    instance
 
-            setValue obj path.[n - 1] value
-            for i = n - 2 downto 0 do
-                let obj2 = valueStack.[i]
-                setValue obj2 path.[i] obj
-                obj <- obj2
-
-            obj :?> 'Record          
+            update 0 instance :?> 'Type
         else
+            // all nested instances are heap allocated,
+            // just traverse to the leaf object and update it.
+            let mutable obj = box instance
             for i = 0 to n - 2 do
                 obj <- getValue obj path.[i]
 
             setValue obj path.[n - 1] value
-            r
+            instance
 
 #if TYPESHAPE_EXPR
 
@@ -904,7 +913,6 @@ and [<Sealed>] ShapeMember<'DeclaringType, 'MemberType> private (label : string,
         __.Set instance field
 
 #if TYPESHAPE_EXPR
-
     /// Injects a value to member of given instance
     member __.SetExpr (instance : Expr<'DeclaringType>) (field : Expr<'MemberType>) =
         injectExpr path instance field
