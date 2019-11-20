@@ -1,3 +1,8 @@
+### 9.0.0
+* Only target netstandard2.0.
+* Remove TYPESHAPE_EMIT build conditional.
+* Remove System.Reflection.Emit dependency.
+
 ### 8.0.1
 * Surface correct target frameworks in nuget package.
 
