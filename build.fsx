@@ -178,12 +178,12 @@ Target.create "Bundle"  ignore
 Target.create "Release" ignore
 
 "Clean"
-  //==> "Build.Emit"
-  //==> "Build.NoEmit"
-  //==> "Build"
-  //==> "RunTests.Release"
-  //==> "RunTests.Release-NoEmit"
-  //==> "RunTests"
+  ==> "Build.Emit"
+  ==> "Build.NoEmit"
+  ==> "Build"
+  ==> "RunTests.Release"
+  ==> "RunTests.Release-NoEmit"
+  ==> "RunTests"
   ==> "Default"
 
 "Default"
