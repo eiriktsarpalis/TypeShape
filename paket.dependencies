@@ -1,21 +1,14 @@
 source https://api.nuget.org/v3/index.json
-framework: netstandard2.0, netcoreapp3.0, net472
+framework: netstandard2.0
 storage: none
 
 nuget FSharp.Core >= 4.3.2 lowest_matching: true
 nuget System.Reflection.Emit.Lightweight >= 4.3 lowest_matching: true
 nuget Microsoft.SourceLink.GitHub prerelease copy_local:true
 
-group Legacy
-  source https://api.nuget.org/v3/index.json
-  framework: net45
-  storage: none
-
-  nuget FSharp.Core >= 3.1.2 lowest_matching: true
-  nuget Microsoft.SourceLink.GitHub prerelease copy_local:true
-
 group Test
-  source https://api.nuget.org/v3/index.json 
+  source https://api.nuget.org/v3/index.json
+  framework: netcoreapp3.0, net472
 
   nuget FSharp.Core >= 4.7.0
   nuget Microsoft.NET.Test.Sdk ~> 15.8
@@ -42,6 +35,5 @@ group Build
   nuget Fake.Core.Target        ~> 5.16.0
   nuget Fake.IO.FileSystem      ~> 5.16.0
   nuget Fake.DotNet.Cli	        ~> 5.16.0
-  nuget Fake.DotNet.Paket          5.16.0 # pin due mono issue
   nuget Fake.Tools.Git          ~> 5.16.0
   nuget Fake.Api.Github         ~> 5.16.0
