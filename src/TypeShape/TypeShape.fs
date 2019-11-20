@@ -645,171 +645,6 @@ module private MemberUtils =
             <@ (% Expr.Cast<_>(aux 0 r)) ; %r @>
 #endif
 
-#if TYPESHAPE_EMIT
-    open System.Reflection.Emit
-    open System.Collections.Concurrent
-
-    type private Marker = class end
-    let private compileCache = new ConcurrentDictionary<Type * string, Lazy<Delegate>>()
-
-    /// Lazily emits a dynamic method using supplied parameters
-    let emitDynamicMethod<'Delegate when 'Delegate :> Delegate> (id : string) 
-                (argTypes : Type []) (returnType : Type)
-                (ilBuilder : ILGenerator -> unit) =
-
-        let compile () =
-            let name = sprintf "%O-%s" typeof<'Delegate> id
-            let dynamicMethod =
-                new DynamicMethod(name, MethodAttributes.Static ||| MethodAttributes.Public, 
-                                    CallingConventions.Standard, returnType, argTypes, typeof<Marker>, 
-                                    skipVisibility = true)
-
-            let ilGen = dynamicMethod.GetILGenerator()
-            do ilBuilder ilGen
-            dynamicMethod.CreateDelegate typeof<'Delegate>
-
-        let wrapper = compileCache.GetOrAdd((typeof<'Delegate>, id), fun _ -> lazy(compile ()))
-        lazy(wrapper.Value :?> 'Delegate)
-
-    /// Emits a dynamic method that projects supplied member path
-    let emitProjection<'DeclaringType, 'Property> (path : MemberInfo []) =
-        let builder (gen : ILGenerator) =
-            gen.Emit OpCodes.Ldarg_0
-            for m in path do
-                match m with
-                | :? FieldInfo as f -> gen.Emit(OpCodes.Ldfld, f)
-                | :? PropertyInfo as p -> 
-                    let m = p.GetGetMethod(true)
-                    if m.IsVirtual then
-                        gen.EmitCall(OpCodes.Callvirt, m, null)
-                    else
-                        gen.EmitCall(OpCodes.Call, m, null)
-                | _ -> invalidMember m
-
-            gen.Emit OpCodes.Ret
-
-        let projectionId =
-            path 
-            |> Seq.map (fun p -> p.Name)
-            |> String.concat "->"
-            |> sprintf "proj-%s"
-
-        emitDynamicMethod<Func<'DeclaringType, 'Property>>
-            projectionId [|typeof<'DeclaringType>|] typeof<'Property> builder
-
-    // Emits a dynamic method that injects a value to supplied member path
-    let emitInjection<'DeclaringType, 'Property> (path : MemberInfo []) =
-        let builder (gen : ILGenerator) =
-            gen.Emit OpCodes.Ldarg_0
-            let local =
-                if typeof<'DeclaringType>.IsValueType then 
-                    let local = gen.DeclareLocal typeof<'DeclaringType>
-                    gen.Emit(OpCodes.Stloc, local)
-                    gen.Emit(OpCodes.Ldloca, local)
-                    Some local
-                else
-                    None
-
-            for i = 0 to path.Length - 2 do
-                match path.[i] with
-                | :? FieldInfo as f -> 
-                    if f.DeclaringType.IsValueType then
-                        gen.Emit(OpCodes.Ldflda, f)
-                    else
-                        gen.Emit(OpCodes.Ldfld, f)
-
-                | :? PropertyInfo as p ->
-                    if p.DeclaringType.IsValueType then
-                        invalidOp "internal error: nested struct properties not supported."
-
-                    let m = p.GetGetMethod(true)
-                    if m.IsVirtual then
-                        gen.EmitCall(OpCodes.Callvirt, m, null)
-                    else
-                        gen.EmitCall(OpCodes.Call, m, null)
-                | m -> invalidMember m
-
-            gen.Emit OpCodes.Ldarg_1
-
-            match path.[path.Length - 1] with
-            | :? FieldInfo as f -> gen.Emit(OpCodes.Stfld, f)
-            | :? PropertyInfo as p ->
-                let m = p.GetSetMethod(true)
-                if m.IsVirtual then
-                    gen.EmitCall(OpCodes.Callvirt, m, null)
-                else
-                    gen.EmitCall(OpCodes.Call, m, null)
-
-            | m -> invalidMember m
-
-            match local with
-            | Some l -> gen.Emit(OpCodes.Ldloc, l)
-            | None -> gen.Emit OpCodes.Ldarg_0
-            gen.Emit OpCodes.Ret
-
-        let injectionId =
-            path 
-            |> Seq.map (fun p -> p.Name)
-            |> String.concat "->"
-            |> sprintf "inj-%s"
-
-        emitDynamicMethod<Func<'DeclaringType, 'Property, 'DeclaringType>>
-            injectionId [|typeof<'DeclaringType>; typeof<'Property>|] typeof<'DeclaringType> builder
-
-    /// Emits a dynamic method that injects uninitialized values to supplied static method or ctor
-    let emitUninitializedCtor<'DeclaringType> (ctor : MethodBase) =
-        let builder (gen : ILGenerator) =
-            for p in ctor.GetParameters() do
-                let lvar = gen.DeclareLocal p.ParameterType
-                gen.Emit(OpCodes.Ldloca_S, lvar.LocalIndex)
-                gen.Emit(OpCodes.Initobj, p.ParameterType)
-                gen.Emit(OpCodes.Ldloc, lvar.LocalIndex)
-
-            match ctor with
-            | :? ConstructorInfo as c -> gen.Emit(OpCodes.Newobj, c)
-            | :? MethodInfo as m when m.IsStatic ->
-                if m.IsVirtual then gen.EmitCall(OpCodes.Callvirt, m, null)
-                else gen.EmitCall(OpCodes.Call, m, null)
-            | _ -> invalidMember ctor
-
-            gen.Emit OpCodes.Ret
-
-        let ctorId = sprintf "ctor-%O" ctor
-
-        emitDynamicMethod<Func<'DeclaringType>> ctorId [||] typeof<'DeclaringType> builder
-
-    /// Emits a dynamic method that gets the tag of supplied union case
-    let emitUnionTagReader<'U> (tagReader : MemberInfo) =
-        let builder (gen : ILGenerator) =
-            if typeof<'U>.IsValueType then
-                gen.Emit (OpCodes.Ldarga, 0)
-            else
-                gen.Emit OpCodes.Ldarg_0
-
-            let m =
-                match tagReader with
-                | :? MethodInfo as m -> m
-                | :? PropertyInfo as p -> p.GetGetMethod(true)
-                | _ -> invalidMember tagReader
-
-            if m.IsVirtual then gen.EmitCall(OpCodes.Callvirt, m, null)
-            else gen.EmitCall(OpCodes.Call, m, null)
-            gen.Emit OpCodes.Ret
-
-        emitDynamicMethod<Func<'U, int>> "unionTagReader" [|typeof<'U>|] typeof<int> builder
-
-    let emitISerializableCtor<'T when 'T :> ISerializable> (ctorInfo : ConstructorInfo) =
-        let builder (gen : ILGenerator) =
-            gen.Emit OpCodes.Ldarg_0
-            gen.Emit OpCodes.Ldarg_1
-            gen.Emit(OpCodes.Newobj, ctorInfo)
-            gen.Emit OpCodes.Ret
-
-        emitDynamicMethod<Func<SerializationInfo, StreamingContext, 'T>> "serializableCtor" 
-            [|typeof<SerializationInfo>; typeof<StreamingContext>|] typeof<'T> builder
-#endif
-                
-
 //-------------------------
 // Member Shape Definitions
 
@@ -838,9 +673,6 @@ type IShapeReadOnlyMember<'DeclaringType> =
 and ReadOnlyMember<'DeclaringType, 'MemberType> internal (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
     let isStructMember = isStructMember path
     let isPublicMember = isPublicMember memberInfo
-#if TYPESHAPE_EMIT
-    let projectFunc = emitProjection<'DeclaringType, 'MemberType> path
-#endif
 
     /// Human-readable member identifier
     member __.Label = label
@@ -852,11 +684,7 @@ and ReadOnlyMember<'DeclaringType, 'MemberType> internal (label : string, member
     member __.IsPublic = isPublicMember
     /// Gets the current value from the given declaring type instance
     member __.Get (instance : 'DeclaringType) : 'MemberType =
-#if TYPESHAPE_EMIT
-        projectFunc.Value.Invoke instance
-#else
         project path instance
-#endif
 
     /// Gets the current value from the given declaring type instance
     [<Obsolete("Deprecated, please use the 'Get' method instead")>]
@@ -893,19 +721,11 @@ type IShapeMember<'Record> =
 and [<Sealed>] ShapeMember<'DeclaringType, 'MemberType> private (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
     inherit ReadOnlyMember<'DeclaringType, 'MemberType>(label, memberInfo, path)
 
-#if TYPESHAPE_EMIT
-    let injectFunc = emitInjection<'DeclaringType, 'MemberType> path
-#else
     let isStructMember = isStructMember path
-#endif
 
     /// Assigns value to the provided instance. NB this is a mutating operation
     member __.Set (instance : 'DeclaringType) (field : 'MemberType) : 'DeclaringType =
-#if TYPESHAPE_EMIT
-        injectFunc.Value.Invoke(instance, field)
-#else
         inject isStructMember path instance field
-#endif
 
     /// Assigns value to the provided instance. NB this is a mutating operation
     [<Obsolete("Deprecated, please use the 'Set' method instead")>]
@@ -1159,11 +979,7 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
         let field = fields |> Array.find (fun f -> f.Name = prop.Name + "@")
         mkWriteMemberUntyped<'Record> prop.Name prop [|field :> MemberInfo|]
 
-#if TYPESHAPE_EMIT
-    let ctorf = emitUninitializedCtor<'Record> ctorInfo
-#else
     let ctorParams = props |> Array.map (fun p -> defaultOfUntyped p.PropertyType)
-#endif
 
     let recordFields = Array.map mkRecordField props
 
@@ -1179,11 +995,7 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
     /// Creates an uninitialized instance for given record
     member __.CreateUninitialized() : 'Record =
         if isStructRecord then Unchecked.defaultof<'Record> else
-#if TYPESHAPE_EMIT
-        ctorf.Value.Invoke()
-#else
         ctorInfo.Invoke ctorParams :?> 'Record
-#endif
 
 #if TYPESHAPE_EXPR
     member __.CreateUninitializedExpr() : Expr<'Record> =
@@ -1216,11 +1028,7 @@ type IShapeFSharpUnionCase =
 type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
     let properties = uci.GetFields()
     let ctorInfo = FSharpValue.PreComputeUnionConstructorInfo(uci, allMembers)
-#if TYPESHAPE_EMIT
-    let ctorf = emitUninitializedCtor<'Union> ctorInfo
-#else
     let ctorParams = properties |> Array.map (fun p -> defaultOfUntyped p.PropertyType)
-#endif
 
     let caseFields =
         match properties with
@@ -1243,11 +1051,7 @@ type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
 
     /// Creates an uninitialized instance for specific union case
     member __.CreateUninitialized() : 'Union =
-#if TYPESHAPE_EMIT
-        ctorf.Value.Invoke()
-#else
         ctorInfo.Invoke(null, ctorParams) :?> 'Union
-#endif
 
 #if TYPESHAPE_EXPR
     member __.CreateUninitializedExpr() : Expr<'Union> =
@@ -1274,15 +1078,10 @@ and [<Sealed>] ShapeFSharpUnion<'U> private () =
             Activator.CreateInstanceGeneric<ShapeFSharpUnionCase<'U>>([||],[|uci|]) 
             :?> ShapeFSharpUnionCase<'U>)
 
-#if TYPESHAPE_EMIT || TYPESHAPE_EXPR
+#if TYPESHAPE_EXPR
     let tagReaderInfo = FSharpValue.PreComputeUnionTagMemberInfo(typeof<'U>, allMembers)
 #endif
-
-#if TYPESHAPE_EMIT
-    let tagReader = emitUnionTagReader<'U> tagReaderInfo
-#else
     let tagReader = FSharpValue.PreComputeUnionTagReader(typeof<'U>, allMembers)
-#endif
 
     let caseNames = ucis |> Array.map (fun u -> u.CaseInfo.Name)
 
@@ -1292,11 +1091,7 @@ and [<Sealed>] ShapeFSharpUnion<'U> private () =
     member __.UnionCases = ucis
     /// Gets the underlying tag id for given union instance
     member __.GetTag (union : 'U) : int = 
-#if TYPESHAPE_EMIT
-        tagReader.Value.Invoke union
-#else
         tagReader union
-#endif
 
     /// Gets the underlying tag id for given union case name
     member __.GetTag (caseName : string) : int =
@@ -1351,17 +1146,9 @@ and [<Sealed>] ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) 
         |> Seq.map (fun p -> mkWriteMemberUntyped<'Record> p.Name p [|p|])
         |> Seq.toArray
 
-#if TYPESHAPE_EMIT
-    let ctor = emitUninitializedCtor<'Record> defaultCtor
-#endif
-
     /// Creates an uninitialized instance for given C# record
     member __.CreateUninitialized() : 'Record = 
-#if TYPESHAPE_EMIT
-        ctor.Value.Invoke()
-#else
         defaultCtor.Invoke [||] :?> 'Record
-#endif
 
 #if TYPESHAPE_EXPR
     /// Creates an uninitialized instance for given C# record
@@ -1465,17 +1252,9 @@ and ShapeISerializable<'T when 'T :> ISerializable> private () =
         | null -> invalidOp <| sprintf "ISerializable constructor not available for type '%O'" typeof<'T>
         | ctor -> ctor
 
-#if TYPESHAPE_EMIT
-    let ctor = lazy(let c = emitISerializableCtor<'T> (getCtorInfo()) in c.Value)
-#endif
-
     member __.CtorInfo = ctorInfo
     member __.Create(serializationInfo : SerializationInfo, streamingContext : StreamingContext) : 'T =
-#if TYPESHAPE_EMIT
-        ctor.Value.Invoke(serializationInfo, streamingContext)
-#else
         getCtorInfo().Invoke [| serializationInfo ; streamingContext |] :?> 'T
-#endif
 
 #if TYPESHAPE_EXPR
     member __.CreateExpr (serializationInfo : Expr<SerializationInfo>) (streamingContext : Expr<StreamingContext>) : Expr<'T> =

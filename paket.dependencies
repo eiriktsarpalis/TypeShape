@@ -3,7 +3,6 @@ framework: netstandard2.0
 storage: none
 
 nuget FSharp.Core >= 4.3.2 lowest_matching: true
-nuget System.Reflection.Emit.Lightweight >= 4.3 lowest_matching: true
 nuget Microsoft.SourceLink.GitHub prerelease copy_local:true
 
 group Test
@@ -29,11 +28,10 @@ group Build
   source https://api.nuget.org/v3/index.json
   storage: none
 
-  nuget Fake.Core               ~> 5.16.0
-  nuget Fake.Core.UserInput	    ~> 5.16.0
-  nuget Fake.Core.ReleaseNotes  ~> 5.16.0
-  nuget Fake.Core.Target        ~> 5.16.0
-  nuget Fake.IO.FileSystem      ~> 5.16.0
-  nuget Fake.DotNet.Cli	        ~> 5.16.0
-  nuget Fake.Tools.Git          ~> 5.16.0
-  nuget Fake.Api.Github         ~> 5.16.0
+  nuget Fake.Core.UserInput	    ~> 5.18.0
+  nuget Fake.Core.ReleaseNotes  ~> 5.18.0
+  nuget Fake.Core.Target        ~> 5.18.0
+  nuget Fake.IO.FileSystem      ~> 5.18.0
+  nuget Fake.DotNet.Cli	        ~> 5.18.0
+  nuget Fake.Tools.Git          ~> 5.18.0
+  nuget Fake.Api.Github         ~> 5.18.0

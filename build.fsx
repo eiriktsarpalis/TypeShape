@@ -26,10 +26,9 @@ let artifactsDir = __SOURCE_DIRECTORY__ @@ "artifacts"
 // The profile where the project is posted
 let gitOwner = "eiriktsarpalis"
 let gitHome = "https://github.com/" + gitOwner
-
-// The name of the project on GitHub
 let gitName = "TypeShape"
 
+let configuration = Environment.environVarOrDefault "configuration" "Release"
 let testFramework = 
     match Environment.environVarOrDefault "testFramework" "" with
     | x when String.IsNullOrWhiteSpace x -> None
@@ -56,29 +55,25 @@ Target.create "CleanDocs" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Build library & test project
 
-Target.create "Build" ignore
-
-let buildWithConfiguration config =
+Target.create "Build" (fun _ ->
     DotNet.build(fun c ->
         { c with
-            Configuration = DotNet.BuildConfiguration.fromString config
+            Configuration = DotNet.BuildConfiguration.fromString configuration
 
             MSBuildParams =
                 { c.MSBuildParams with
                     Properties = [("Version", release.NugetVersion)] }
 
         }) __SOURCE_DIRECTORY__
-
-Target.create "Build.Emit" (fun _ -> buildWithConfiguration "Release")
-Target.create "Build.NoEmit" (fun _ -> buildWithConfiguration "Release-NoEmit")
+)
 
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner & kill test runner when complete
 
-let runTests config =
+Target.create "RunTests" (fun _ ->
     DotNet.test (fun c ->
         { c with
-            Configuration = DotNet.BuildConfiguration.fromString config
+            Configuration = DotNet.BuildConfiguration.fromString configuration
             NoBuild = true
             Blame = true
             Framework = testFramework
@@ -91,10 +86,7 @@ let runTests config =
                 if Environment.isWindows then None
                 else Some " -- RunConfiguration.DisableAppDomain=true" // https://github.com/xunit/xunit/issues/1357
         }) __SOURCE_DIRECTORY__
-
-Target.create "RunTests" ignore
-Target.create "RunTests.Release" (fun _ -> runTests "Release")
-Target.create "RunTests.Release-NoEmit" (fun _ -> runTests "Release-NoEmit")
+)
 
 // --------------------------------------------------------------------------------------
 // Build a NuGet package
@@ -104,7 +96,7 @@ Target.create "NuGet.Bundle" (fun _ ->
     DotNet.pack (fun pack ->
         { pack with
             OutputPath = Some artifactsDir 
-            Configuration = DotNet.BuildConfiguration.Release
+            Configuration = DotNet.BuildConfiguration.fromString configuration
             MSBuildParams =
                 { pack.MSBuildParams with
                     Properties = 
@@ -178,11 +170,7 @@ Target.create "Bundle"  ignore
 Target.create "Release" ignore
 
 "Clean"
-  ==> "Build.Emit"
-  ==> "Build.NoEmit"
   ==> "Build"
-  ==> "RunTests.Release"
-  ==> "RunTests.Release-NoEmit"
   ==> "RunTests"
   ==> "Default"
 
