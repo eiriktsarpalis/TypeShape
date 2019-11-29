@@ -1,4 +1,4 @@
-#I "bin/Release/net461"
+#I "bin/Release/net472"
 #r "TypeShape.dll"
 #r "TypeShape.Tests.dll"
 open System
