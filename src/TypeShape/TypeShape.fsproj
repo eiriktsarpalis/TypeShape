@@ -20,6 +20,7 @@
     <Compile Include="StagingExtensions.fs" />
     <Compile Include="SubtypeExtensions.fs" />
     <Compile Include="Utils.fs" />
+    <Compile Include="NBE.fs" />
     <Compile Include="HKT\HKT.fs" />
     <Compile Include="HKT\Builders.fs" />
     <Compile Include="HKT\Folding.fs" />
