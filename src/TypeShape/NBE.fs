@@ -46,15 +46,6 @@ let rec isValue (s : Sem) =
     | SYN _ | LET _ -> false
     | TUPLE (_,fs) | RECORD (_,fs) | UNION(_,fs) -> fs |> List.forall isValue
 
-//| VAR of Var * value:Sem option
-//| LIT of obj * Type
-//| LAM of Var * (Sem -> Sem)
-//| LET of Var * Sem * Sem
-//| TUPLE of Type * Sem list
-//| RECORD of Type * Sem list
-//| UNION of UnionCaseInfo * Sem list
-//| SYN of shape:obj * Sem list
-
 //let isClosed (s : Sem) =
 //    let rec aux (env : Set<Var>) (s : Sem) =
 //        match s with
@@ -65,20 +56,24 @@ let rec isValue (s : Sem) =
 //        | RECORD(_,fs)
 //        | UNION(_,fs) 
 //        | SYN(_,fs) -> fs |> List.forall (aux env)
-
 //    aux Set.empty s
 
 //let isLiteral s = isValue s && isClosed s
+
+let rec dereference (s : Sem) =
+    match s with
+    | VAR(_, Some s) -> dereference s
+    | VAR _ | LIT _ | LAM _ | LET _ | SYN _ as s -> s
+    | TUPLE  (t,fs) -> TUPLE(t, fs |> List.map dereference)
+    | RECORD (t,fs) -> RECORD(t, fs |> List.map dereference)
+    | UNION(uci,fs) -> UNION(uci, fs |> List.map dereference)
 
 type Environment = Map<Var, Sem>
 
 let rec meaning (env : Environment) (expr : Expr) : Sem =
     let mkLit (x : 'T) = LIT(x, typeof<'T>)
 
-    let rec (|EV|) (s : Sem) =
-        match s with
-        | VAR(_, Some s) -> (|EV|) s
-        | _ -> s
+    let (|DR|) = dereference
 
     let fallback (env : Environment) e =
         match e with
@@ -95,7 +90,7 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
     | Value(o, t) -> LIT(o, t)
     | Application(f, g) ->
         match meaning env f with
-        | EV (LAM (v, l)) ->
+        | DR (LAM (v, l)) ->
             match meaning env g with
             // (λ x. M) N ~> M[N/x]
             | LIT _ | VAR _ | LAM _ as s -> l s
@@ -105,7 +100,7 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
         | _ -> fallback env expr
 
     | Let(v, binding, body) when not v.IsMutable ->
-        let (EV s) = meaning env binding
+        let (DR s) = meaning env binding
         if isValue s then
             let sk = meaning (env.Add(v, s)) body
             LET(v, s, sk)
@@ -113,7 +108,7 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
 
     | IfThenElse(cond, ifExpr, elseExpr) ->
         match meaning env cond with
-        | EV (LIT(:? bool as ccond, _)) ->
+        | DR (LIT(:? bool as ccond, _)) ->
             let branch = if ccond then ifExpr else elseExpr
             meaning env branch
 
@@ -130,17 +125,17 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
 
     | TupleGet(tuple, i) ->
         match meaning env tuple with
-        | EV (TUPLE (_, ts)) -> ts.[i]
+        | DR (TUPLE (_, ts)) -> ts.[i]
         | _ -> fallback env expr
 
     | NewRecord(t, fs) -> RECORD(t, fs |> List.map (meaning env))
     | PropertyGet(Some e, prop, []) ->
         match meaning env e with
-        | EV (RECORD(t,fs)) -> 
+        | DR (RECORD(t,fs)) -> 
             match FSharpType.GetRecordFields(t, true) |> Array.tryFindIndex(fun p -> prop = p) with
             | Some i -> fs.[i]
             | None -> fallback env expr
-        | EV (UNION(uci, fs)) ->
+        | DR (UNION(uci, fs)) ->
             match uci.GetFields() |> Array.tryFindIndex(fun p -> prop = p) with
             | Some i -> fs.[i]
             | None -> fallback env expr
@@ -149,16 +144,16 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
     | NewUnionCase(uci, fs) -> UNION(uci, fs |> List.map (meaning env))
     | UnionCaseTest(e, uci) ->
         match meaning env e with
-        | EV (UNION(uci', _)) -> mkLit(uci = uci')
+        | DR (UNION(uci', _)) -> mkLit(uci = uci')
         | _ -> fallback env expr
 
     | TypeTest(e, t) ->
         match meaning env e with
-        | EV (LIT(null,_)) -> mkLit(false)
-        | EV (LIT(o,_)) -> mkLit(t.IsAssignableFrom(o.GetType()))
-        | EV (TUPLE(tt,_)) -> mkLit(t = tt)
-        | EV (RECORD(rt,_)) -> mkLit(t = rt)
-        | EV (UNION(uci,_)) -> mkLit(uci.DeclaringType = t)
+        | DR (LIT(null,_)) -> mkLit(false)
+        | DR (LIT(o,_)) -> mkLit(t.IsAssignableFrom(o.GetType()))
+        | DR (TUPLE(tt,_)) -> mkLit(t = tt)
+        | DR (RECORD(rt,_)) -> mkLit(t = rt)
+        | DR (UNION(uci,_)) -> mkLit(uci.DeclaringType = t)
         | _ -> fallback env expr
 
     | SpecificCall <@ (|>) @> (None, _, [value; func])
@@ -170,7 +165,7 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
         let constArgs = 
             args 
             |> Seq.map (meaning env) 
-            |> Seq.choose (function EV (LIT(o,t)) when t.IsValueType -> Some o | _ -> None)
+            |> Seq.choose (function DR (LIT(o,t)) when t.IsValueType -> Some o | _ -> None)
             |> Seq.toArray
 
         if constArgs.Length = args.Length then

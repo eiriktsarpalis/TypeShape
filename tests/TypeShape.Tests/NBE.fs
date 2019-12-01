@@ -36,12 +36,7 @@ let ``Unused Let value elimination`` () =
 [<Fact>]
 let ``No mutable Let elimination`` () =
     nbe <@ fun () -> let f x = x + 2 in let mutable y = f 2 in 1 @> 
-    |> shouldEqual <@ fun () -> let mutable y = 4 in 1 @> 
-
-[<Fact>]
-let ``No Let mutable elimination`` () =
-    nbe <@ fun () -> let f x = x + 2 in let mutable y = f 2 in 1 @> 
-    |> shouldEqual <@ fun () -> let mutable y = 4 in 1 @> 
+    |> shouldEqual <@ fun () -> let mutable y = 4 in 1 @>
 
 [<Fact>]
 let ``No side-effectful let elimination`` () =
@@ -72,7 +67,7 @@ let ``Simple branch elimination`` () =
 
 [<Fact>]
 let ``Simple Tuple elimination`` () =
-    nbe <@ fun x -> let z,_ = (x, "baz") in z + 1 @> |> shouldEqual <@ fun x -> x + 1 @>
+    nbe <@ fun x -> let z,_ = (x + 1, "baz") in z @> |> shouldEqual <@ fun x -> x + 1 @>
 
 [<Fact>]
 let ``Combined Tuple, function and binding elimination`` () = 
