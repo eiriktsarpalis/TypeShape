@@ -79,10 +79,10 @@ let ``Simple record elimination`` () =
     nbe <@
         fun z ->
             let x = {| x = z + 1 |}
-            x.x
+            (x.x, x.x)
     @> 
     
-    |> shouldEqual <@ fun z -> z + 1 @>
+    |> shouldEqual <@ fun z -> (z + 1, z + 1) @>
 
 [<Fact>]
 let ``Simple record elimination 2`` () =
@@ -131,6 +131,12 @@ let ``Beta reduction should respect evaluation semantics`` () =
     |> shouldEqual <@ fun x -> let x = printfn "hello" ; x + 1 in x,x @>
 
 [<Fact>]
+let ``Beta reduction should not optimize away side-effects`` () =
+    nbe <@ let f (x : int) = () in f (printfn "hi"; 42) @> 
+    
+    |> shouldEqual <@ let x = printfn "hi"; 42 in () @>
+
+[<Fact>]
 let ``Simple eta reduction`` () =
     nbe <@ fun z -> let f x = x + z in fun x -> f x @>
 
@@ -140,7 +146,6 @@ let ``Simple eta reduction`` () =
 let ``Recursive function support`` () =
     nbe <@ let rec f x = if x = 0 then (2 + (-1)) else x * f(x - 1) in f @>
     |> shouldEqual <@ let rec f x = if x = 0 then 1 else x * f(x - 1) in f @>
-
 
 [<Fact>]
 let ``Imperative code support`` () =
@@ -170,7 +175,7 @@ type Stream<'T> = ('T -> unit) -> unit
 [<Fact>]
 let ``Stream inlining`` () =
     nbe <@
-        let ofList (xs : int []) =
+        let ofArray (xs : int []) =
             fun k -> for x in xs do k x
 
         let map : (int -> int) -> Stream<int> -> Stream<int> =
@@ -183,12 +188,12 @@ let ``Stream inlining`` () =
             fun f ts -> ts f
 
         fun xs ->
-            ofList xs
+            ofArray xs
             |> filter (fun i -> i > 0)
             |> filter (fun i -> i % 2 = 0)
             |> map (fun i -> i * i)
             |> map (fun i -> i + i)
-            |> iter (fun i -> Console.WriteLine i)
+            |> iter (fun i -> printfn "%d" i)
     @> 
     
     |> shouldEqual <@ fun (xs : int []) ->
@@ -197,5 +202,5 @@ let ``Stream inlining`` () =
                 if x % 2 = 0 then
                     let t = x * x
                     let i = t + t
-                    Console.WriteLine i
+                    printfn "%d" i
     @>
