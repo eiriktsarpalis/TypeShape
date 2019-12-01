@@ -2,7 +2,6 @@
 
 open System
 open System.Reflection
-open System.Collections.Generic
 open FSharp.Reflection
 open FSharp.Quotations
 open FSharp.Quotations.Patterns
@@ -21,13 +20,14 @@ type Sem =
     // Standard arithmetic operator expression
     | OP of MethodInfo * Sem list
     // Embeds arbitrary syntactic trees
-    | SYN of shape:obj * Sem list
+    | SYN of isPureNode:bool * shape:obj * Sem list
 
 /// determines if expression is guaranteed to evaluate without side-effects
 let rec isPure (s : Sem) =
     match s with
-    | SYN _ -> false
-    | LIT _ | LAM _ | VAR _ -> true
+    | VAR (v,_) -> not v.IsMutable
+    | LIT _ | LAM _ -> true
+    | SYN(isPureNode = isPure) -> isPure
     | LET(_,b,k) -> isPure b && isPure k
     | TUPLE (_,fs) | RECORD (_,fs) | UNION(_,fs) | OP(_,fs) -> fs |> List.forall isPure
 
@@ -43,8 +43,8 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
         | _ -> s
 
     // trivial semantic mapping; use as fallback when no other optimizations can be applied
-    let fallback (env : Environment) e =
-        match e with
+    let fallback (env : Environment) (expr : Expr) =
+        match expr with
         | ShapeVar v -> 
             match env.TryFind v with
             | Some (LIT _ | VAR _ as s) -> s
@@ -52,18 +52,33 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
         | ShapeLambda(v, body) -> LAM(v, fun s -> meaning (env.Add(v, s)) body)
         | ShapeCombination(shape, args) ->
             let sargs = args |> List.map (meaning env)
-            SYN(shape, sargs)
+            let isPureNode =
+                match expr with
+                | IfThenElse _
+                | TupleGet _
+                | TypeTest _
+                | UnionCaseTest _
+                | LetRecursive _
+                | QuoteRaw _
+                | QuoteTyped _ -> true
+                | PropertyGet(Some e, _, []) when 
+                    FSharpType.IsRecord(e.Type, true) || 
+                    FSharpType.IsUnion(e.Type, true) ||
+                    FSharpType.IsTuple(e.Type) -> true
+                | _ -> false
+
+            SYN(isPureNode, shape, sargs)
         
     match expr with
     | Value(o, t) -> LIT(o, t)
     | Application(f, g) ->
         match meaning env f with
-        | Deref (LAM (v, l)) ->
+        | Deref (LAM (v, lam)) ->
             match meaning env g with
             // (λ x. M) N ~> M[N/x]
-            | LIT _ | VAR _ | LAM _ as s -> l s
+            | LIT _ | VAR _ | LAM _ as s -> lam s
             // (λ x. M) N ~> let x = N in M
-            | s -> LET(v, s, l (VAR(v, Some s)))
+            | s -> LET(v, s, lam (VAR(v, Some s)))
         | _ -> fallback env expr
 
     | Let(v, binding, body) when not v.IsMutable ->
@@ -139,28 +154,31 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
 
 /// Maps semantic expressions back to a syntactic representation
 let reify (s : Sem) : Expr =
-    let referencedVars = new HashSet<Var>()
+    let rec aux (refdVars : Set<Var>) s =
+        let foldMap refdVars (ss : Sem list) =
+            let mutable refdVars = refdVars
+            let es = ss |> List.map (fun s -> let r,e = aux refdVars s in refdVars <- r; e)
+            refdVars, es
 
-    let rec aux s =
         match s with
-        | VAR (v, _) -> 
-            let _ = referencedVars.Add v
-            Expr.Var v
-        | LIT (o, t) -> Expr.Value(o, t)
-        | LAM (v, lam) -> Expr.Lambda(v, lam (VAR (v, None)) |> aux)
+        | VAR (v, _) -> refdVars.Add v, Expr.Var v
+        | LIT (o, t) -> refdVars, Expr.Value(o, t)
+        | LAM (v, lam) -> refdVars, Expr.Lambda(v, lam (VAR (v, None)) |> aux refdVars |> snd)
         | LET (v, b, k) ->
-            let eb = aux b
-            let ek = aux k
-            if isPure b && not (referencedVars.Contains v) then ek
-            else Expr.Let(v, eb, ek)
+            let kvars, ek = aux refdVars k
+            if isPure b && not (kvars.Contains v) then
+                kvars, ek
+            else 
+                let bvars, eb = aux refdVars b
+                Set.union kvars bvars, Expr.Let(v, eb, ek)
 
-        | TUPLE (_,es) -> Expr.NewTuple(es |> List.map aux)
-        | RECORD (t, fs) -> Expr.NewRecord(t, fs |> List.map aux)
-        | UNION (uci, fs) -> Expr.NewUnionCase(uci, fs |> List.map aux)
-        | OP(mI, args) -> Expr.Call(mI, args |> List.map aux)
-        | SYN(shape, sparams) -> RebuildShapeCombination(shape, sparams |> List.map aux)
+        | TUPLE (_,fs) -> let refdVars,es = foldMap refdVars fs in refdVars, Expr.NewTuple(es)
+        | RECORD (t, fs) -> let refdVars,es = foldMap refdVars fs in refdVars, Expr.NewRecord(t, es)
+        | UNION (uci, fs) -> let refdVars,es = foldMap refdVars fs in refdVars, Expr.NewUnionCase(uci, es)
+        | OP(mI, args) -> let refdVars,es = foldMap refdVars args in refdVars, Expr.Call(mI, es)
+        | SYN(_, shape, sparams) -> let refdVars,es = foldMap refdVars sparams in refdVars, RebuildShapeCombination(shape, es)
 
-    aux s
+    aux Set.empty s |> snd
 
 /// Apply normalization-by-evaluation to quotation tree
 let nbe (e : Expr<'a>) : Expr<'a> = e |> meaning Map.empty |> reify |> Expr.Cast

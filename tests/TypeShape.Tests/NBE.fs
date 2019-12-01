@@ -119,6 +119,19 @@ let ``Parameterized pattern match`` () =
     nbe <@ match Some 1 with Some x -> x + 1 | None -> -1 @> |> shouldEqual <@ 2 @>
 
 [<Fact>]
+let ``Pattern match elimination in function call`` () =
+    nbe <@
+        let f x =
+            match x with
+            | Some i -> i > 0
+            | None -> false
+
+        f (Some 42) , f None
+    @> 
+    
+    |> shouldEqual <@ (true, false) @>
+
+[<Fact>]
 let ``Simple beta reduction`` () =
     nbe <@ fun z -> (fun x -> x + 1) z @>
 
