@@ -149,6 +149,13 @@ let ``Beta reduction should not optimize away side-effects`` () =
     
     |> shouldEqual <@ let x = printfn "hi"; 42 in () @>
 
+
+[<Fact>]
+let ``Closure variable capturing should be preserved`` () =
+    nbe <@ let x = (1,2) in let g () = x in g @>
+
+    |> shouldEqual <@ let x = (1,2) in fun () -> x @>
+
 [<Fact>]
 let ``Simple eta reduction`` () =
     nbe <@ fun z -> let f x = x + z in fun x -> f x @>
