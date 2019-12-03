@@ -1,7 +1,6 @@
 ﻿module TypeShape.Core.NBE
 
 open System
-open System.Collections.Generic
 open System.Reflection
 open FSharp.Reflection
 open FSharp.Quotations
