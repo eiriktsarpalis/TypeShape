@@ -157,6 +157,22 @@ let ``Closure variable capturing should be preserved`` () =
     |> shouldEqual <@ let x = (1,2) in fun () -> x @>
 
 [<Fact>]
+let ``Let bindings should be eliminated in expressions that do not reference them`` () =
+    nbe
+        <@
+            let g c =
+                let f () = Console.Write "x"
+                if c then
+                    (f,f)
+                else
+                    (ignore, ignore)
+
+            (g true , g false)
+        @>
+
+    |> shouldEqual <@ (let f () = Console.Write "x" in (f,f)), ((fun () -> ()), (fun () -> ())) @>
+
+[<Fact>]
 let ``Simple eta reduction`` () =
     nbe <@ fun z -> let f x = x + z in fun x -> f x @>
 

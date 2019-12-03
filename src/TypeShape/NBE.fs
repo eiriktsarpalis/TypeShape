@@ -155,25 +155,32 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
 
 /// Maps semantic expressions back to a syntactic representation
 let reify (s : Sem) : Expr =
-    let rec aux (refdVars : HashSet<Var>) s =
+    let rec aux s =
+        let foldMap ss =
+            let refss, es = ss |> List.map aux |> List.unzip
+            Set.unionMany refss, es
+
         match s with
-        | VAR (v, _) -> let _ = refdVars.Add v in Expr.Var v
-        | LIT (o, t) -> Expr.Value(o, t)
-        | LAM (v, lam) -> Expr.Lambda(v, lam (VAR (v, None)) |> aux refdVars)
+        | VAR (v, _) -> Set.singleton v, Expr.Var v
+        | LIT (o, t) -> Set.empty, Expr.Value(o, t)
+        | LAM (v, lam) -> 
+            let refs, ebody = lam (VAR (v, None)) |> aux
+            Set.remove v refs, Expr.Lambda(v, ebody)
         | LET (v, b, k) ->
-            let ek = aux refdVars k
-            if isPure b && not (refdVars.Contains v) then ek
+            let krefs, ek = aux k
+            if isPure b && not (krefs.Contains v) then krefs, ek
             else
-                let eb = aux refdVars b
-                Expr.Let(v, eb, ek)
+                let brefs, eb = aux b
+                let refs = krefs |> Set.union brefs |> Set.remove v
+                refs, Expr.Let(v, eb, ek)
 
-        | TUPLE (_,fs) -> Expr.NewTuple(fs |> List.map (aux refdVars))
-        | RECORD (t, fs) -> Expr.NewRecord(t, fs |> List.map (aux refdVars))
-        | UNION (uci, fs) -> Expr.NewUnionCase(uci, fs |> List.map (aux refdVars))
-        | OP(mI, args) -> Expr.Call(mI, args |> List.map (aux refdVars))
-        | SYN(_, shape, sparams) -> RebuildShapeCombination(shape, sparams |> List.map (aux refdVars))
+        | TUPLE (_,fs) -> let scope, es = foldMap fs in scope, Expr.NewTuple(es)
+        | RECORD (t, fs) -> let scope, es = foldMap fs in scope, Expr.NewRecord(t, es)
+        | UNION (uci, fs) -> let scope, es = foldMap fs in scope, Expr.NewUnionCase(uci, es)
+        | OP(mI, args) -> let scope, es = foldMap args in scope, Expr.Call(mI, es)
+        | SYN(_, shape, sparams) -> let scope, es = foldMap sparams in scope, RebuildShapeCombination(shape, es)
 
-    aux (HashSet()) s
+    aux s |> snd
 
 /// Apply normalization-by-evaluation to quotation tree
 let nbe (e : Expr<'a>) : Expr<'a> = e |> meaning Map.empty |> reify |> Expr.Cast
