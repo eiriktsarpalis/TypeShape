@@ -8,7 +8,15 @@ open TypeShape.Core.NBE
 
 #nowarn "0020"
 
-let shouldEqual (expected : Expr<'T>) (actual : Expr<'T>) = Assert.Equal(decompile expected, decompile actual)
+let shouldEqual (expected : Expr<'T>) (actual : Expr<'T>) = 
+    Assert.Equal(decompile expected, decompile actual)
+    let expectedEval = eval expected
+    let actualEval = eval actual
+    match box expectedEval with
+    | null -> Assert.Null actualEval
+    | _ ->
+        Assert.Equal(expectedEval.GetType(), actualEval.GetType())
+        Assert.Equal(expectedEval.ToString(), actualEval.ToString())
 
 [<Fact>]
 let ``Constant expression`` () =
