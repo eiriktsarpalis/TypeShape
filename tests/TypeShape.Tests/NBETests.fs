@@ -23,6 +23,10 @@ let ``Constant expression`` () =
     nbe <@ fun () -> 1 + 1 @> |> shouldEqual <@ fun () -> 2 @>
 
 [<Fact>]
+let ``Constant subtraction cannot be optimized`` () =
+    nbe <@ fun () -> 1 - 1 @> |> shouldEqual <@ fun () -> 1 - 1 @>
+
+[<Fact>]
 let ``Simple pipe elimination`` () =
     let f x = x + 1
     nbe <@ fun x -> x |> f @> |> shouldEqual <@ fun x -> f x @>
@@ -140,6 +144,24 @@ let ``Pattern match elimination in function call`` () =
     |> shouldEqual <@ (true, false) @>
 
 [<Fact>]
+let ``Type test elimination in function call`` () =
+    nbe <@
+        let f (x:obj) =
+            match x with
+            | :? int as i -> string i
+            | :? string as s -> s
+            | :? (string list) as l ->
+                match l with
+                | h :: _ -> h
+                | [] -> "null"
+            | _ -> "unknown"
+
+        f 42, f "foo", f ["x"]
+    @> 
+    
+    |> shouldEqual <@ (string 42, "foo", "x") @>
+
+[<Fact>]
 let ``Simple beta reduction`` () =
     nbe <@ fun z -> (fun x -> x + 1) z @>
 
@@ -157,6 +179,20 @@ let ``Beta reduction should not optimize away side-effects`` () =
     
     |> shouldEqual <@ let x = printfn "hi"; 42 in () @>
 
+
+[<Fact>]
+let ``Simple null check elimination`` () =
+    nbe 
+        <@ 
+            let f (x : string) =
+                match x with
+                | null -> "null"
+                | x -> x
+        
+            f null, f "foo" 
+        @> 
+    
+    |> shouldEqual <@ "null", "foo" @>
 
 [<Fact>]
 let ``Closure variable capturing should be preserved`` () =
@@ -212,7 +248,29 @@ let ``Imperative code support`` () =
             else i <- i + 1
 
         if isPrime then failwith "omg"
-    @> 
+    @>
+
+type DummyDisposable() =
+    member val IsDisposed = false with get,set
+    interface IDisposable with
+        member __.Dispose() = __.IsDisposed <- true
+
+[<Fact>]
+let ``Simple use binding`` () =
+    nbe 
+        <@ 
+            let x = new DummyDisposable () 
+            do use y = x in () 
+            x.IsDisposed
+        @>
+
+    |> shouldEqual
+        <@
+            let x = new DummyDisposable()
+            try () 
+            finally (x :> IDisposable).Dispose()
+            x.IsDisposed
+        @>
 
 type Stream<'T> = ('T -> unit) -> unit
 
