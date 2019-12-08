@@ -66,10 +66,25 @@ type Environment = Map<Var, Sem>
 let rec meaning (env : Environment) (expr : Expr) : Sem =
     let mkLit (x : 'T) = LIT(x, typeof<'T>)
 
+    /// attempt to dereference a sem expression
+    /// to its underlying materialized value.
     let (|Deref|) s =
-        match s with
-        | VAR(_, Some s) -> s
-        | _ -> s
+        let rec aux s =
+            match s with
+            | LIT _ -> Some s
+            | UPCAST(s, _) -> aux s
+            | VAR(_, Some v) ->
+                match aux v with
+                | Some _ as r -> r
+                | None -> Some v
+
+            // do not deref if expr is method
+            // or other side-effectful operation
+            | _ -> None
+
+        match aux s with
+        | Some r -> r
+        | None -> s
 
     // trivial semantic mapping; use as fallback when no other optimizations can be applied
     let fallback (env : Environment) (expr : Expr) =
@@ -173,20 +188,8 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
         let (s | UPCAST(s,_)) = meaning env e
         let st = getType true s
         if t = st then
-            // UPCAST elimination: remove if expression type matches reflected type
-            let rec tryInline s =
-                match s with
-                | VAR (_, Some s0) -> 
-                    match tryInline s0 with
-                    | None -> Some s
-                    | Some _ as r -> r
-
-                | UPCAST(s,_) -> tryInline s
-                | LIT _ as s -> Some s
-                | _ -> None
-
-            match tryInline s with
-            | Some s when getType false s = t -> s
+            match s with
+            | Deref s0 when getType false s0 = t -> s0
             | _ -> UPCAST(s, t)
 
         elif isAssignableFrom t (getType true s) then UPCAST(s, t)
