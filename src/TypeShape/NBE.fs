@@ -50,26 +50,6 @@ let rec getType reflect (s : Sem) =
     | OP(mi,_) -> mi.ReturnType
     | SYN(expr = e) -> e.Type
 
-/// attempt to dereference a sem expression
-/// to its underlying materialized value.
-let rec tryDereference reflect s =
-    let tOpt = if reflect then None else Some(getType false s)
-    let rec tryDeref s =
-        match s with
-        | LIT _ -> Some s
-        | UPCAST(s, _) -> tryDeref s
-        | VAR(_, Some v) ->
-            match tryDeref v, tOpt with
-            | Some _ as r, None -> r
-            | Some s as r, Some t when t = getType false s -> r
-            | _ -> Some v
-
-        // do not deref if expr is method
-        // or other side-effectful operation
-        | _ -> None
-
-    tryDeref s
-
 // correctly resolves if type is assignable to interface
 let rec isAssignableFrom (iface : Type) (ty : Type) =
     let proj (t : Type) = t.Assembly, t.Namespace, t.Name, t.MetadataToken
@@ -86,7 +66,10 @@ type Environment = Map<Var, Sem>
 let rec meaning (env : Environment) (expr : Expr) : Sem =
     let mkLit (x : 'T) = LIT(x, typeof<'T>)
 
-    let (|Deref|) s = defaultArg (tryDereference false s) s
+    let (|Deref|) s =
+        match s with
+        | VAR(_, Some s) -> s
+        | _ -> s
 
     // fallback mapping: use trivial expression node embedding
     let fallback (env : Environment) (expr : Expr) =
@@ -197,11 +180,24 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
         let st = getType true s
         if t = st then
             // UPCAST elimination: remove if expression type matches the reflected type
-            match tryDereference true s with
+            let rec tryDeref s =
+                match s with
+                | LIT _ -> Some s
+                | UPCAST(s, _) -> tryDeref s
+                | VAR(_, Some v) ->
+                    match tryDeref v with
+                    | Some _ as r -> r
+                    | None -> Some s
+
+                // do not deref if expr is method
+                // or other side-effectful operation
+                | _ -> None
+
+            match tryDeref s with
             | Some s when getType false s = t -> s
             | _ -> UPCAST(s, t)
 
-        elif isAssignableFrom t (getType true s) then UPCAST(s, t)
+        elif isAssignableFrom t st then UPCAST(s, t)
         else fallback env expr
 
     | SpecificCall <@ (=) @> (None, _, ([value; Value(null,_)] | [Value(null,_) ; value]))
