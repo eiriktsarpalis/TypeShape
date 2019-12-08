@@ -14,7 +14,7 @@ open FSharp.Quotations.ExprShape
 type Sem =
     | VAR of Var * value:Sem option
     | LIT of obj * Type
-    | LAM of Var * (Sem -> Sem)
+    | LAM of Var * Sem * (Sem -> Sem)
     | LET of Var * Sem * Sem
     | TUPLE of Type * Sem list
     | RECORD of Type * Sem list
@@ -41,7 +41,7 @@ let rec getType reflect (s : Sem) =
     | VAR (_, Some s) -> getType reflect s
     | LIT (null, t) -> t
     | LIT (o, _) -> o.GetType()
-    | LAM (v, f) -> FSharpType.MakeFunctionType(v.Type, getType reflect (f (VAR(v, None))))
+    | LAM (v, s, _) -> FSharpType.MakeFunctionType(v.Type, getType false s)
     | LET (_,_,k) -> getType reflect k
     | UPCAST (s,t) -> if reflect then getType reflect s else t
     | TUPLE (t,_) -> t
@@ -49,6 +49,26 @@ let rec getType reflect (s : Sem) =
     | UNION(uci,_) -> uci.DeclaringType
     | OP(mi,_) -> mi.ReturnType
     | SYN(expr = e) -> e.Type
+
+/// attempt to dereference a sem expression
+/// to its underlying materialized value.
+let rec tryDereference reflect s =
+    let tOpt = if reflect then None else Some(getType false s)
+    let rec tryDeref s =
+        match s with
+        | LIT _ -> Some s
+        | UPCAST(s, _) -> tryDeref s
+        | VAR(_, Some v) ->
+            match tryDeref v, tOpt with
+            | Some _ as r, None -> r
+            | Some s as r, Some t when t = getType false s -> r
+            | _ -> Some v
+
+        // do not deref if expr is method
+        // or other side-effectful operation
+        | _ -> None
+
+    tryDeref s
 
 // correctly resolves if type is assignable to interface
 let rec isAssignableFrom (iface : Type) (ty : Type) =
@@ -66,25 +86,7 @@ type Environment = Map<Var, Sem>
 let rec meaning (env : Environment) (expr : Expr) : Sem =
     let mkLit (x : 'T) = LIT(x, typeof<'T>)
 
-    /// attempt to dereference a sem expression
-    /// to its underlying materialized value.
-    let (|Deref|) s =
-        let rec aux s =
-            match s with
-            | LIT _ -> Some s
-            | UPCAST(s, _) -> aux s
-            | VAR(_, Some v) ->
-                match aux v with
-                | Some _ as r -> r
-                | None -> Some v
-
-            // do not deref if expr is method
-            // or other side-effectful operation
-            | _ -> None
-
-        match aux s with
-        | Some r -> r
-        | None -> s
+    let (|Deref|) s = defaultArg (tryDereference false s) s
 
     // trivial semantic mapping; use as fallback when no other optimizations can be applied
     let fallback (env : Environment) (expr : Expr) =
@@ -93,7 +95,9 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
             match env.TryFind v with
             | Some (LIT _ | VAR _ as s) -> s
             | sopt -> VAR(v, sopt)
-        | ShapeLambda(v, body) -> LAM(v, fun s -> meaning (env.Add(v, s)) body)
+        | ShapeLambda(v, body) -> 
+            let slam s = meaning (env.Add(v, s)) body
+            LAM(v, slam (VAR(v, None)), slam)
         | ShapeCombination(shape, args) ->
             let sargs = args |> List.map (meaning env)
             let isPureNode =
@@ -117,7 +121,7 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
     | Value(o, t) -> LIT(o, t)
     | Application(f, g) ->
         match meaning env f with
-        | Deref (LAM (v, lam)) ->
+        | Deref (LAM (v, _, lam)) ->
             match meaning env g with
             // (λ x. M) N ~> M[N/x]
             | LIT _ | VAR _ | LAM _ as s -> lam s
@@ -188,8 +192,9 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
         let (s | UPCAST(s,_)) = meaning env e
         let st = getType true s
         if t = st then
-            match s with
-            | Deref s0 when getType false s0 = t -> s0
+            // UPCAST elimination: remove if expression type matches the reflected type
+            match tryDereference true s with
+            | Some s when getType false s = t -> s
             | _ -> UPCAST(s, t)
 
         elif isAssignableFrom t (getType true s) then UPCAST(s, t)
@@ -242,7 +247,7 @@ let reify (s : Sem) : Expr =
         match s with
         | VAR (v, _) -> Set.singleton v, Expr.Var v
         | LIT (o, t) -> Set.empty, Expr.Value(o, t)
-        | LAM (v, lam) -> 
+        | LAM (v, _, lam) -> 
             let refs, ebody = lam (VAR (v, None)) |> aux
             Set.remove v refs, Expr.Lambda(v, ebody)
         | LET (v, b, k) ->
