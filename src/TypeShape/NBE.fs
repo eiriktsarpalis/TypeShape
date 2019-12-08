@@ -50,15 +50,28 @@ let rec getType reflect (s : Sem) =
     | OP(mi,_) -> mi.ReturnType
     | SYN(expr = e) -> e.Type
 
-// correctly resolves if type is assignable to interface
-let rec isAssignableFrom (iface : Type) (ty : Type) =
+/// determines if the two types are in a subtype relationship
+let rec isSubtypeOf (iface : Type) (ty : Type) =
     let proj (t : Type) = t.Assembly, t.Namespace, t.Name, t.MetadataToken
     if iface.IsAssignableFrom ty then true
     elif ty.GetInterfaces() |> Array.exists(fun if0 -> proj if0 = proj iface) then true
     else
         match ty.BaseType with
         | null -> false
-        | bt -> isAssignableFrom iface bt
+        | bt -> isSubtypeOf iface bt
+
+let rec containsReference (v : Var) (s : Sem) =
+    match s with
+    | VAR (w, _) -> v = w
+    | LIT _ -> false
+    | LAM (_, b, _) -> containsReference v b
+    | LET (_, b, k) -> containsReference v b || containsReference v k
+    | UPCAST (s, _) -> containsReference v s
+    | TUPLE (_, args)
+    | RECORD (_, args)
+    | UNION (_, args)
+    | OP (_, args)
+    | SYN (_, _, _, args) -> args |> List.exists (containsReference v)
 
 type Environment = Map<Var, Sem>
 
@@ -70,6 +83,11 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
         match s with
         | VAR(_, Some s) -> s
         | _ -> s
+
+    let mkLet v sbind skont =
+        // if binding is pure and variable not referenced in kont, eliminate the let
+        if isPure sbind && skont |> containsReference v |> not then skont
+        else LET(v, sbind, skont)
 
     // fallback mapping: use trivial expression node embedding
     let fallback (env : Environment) (expr : Expr) =
@@ -113,14 +131,17 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
             // (λ x. M) N ~> M[N/x]
             | LIT _ | VAR _ | LAM _ as s -> lam s
             // (λ x. M) N ~> let x = N in M
-            | s -> LET(v, s, lam (VAR(v, Some s)))
+            | sbind -> mkLet v sbind (lam (VAR(v, Some sbind)))
+
         | _ -> fallback env expr
 
-    | Let(v, binding, body) when not v.IsMutable ->
-        let s = meaning env binding
-        match meaning (env.Add(v, s)) body with
-        | VAR(x, _) when x = v -> s // let x = N in x ~> N
-        | sk -> LET(v, s, sk)
+    | Let(v, bind, kont) when not v.IsMutable ->
+        let sbind = meaning env bind
+        match meaning (env.Add(v, sbind)) kont with
+        // let x = N in x ~> N
+        | VAR(x, _) when x = v -> sbind 
+        // let x = expr in M ~> M
+        | skont -> mkLet v sbind skont
 
     | IfThenElse(cond, ifExpr, elseExpr) ->
         match meaning env cond with
@@ -167,8 +188,8 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
         let s = meaning env e
         let st = getType true s
         let staticTypeTestResult =
-            if isAssignableFrom t st then Some true
-            elif isAssignableFrom st t then None
+            if isSubtypeOf t st then Some true
+            elif isSubtypeOf st t then None
             else Some false
 
         match staticTypeTestResult with
@@ -197,7 +218,7 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
             | Some s when getType false s = t -> s
             | _ -> UPCAST(s, t)
 
-        elif isAssignableFrom t st then UPCAST(s, t)
+        elif isSubtypeOf t st then UPCAST(s, t)
         else fallback env expr
 
     | SpecificCall <@ (=) @> (None, _, ([value; Value(null,_)] | [Value(null,_) ; value]))
@@ -238,34 +259,18 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
     | _ -> fallback env expr
 
 /// Maps semantic expressions back to a syntactic representation
-let reify (s : Sem) : Expr =
-    let rec aux s =
-        let foldMap ss =
-            let refss, es = ss |> List.map aux |> List.unzip
-            Set.unionMany refss, es
-
-        match s with
-        | VAR (v, _) -> Set.singleton v, Expr.Var v
-        | LIT (o, t) -> Set.empty, Expr.Value(o, t)
-        | LAM (v, _, lam) -> 
-            let refs, ebody = lam (VAR (v, None)) |> aux
-            Set.remove v refs, Expr.Lambda(v, ebody)
-        | LET (v, b, k) ->
-            let krefs, ek = aux k
-            if isPure b && not (krefs.Contains v) then krefs, ek
-            else
-                let brefs, eb = aux b
-                let refs = krefs |> Set.union brefs |> Set.remove v
-                refs, Expr.Let(v, eb, ek)
-
-        | UPCAST (s, t) -> let scope, es = aux s in scope, Expr.Coerce(es, t)
-        | TUPLE (_,fs) -> let scope, es = foldMap fs in scope, Expr.NewTuple(es)
-        | RECORD (t, fs) -> let scope, es = foldMap fs in scope, Expr.NewRecord(t, es)
-        | UNION (uci, fs) -> let scope, es = foldMap fs in scope, Expr.NewUnionCase(uci, es)
-        | OP(mI, args) -> let scope, es = foldMap args in scope, Expr.Call(mI, es)
-        | SYN(_, _, shape, sparams) -> let scope, es = foldMap sparams in scope, RebuildShapeCombination(shape, es)
-
-    aux s |> snd
+let rec reify (s : Sem) : Expr =
+    match s with
+    | VAR (v, _) -> Expr.Var v
+    | LIT (o, t) -> Expr.Value(o, t)
+    | LAM (v, b, _) -> Expr.Lambda(v, reify b)
+    | LET (v, b, k) -> Expr.Let(v, reify b, reify k)
+    | UPCAST (s, t) -> Expr.Coerce(reify s, t)
+    | TUPLE (_, fs) -> Expr.NewTuple(fs |> List.map reify)
+    | RECORD (t, fs) -> Expr.NewRecord(t, fs |> List.map reify)
+    | UNION (uci, fs) -> Expr.NewUnionCase(uci, fs |> List.map reify)
+    | OP(mI, args) -> Expr.Call(mI, args |> List.map reify)
+    | SYN(_, _, shape, sparams) -> RebuildShapeCombination(shape, sparams |> List.map reify)
 
 /// Apply normalization-by-evaluation to quotation tree
 let nbeUntyped (e : Expr) : Expr = e |> meaning Map.empty |> reify
