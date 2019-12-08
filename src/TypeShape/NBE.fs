@@ -88,16 +88,9 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
 
     let (|Deref|) s = defaultArg (tryDereference false s) s
 
-    // trivial semantic mapping; use as fallback when no other optimizations can be applied
+    // fallback mapping: use trivial expression node embedding
     let fallback (env : Environment) (expr : Expr) =
         match expr with
-        | ShapeVar v -> 
-            match env.TryFind v with
-            | Some (LIT _ | VAR _ as s) -> s
-            | sopt -> VAR(v, sopt)
-        | ShapeLambda(v, body) -> 
-            let slam s = meaning (env.Add(v, s)) body
-            LAM(v, slam (VAR(v, None)), slam)
         | ShapeCombination(shape, args) ->
             let sargs = args |> List.map (meaning env)
             let isPureNode =
@@ -116,9 +109,20 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
                 | _ -> false
 
             SYN(expr, isPureNode, shape, sargs)
+
+        | ShapeVar _ | ShapeLambda _ -> failwith "internal error"
         
     match expr with
     | Value(o, t) -> LIT(o, t)
+    | Var v -> 
+        match env.TryFind v with
+        | Some (LIT _ | VAR _ as s) -> s
+        | sopt -> VAR(v, sopt)
+
+    | Lambda(v, body) -> 
+        let slam s = meaning (env.Add(v, s)) body
+        LAM(v, slam (VAR(v, None)), slam)
+
     | Application(f, g) ->
         match meaning env f with
         | Deref (LAM (v, _, lam)) ->
@@ -204,12 +208,12 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
     | SpecificCall <@ isNull @> (None, _, ([value])) ->
         match meaning env value with
         | Deref (LIT (x,_)) -> mkLit(obj.ReferenceEquals(x, null))
-        | _ -> fallback env value
+        | _ -> fallback env expr
 
     | SpecificCall <@ (<>) @> (None, _, ([value; Value(null,_)] | [Value(null,_) ; value])) ->
         match meaning env value with
         | Deref (LIT (x,_)) -> mkLit(not <| obj.ReferenceEquals(x, null))
-        | _ -> fallback env value
+        | _ -> fallback env expr
 
     | SpecificCall <@ (|>) @> (None, _, [value; func])
     | SpecificCall <@ (<|) @> (None, _, [func; value]) -> meaning env (Expr.Application(func, value))
