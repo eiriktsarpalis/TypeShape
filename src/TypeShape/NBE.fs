@@ -79,7 +79,7 @@ type Environment = Map<Var, Sem>
 let rec meaning (env : Environment) (expr : Expr) : Sem =
     let mkLit (x : 'T) = LIT(x, typeof<'T>)
 
-    let (|Deref|) s =
+    let rec (|Deref|) s =
         match s with
         | VAR(_, Some s) -> s
         | _ -> s
