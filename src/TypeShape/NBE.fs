@@ -102,10 +102,10 @@ let rec meaning (env : Environment) (expr : Expr) : Sem =
                 | LetRecursive _
                 | QuoteRaw _
                 | QuoteTyped _ -> true
-                | PropertyGet(Some e, _, []) when 
+                | PropertyGet(Some e, _, []) ->
                     FSharpType.IsRecord(e.Type, true) || 
                     FSharpType.IsUnion(e.Type, true) ||
-                    FSharpType.IsTuple(e.Type) -> true
+                    FSharpType.IsTuple(e.Type)
                 | _ -> false
 
             SYN(expr, isPureNode, shape, sargs)
