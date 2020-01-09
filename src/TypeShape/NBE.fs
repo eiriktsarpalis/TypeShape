@@ -39,8 +39,7 @@ let rec getType reflect (s : Sem) =
     match s with
     | VAR (v, None) -> v.Type
     | VAR (_, Some s) -> getType reflect s
-    | LIT (null, t) -> t
-    | LIT (o, _) -> o.GetType()
+    | LIT (_, t) -> t
     | LAM (v, s, _) -> FSharpType.MakeFunctionType(v.Type, getType false s)
     | LET (_,_,k) -> getType reflect k
     | UPCAST (s,t) -> if reflect then getType reflect s else t
