@@ -176,7 +176,7 @@ Target.create "Release" ignore
 
 "Default"
   ==> "NuGet.Bundle"
-  ==> "NuGet.ValidateSourceLink"
+  //==> "NuGet.ValidateSourceLink"
   ==> "Bundle"
 
 "Bundle"

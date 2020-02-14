@@ -7,10 +7,10 @@ nuget Microsoft.SourceLink.GitHub ~> 1.0.0 copy_local:true
 
 group Test
   source https://api.nuget.org/v3/index.json
-  framework: netcoreapp3.0, net472
+  framework: netcoreapp3.1, net472
 
   nuget FSharp.Core >= 4.7.0
-  nuget Microsoft.NET.Test.Sdk ~> 15.8
+  nuget Microsoft.NET.Test.Sdk ~> 16.0
   nuget xunit ~> 2.4.0
   nuget xunit.runner.visualstudio ~> 2.4.0 version_in_path: true
   nuget Unquote ~> 4.0
