@@ -46,6 +46,12 @@ let ``Should fail on invalid type inputs`` () =
     | null -> ()
     | canon -> raises<UnsupportedShape> <@ TypeShape.Create canon @>
 
+    match Type.GetType("System.Span`1") with
+    | null -> ()
+    | span -> 
+        let instance = span.MakeGenericType(typeof<int>)
+        raises<UnsupportedShape> <@ TypeShape.Create instance @>
+
 [<Fact>]
 let ``Should correctly resolve untyped shapes`` () =
     test <@ TypeShape.Create typeof<int> :? TypeShape<int> @>

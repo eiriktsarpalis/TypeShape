@@ -124,8 +124,17 @@ module private TypeShapeImpl =
     type private ReflectionHelper =
         static member GetInstance<'T>() = TypeShape<'T>.Instance
     
-    let private canon = Type.GetType "System.__Canon"
     let private genInstanceGetter = typeof<ReflectionHelper>.GetMethod("GetInstance", BindingFlags.NonPublic ||| BindingFlags.Static)
+    let private canon = Type.GetType "System.__Canon"
+#if NETSTANDARD2_0
+    let private isByRefLike : Type -> bool = 
+        match typeof<Type>.GetProperty("IsByRefLike") with
+        | null -> fun _ -> false
+        | p ->
+            let method = p.GetGetMethod()
+            let dele = Delegate.CreateDelegate(typeof<Func<Type, bool>>, method) :?> Func<Type, bool>
+            dele.Invoke
+#endif
 
     let resolveTypeShape(typ : Type) =
         if typ = null then raise <| ArgumentNullException("TypeShape: System.Type cannot be null.")
@@ -134,7 +143,12 @@ module private TypeShapeImpl =
             typ.IsGenericParameter ||
             typ = canon ||
             typ.IsByRef ||
-            typ.IsPointer 
+            typ.IsPointer ||
+#if NETSTANDARD2_0
+            isByRefLike typ
+#else
+            typ.IsByRefLike
+#endif
         then 
             raise <| UnsupportedShape typ
 
