@@ -112,14 +112,11 @@ Target.create "NuGet.ValidateSourceLink" (fun _ ->
 )
 
 Target.create "NuGet.Push" (fun _ ->
-    DotNet.nugetPush (fun opts ->
-        { opts with
-            PushParams =
-                { opts.PushParams with
-                    NoSymbols = true
-                    Source = Some "https://api.nuget.org/v3/index.json"
-                    ApiKey = Some (Environment.GetEnvironmentVariable "NUGET_KEY") }
-        }) (artifactsDir + "/*")
+    let source = "https://api.nuget.org/v3/index.json"
+    let key = Environment.GetEnvironmentVariable "NUGET_KEY"
+    for artifact in !! (artifactsDir + "/*nupkg") do
+        let result = DotNet.exec id "nuget" (sprintf "push -s %s -k %s %s" source key artifact)
+        if not result.OK then failwith "failed to push packages"
 )
 
 // --------------------------------------------------------------------------------------
@@ -140,7 +137,7 @@ Target.create "ReleaseGithub" (fun _ ->
     Git.Branches.pushTag "" remote release.NugetVersion
 
     let client =
-        match Environment.GetEnvironmentVariable "OctokitToken" with
+        match Environment.GetEnvironmentVariable "GITHUB_TOKEN" with
         | null -> 
             let user =
                 match Environment.environVarOrDefault "github-user" "" with

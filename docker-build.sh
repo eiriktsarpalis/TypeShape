@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 
-if [ -z $1 ] ; then
-	TARGET="Bundle"
-else
-	TARGET=$1
-fi
+cd `dirname $0`
 
-IMAGE_LABEL="typeshape-build:$RANDOM"
+IMAGE_LABEL="typeshape-build"
 
 # docker build
-docker build -t $IMAGE_LABEL .
+docker build \
+    --build-arg "GIT_USER_NAME=$(git config user.name)" \
+    --build-arg "GIT_USER_EMAIL=$(git config user.email)" \
+    -t $IMAGE_LABEL \
+    .
 
 # dotnet build, test & nuget publish
-docker run -t --rm \
-           -e NUGET_KEY=$NUGET_KEY \
-		   -e TARGET=$TARGET \
-		   $IMAGE_LABEL
+docker run --rm \
+    -e GITHUB_TOKEN=$GITHUB_TOKEN \
+    -e NUGET_KEY=$NUGET_KEY \
+    $IMAGE_LABEL \
+    ./build.sh "$@"
