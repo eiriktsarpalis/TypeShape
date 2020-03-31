@@ -1,6 +1,6 @@
 # TypeShape [![Windows Build master](https://ci.appveyor.com/api/projects/status/6t6vovc2xrj8nqh9/branch/master?svg=true)](https://ci.appveyor.com/project/nessos/typeshape/branch/master) [![Docker build master](https://api.travis-ci.org/eiriktsarpalis/TypeShape.svg?branch=master)](https://travis-ci.org/eiriktsarpalis/TypeShape/branches) [![NuGet Badge](https://buildstats.info/nuget/TypeShape)](https://www.nuget.org/packages/TypeShape/)
 
-TypeShape is a small, extensible F# library for practical generic programming.
+TypeShape is a small, extensible F# library for practical datatype-generic programming.
 Borrowing from ideas used in the FsPickler [implementation](http://mbraceproject.github.io/FsPickler/overview.html#Pickler-Generation),
 it uses a combination of reflection, active patterns and F# object expressions to minimize the
 amount of reflection required by the user in such applications.
