@@ -423,6 +423,12 @@ let ``Shape F# Map`` () =
 
     test <@ match shapeof<Map<string, int>> with Shape.FSharpMap s -> s.Accept accepter | _ -> false @>
 
+[<Fact>]
+let ``Shape F# Async`` () =
+    let visitor ty =
+        { new ITypeVisitor<bool> with member __.Visit<'T>() = typeof<'T> = ty }
+
+    test <@ match shapeof<Async<Dictionary<int, string>>> with Shape.FSharpAsync s -> s.Element.Accept (visitor typeof<Dictionary<int, string>>) | _ -> false @>
 
 type Record7 = 
     { 

@@ -507,6 +507,15 @@ type private ShapeFSharpList<'T> () =
     interface IShapeFSharpList with
         member __.Element = shapeof<'T> :> _
 
+// F# Async
+
+type IShapeFSharpAsync =
+    abstract Element : TypeShape
+
+type private ShapeFSharpAsync<'T> () =
+    interface IShapeFSharpAsync with
+        member __.Element = shapeof<'T> :> _
+
 //-----------------------------
 // Section: Member-based Shapes
 
@@ -1291,6 +1300,11 @@ module Shape =
         | :? TypeShape<'T> -> SomeU
         | _ -> None
 
+    let inline private isNotAsync (s : TypeShape) =
+        match s.ShapeInfo with
+        | Generic(td,_) when td = typedefof<Async<_>> -> false
+        | _ -> true
+
     // ----------
     // Primitives
 
@@ -1606,6 +1620,15 @@ module Shape =
             |> Some
         else None
 
+    /// Recognizes shapes of F# async types
+    let (|FSharpAsync|_|) (s : TypeShape) =
+        match s.ShapeInfo with
+        | Generic(td,ta) when td = typedefof<Async<_>> ->
+            Activator.CreateInstanceGeneric<ShapeFSharpAsync<_>>(ta)
+            :?> IShapeFSharpAsync
+            |> Some
+        | _ -> None
+
     /// Recognizes shapes that implement System.Collections.Generic.ICollection<_>
     let (|Collection|_|) (s : TypeShape) =
         match s.Type.GetInterface("ICollection`1") with
@@ -1640,7 +1663,7 @@ module Shape =
 
     /// Recognizes shapes that are F# records
     let (|FSharpRecord|_|) (s : TypeShape) =
-        if FSharpType.IsRecord(s.Type, allMembers) then
+        if FSharpType.IsRecord(s.Type, allMembers) && isNotAsync s then
             Activator.CreateInstanceGeneric<ShapeFSharpRecord<_>>([|s.Type|], [||])
             :?> IShapeFSharpRecord
             |> Some
@@ -1693,7 +1716,7 @@ module Shape =
             not t.IsPrimitive &&
             not t.IsEnum
 
-        if isPocoClass s.Type || isPocoStruct s.Type then
+        if isNotAsync s && (isPocoClass s.Type || isPocoStruct s.Type) then
             let isNullable () =
                 match s.ShapeInfo with
                 | Generic(td,_) -> td = typedefof<Nullable<_>>
