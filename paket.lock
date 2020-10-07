@@ -4,10 +4,45 @@ NUGET
   remote: https://api.nuget.org/v3/index.json
     FSharp.Core (4.3.2)
     Microsoft.Build.Tasks.Git (1.0) - copy_local: true
+    Microsoft.NETCore.Platforms (3.1.3)
+    Microsoft.NETCore.Targets (3.1)
     Microsoft.SourceLink.Common (1.0) - copy_local: true
     Microsoft.SourceLink.GitHub (1.0) - copy_local: true
       Microsoft.Build.Tasks.Git (>= 1.0)
       Microsoft.SourceLink.Common (>= 1.0)
+    System.IO (4.3)
+      Microsoft.NETCore.Platforms (>= 1.1)
+      Microsoft.NETCore.Targets (>= 1.1)
+      System.Runtime (>= 4.3)
+      System.Text.Encoding (>= 4.3)
+      System.Threading.Tasks (>= 4.3)
+    System.Reflection (4.3)
+      Microsoft.NETCore.Platforms (>= 1.1)
+      Microsoft.NETCore.Targets (>= 1.1)
+      System.IO (>= 4.3)
+      System.Reflection.Primitives (>= 4.3)
+      System.Runtime (>= 4.3)
+    System.Reflection.Emit.ILGeneration (4.7)
+    System.Reflection.Emit.Lightweight (4.3)
+      System.Reflection (>= 4.3)
+      System.Reflection.Emit.ILGeneration (>= 4.3)
+      System.Reflection.Primitives (>= 4.3)
+      System.Runtime (>= 4.3)
+    System.Reflection.Primitives (4.3)
+      Microsoft.NETCore.Platforms (>= 1.1)
+      Microsoft.NETCore.Targets (>= 1.1)
+      System.Runtime (>= 4.3)
+    System.Runtime (4.3.1)
+      Microsoft.NETCore.Platforms (>= 1.1.1)
+      Microsoft.NETCore.Targets (>= 1.1.3)
+    System.Text.Encoding (4.3)
+      Microsoft.NETCore.Platforms (>= 1.1)
+      Microsoft.NETCore.Targets (>= 1.1)
+      System.Runtime (>= 4.3)
+    System.Threading.Tasks (4.3)
+      Microsoft.NETCore.Platforms (>= 1.1)
+      Microsoft.NETCore.Targets (>= 1.1)
+      System.Runtime (>= 4.3)
 
 GROUP Build
 STORAGE: NONE
@@ -17,7 +52,7 @@ NUGET
       FSharp.Core (>= 4.0.0.1) - restriction: >= net45
       FSharp.Core (>= 4.2.3) - restriction: && (< net45) (>= netstandard2.0)
       Microsoft.Win32.Registry (>= 4.7) - restriction: && (< net45) (>= netstandard2.0)
-    Fake.Api.Github (5.20.3)
+    Fake.Api.GitHub (5.20.3)
       FSharp.Core (>= 4.7.2) - restriction: >= netstandard2.0
       Octokit (>= 0.48) - restriction: >= netstandard2.0
     Fake.Core.CommandLineParsing (5.20.3) - restriction: >= netstandard2.0

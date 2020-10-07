@@ -2,8 +2,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <Configurations>Debug;Release;Debug-NoEmit;Release-NoEmit</Configurations>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <DefineConstants>$(DefineConstants);TYPESHAPE_EXPOSE;TYPESHAPE_EXPR</DefineConstants>
     <IsPackable>true</IsPackable>
     <!-- workaround for inlining p2p references in nuget; include custom target from Directory.Build.props -->
     <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
@@ -13,6 +14,19 @@
     <WarningLevel>5</WarningLevel>
     <NoWarn>52,1178</NoWarn>
     <OtherFlags>--warnon:1182</OtherFlags>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <DefineConstants>TRACE;DEBUG;TYPESHAPE_EXPOSE;TYPESHAPE_EMIT;TYPESHAPE_EXPR</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug-NoEmit'">
+    <DefineConstants>TRACE;DEBUG;TYPESHAPE_EXPOSE;TYPESHAPE_EXPR</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DefineConstants>TRACE;TYPESHAPE_EXPOSE;TYPESHAPE_EMIT;TYPESHAPE_EXPR</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release-NoEmit'">
+    <DefineConstants>TRACE;TYPESHAPE_EXPOSE;TYPESHAPE_EXPR</DefineConstants>
   </PropertyGroup>
   
   <ItemGroup>

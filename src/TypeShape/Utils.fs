@@ -13,6 +13,9 @@ open System.Collections.Generic
 open System.Collections.Concurrent
 open System.Reflection
 open System.Runtime.Serialization
+#if TYPESHAPE_EMIT
+open System.Reflection.Emit
+#endif
 
 type private ICell =
     abstract Type : Type
@@ -324,10 +327,28 @@ type private ShallowObjectCopier<'T> private () =
 
         let fields = gatherFields t |> Seq.toArray
 
+#if TYPESHAPE_EMIT
+        let voidType = Type.GetType "System.Void"
+        let dynamicMethod =
+            new DynamicMethod("shallowCopy", MethodAttributes.Static ||| MethodAttributes.Public, 
+                                CallingConventions.Standard, voidType, [|t;t|], typeof<ShallowObjectCopier<'T>>, 
+                                skipVisibility = true)
+
+        let ilGen = dynamicMethod.GetILGenerator()
+        for f in fields do
+            ilGen.Emit OpCodes.Ldarg_1
+            ilGen.Emit OpCodes.Ldarg_0
+            ilGen.Emit(OpCodes.Ldfld, f)
+            ilGen.Emit(OpCodes.Stfld, f)
+
+        ilGen.Emit OpCodes.Ret
+        dynamicMethod.CreateDelegate(typeof<Action<'T,'T>>) :?> Action<'T,'T>
+#else
         new Action<'T,'T>(fun src dst ->
             for f in fields do
                 let v = f.GetValue(src)
                 f.SetValue(dst, v))
+#endif
         )
 
     static member Copy (source : 'T) (target : 'T) = copier.Value.Invoke(source, target)
