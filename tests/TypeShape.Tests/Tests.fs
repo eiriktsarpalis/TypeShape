@@ -697,7 +697,7 @@ let ``Shape-Poco should not match interfaces`` () =
             | _ -> true
         @>
 
-#if !NETCOREAPP2_2
+#if !NET5_0
 [<Fact>]
 let ``Shape-Poco should handle write-only properties`` () =
     // https://github.com/eiriktsarpalis/TypeShape/issues/23
