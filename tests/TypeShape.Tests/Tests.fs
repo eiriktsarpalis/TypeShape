@@ -19,6 +19,7 @@ open TypeShape.Core.SubtypeExtensions
 open TypeShape.Empty
 open TypeShape.Clone
 open TypeShape.Tests.GenericTests
+open TypeShape.CSharp.Tests
 
 let check<'T>(prop : 'T -> bool) = Check.QuickThrowOnFailure prop
 let checkCloner (cloner : 'T -> 'T) = check(fun t -> t = cloner t)
@@ -200,7 +201,7 @@ let ``Shape Generic Tuple`` () =
     let scloner = mkStagedCloner<int * decimal * (string * int list) * bool * string option * uint64 * string * byte[] * string * byte[] * decimal>()
     checkCloner scloner
 
-type CSharpRecord() =
+type CSharpDTO() =
     static let mutable counter = 0
     let count = System.Threading.Interlocked.Increment &counter
     member val Foo = "" with get,set
@@ -212,7 +213,7 @@ type CSharpRecord() =
 
     override x.Equals y =
         match y with
-        | :? CSharpRecord as y -> 
+        | :? CSharpDTO as y -> 
             x.Foo = y.Foo && x.Bar = y.Bar && 
             x.Baz = y.Baz && x.TimeSpan = y.TimeSpan
         | _ -> false
@@ -221,25 +222,25 @@ type CSharpRecord() =
 
 [<Fact>]
 let ``Shape CliMutable`` () =
-    match TypeShape.Create<CSharpRecord>() with
+    match TypeShape.Create<CSharpDTO>() with
     | Shape.CliMutable r -> 
         r.Accept { new ICliMutableVisitor<bool> with
             member __.Visit (shape : ShapeCliMutable<'R>) =
-                test <@ typeof<'R> = typeof<CSharpRecord> @>
+                test <@ typeof<'R> = typeof<CSharpDTO> @>
                 test <@ shape.Properties.Length = 4 @>
                 true }
-    | _ -> failwithf "Type %O not recognized as C# record" typeof<CSharpRecord>
+    | _ -> failwithf "Type %O not recognized as C# record" typeof<CSharpDTO>
     |> ignore
 
-    let source = new CSharpRecord(Foo = "Foo", Bar = true, Baz = 42, TimeSpan = TimeSpan.MaxValue)
+    let source = new CSharpDTO(Foo = "Foo", Bar = true, Baz = 42, TimeSpan = TimeSpan.MaxValue)
 
-    let cloner = clone<CSharpRecord>
+    let cloner = clone<CSharpDTO>
     let target = cloner source
     test <@ obj.ReferenceEquals(source, target) |> not @>
     test <@ source = target @>
     test <@ source.GetterOnly <> target.GetterOnly @>
 
-    let sCloner = clone<CSharpRecord>
+    let sCloner = clone<CSharpDTO>
     let target = sCloner source
     test <@ obj.ReferenceEquals(source, target) |> not @>
     test <@ source = target @>
@@ -744,6 +745,23 @@ let ``Shape-Poco should not handle ctor with ByRefLike args`` () =
     match shapeof<Baz> with
     | Shape.Poco s -> test <@ s.Constructors.Length = 0 @>
     | _ -> ()
+#endif
+
+#if NET5_0
+[<Fact>]
+let ``Should support C# records`` () =
+    let testRecord (value : 'Record) =
+        value =! clone value
+        test
+            <@
+                match shapeof<'Record> with
+                | Shape.Poco s -> s.IsCSharpRecord
+                | _ -> false
+            @>
+
+    SimpleCSharpRecord(42, "foo", false) |> testRecord
+    DerivedCSharpRecord(42, "foo", false, 255uy) |> testRecord
+    CSharpRecordWithProps(X = 42, Y = "foo") |> testRecord
 #endif
 
 module GenericClone =
