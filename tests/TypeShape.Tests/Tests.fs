@@ -4,6 +4,7 @@ open System
 open System.Collections.Generic
 open System.Reflection
 open System.Runtime.Serialization
+open System.Runtime.CompilerServices
 
 open FSharp.Reflection
 
@@ -715,6 +716,34 @@ let ``Shape-Poco should not match MarshalByRef types`` () =
             | Shape.Poco _ -> false
             | _ -> true
         @>
+#endif
+
+[<Fact>]
+let ``Shape-Poco should handle string correctly`` () =
+    
+    test 
+        <@
+            match shapeof<string> with
+            | Shape.Poco _ -> true
+            | _ -> false
+        @>
+
+#if NETCOREAPP
+type [<IsByRefLike>] Foo = struct end
+type Bar() = member _.Foo =  Foo()
+type Baz(foo: Foo) = class end
+
+[<Fact>]
+let ``Shape-Poco should not match types with ByRefLike props or fields`` () =
+    test <@ match shapeof<Bar> with
+            | Shape.Poco _ -> false
+            | _ -> true @>
+
+[<Fact>]
+let ``Shape-Poco should not handle ctor with ByRefLike args`` () =
+    match shapeof<Baz> with
+    | Shape.Poco s -> test <@ s.Constructors.Length = 0 @>
+    | _ -> ()
 #endif
 
 module GenericClone =
