@@ -136,19 +136,22 @@ module private TypeShapeImpl =
             dele.Invoke
 #endif
 
+    let inline internal isUnsupported (typ: Type) =
+        typ.IsPointer ||
+        typ.IsByRef ||
+#if NETSTANDARD2_0
+        isByRefLike typ
+#else
+        typ.IsByRefLike
+#endif
+
     let resolveTypeShape(typ : Type) =
         if typ = null then raise <| ArgumentNullException("TypeShape: System.Type cannot be null.")
 
         if  typ.IsGenericTypeDefinition ||
             typ.IsGenericParameter ||
             typ = canon ||
-            typ.IsByRef ||
-            typ.IsPointer ||
-#if NETSTANDARD2_0
-            isByRefLike typ
-#else
-            typ.IsByRefLike
-#endif
+            isUnsupported typ
         then 
             raise <| UnsupportedShape typ
 
@@ -1208,7 +1211,7 @@ and [<Sealed>] ShapePoco<'Poco> private () =
     let ctors =
         typeof<'Poco>.GetConstructors(allInstanceMembers)
         // filter any ctors that accept byrefs or pointers
-        |> Seq.filter (fun c -> c.GetParameters() |> Array.exists(fun p -> let t = p.ParameterType in t.IsPointer || t.IsByRef) |> not)
+        |> Seq.filter (fun c -> c.GetParameters() |> Array.forall(fun p -> not <| isUnsupported p.ParameterType))
         |> Seq.map (fun c -> mkCtorUntyped<'Poco> c)
         |> Seq.toArray
 
@@ -1700,9 +1703,12 @@ module Shape =
                 | _ -> false
 
             let hasPointers () =
-                s.Type.GetFields allInstanceMembers
-                |> Seq.map (fun f -> f.FieldType)
-                |> Seq.exists (fun t -> t.IsByRef || t.IsPointer)
+                s.Type.GetMembers allInstanceMembers
+                |> Seq.choose (function 
+                    | :? PropertyInfo as p -> Some p.PropertyType
+                    | :? FieldInfo as f -> Some f.FieldType
+                    | _ -> None)
+                |> Seq.exists isUnsupported
 
             if isNullable() || hasPointers() then None // do not recognize if type has pointer fields
             else
