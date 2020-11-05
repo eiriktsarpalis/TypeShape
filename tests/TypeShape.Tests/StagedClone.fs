@@ -61,7 +61,8 @@ let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
         s.Element.Accept { new ITypeVisitor<Expr<'T>> with
             member __.Visit<'t> () =
                 if typeof<'t>.IsPrimitive then
-                    wrap <@ match (% unwrap e) : 't[] with null -> null | ts -> ts.Clone() :?> 't[] @>
+                    // pattern matching weirdness due to https://github.com/dotnet/fsharp/issues/10389
+                    wrap <@ match (% unwrap e) : 't[] with ts when isNull ts -> null | ts -> ts.Clone() :?> 't[] @>
                 else
                     wrap <@ Array.map (% stageCloner self) (% unwrap e) :'t[] @> }
 
