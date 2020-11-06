@@ -13,7 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build
-      run: build.cmd -t Bundle
+      run: .\build.cmd -t Bundle
       
   Linux:
     runs-on: ubuntu-latest
