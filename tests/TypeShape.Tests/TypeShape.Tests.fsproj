@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;net472</TargetFrameworks>
+    <TargetFrameworks>net5.0;net472</TargetFrameworks>
     <Configurations>Debug;Release;Debug-NoEmit;Release-NoEmit</Configurations>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\TypeShape.CSharp\TypeShape.CSharp.csproj" />
     <ProjectReference Include="..\..\src\TypeShape\TypeShape.fsproj" />
+    <ProjectReference Include="..\TypeShape.CSharp.Tests\TypeShape.CSharp.Tests.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="StagedClone.fs" />

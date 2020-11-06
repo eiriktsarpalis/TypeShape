@@ -81,11 +81,13 @@ module private TypeShapeImpl =
 
     let fsharpCore41Version = Version(4,4,1,0)
 
+    [<Literal>]
     let allMembers =
         BindingFlags.NonPublic ||| BindingFlags.Public |||
             BindingFlags.Instance ||| BindingFlags.Static |||
                 BindingFlags.FlattenHierarchy 
 
+    [<Literal>]
     let allInstanceMembers =
         BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance
 
@@ -120,6 +122,19 @@ module private TypeShapeImpl =
             match ty.BaseType with
             | null -> false
             | bt -> isInterfaceAssignableFrom iface bt
+
+    // walks the type hierarchy for fields
+    let gatherMembers (f : Type -> #seq<'Member>) (t : Type) =
+        let members = ResizeArray()
+        let rec aux (t : Type) =
+            match t.BaseType with
+            | null -> ()
+            | bt ->
+                aux bt
+                members.AddRange(f t)
+
+        aux t
+        members.ToArray()
 
     type private ReflectionHelper =
         static member GetInstance<'T>() = TypeShape<'T>.Instance
@@ -993,8 +1008,8 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
     let props = FSharpType.GetRecordFields(typeof<'Record>, allMembers)
     let fields = typeof<'Record>.GetFields(allInstanceMembers)
     let mkRecordField (prop : PropertyInfo) =
-        let field = fields |> Array.find (fun f -> f.Name = prop.Name + "@")
-        mkWriteMemberUntyped<'Record> prop.Name prop [|field :> MemberInfo|]
+        let backingField = fields |> Array.find (fun f -> f.Name = prop.Name + "@")
+        mkWriteMemberUntyped<'Record> prop.Name prop [|backingField :> MemberInfo|]
 
     let ctorParams = props |> Array.map (fun p -> defaultOfUntyped p.PropertyType)
 
@@ -1145,12 +1160,12 @@ and IFSharpUnionVisitor<'R> =
     abstract Visit : ShapeFSharpUnion<'U> -> 'R
 
 //------------------------
-// C# Records
+// C# DTOs
 
-/// Denotes a type that behaves like a mutable C# record:
+/// Denotes a type that behaves like a mutable C# DTO:
 /// Carries a parameterless constructor and settable properties
 type IShapeCliMutable =
-    /// Gettable and Settable properties for C# Record
+    /// Gettable and Settable properties for C# DTO
     abstract Properties : IShapeReadOnlyMember[]
     abstract Accept : ICliMutableVisitor<'R> -> 'R
 
@@ -1192,6 +1207,8 @@ and ICliMutableVisitor<'R> =
 type IShapePoco =
     /// True iff POCO is a struct
     abstract IsStruct : bool
+    /// True iff POCO is a C# 9 record
+    abstract IsCSharpRecord : bool
     /// Constructor shapes for the type
     abstract Constructors : IShapeConstructor[]
     /// Field shapes for the type
@@ -1205,8 +1222,13 @@ and [<Sealed>] ShapePoco<'Poco> private () =
     let isStruct = typeof<'Poco>.IsValueType
 
     let fields = 
-        typeof<'Poco>.GetFields(allInstanceMembers)
+        gatherMembers (fun t -> t.GetFields(allInstanceMembers ||| BindingFlags.FlattenHierarchy)) typeof<'Poco>
         |> Array.map (fun f -> mkWriteMemberUntyped<'Poco> f.Name f [|f|])
+
+    let isCSharpRecord =
+        typeof<IEquatable<'Poco>>.IsAssignableFrom(typeof<'Poco>) &&
+        let cloner = typeof<'Poco>.GetMethod("<Clone>$", BindingFlags.Instance ||| BindingFlags.Public, null, types = [||], modifiers = null) in
+        cloner <> null && cloner.IsVirtual
 
     let ctors =
         typeof<'Poco>.GetConstructors(allInstanceMembers)
@@ -1223,6 +1245,8 @@ and [<Sealed>] ShapePoco<'Poco> private () =
 
     /// True iff POCO is a struct
     member __.IsStruct = isStruct
+    /// True iff POCO is a C# 9 record
+    member __.IsCSharpRecord = isCSharpRecord
     /// Constructor shapes for the type
     member __.Constructors = ctors
     /// Field shapes for the type
@@ -1245,11 +1269,11 @@ and [<Sealed>] ShapePoco<'Poco> private () =
         member __.Fields = fields |> Array.map (fun f -> f :> _)
         member __.Properties = properties |> Array.map (fun p -> p :> _)
         member __.IsStruct = isStruct
+        member __.IsCSharpRecord = isCSharpRecord
         member __.Accept v = v.Visit __
 
 and IPocoVisitor<'R> =
     abstract Visit : ShapePoco<'Poco> -> 'R
-
 
 //-----------------------------
 // Section: Shape ISerializable
@@ -1684,7 +1708,7 @@ module Shape =
             :?> IShapeCliMutable
             |> Some
 
-    /// Recognizes POCO shapes, .NET types that are either classes or structs
+    /// Recognizes POCO shapes, .NET types that are either classes, structs or C# records types
     let (|Poco|_|) (s : TypeShape) =
         let isPocoClass (t : Type) = 
             t.IsClass && 

@@ -3,13 +3,13 @@
 TypeShape is intended for real-world applications, and as such performance is a significant aspect of its design.
 In this article I present a few benchmarks comparing generic programming approaches for common applications.
 
-Unless otherwise stated, all benchmarks use [BenchmarkDotNet](https://benchmarkdotnet.org/) running .NET Core 3.0 on Linux:
+Unless otherwise stated, all benchmarks use [BenchmarkDotNet](https://benchmarkdotnet.org/) running .NET 5.0 on Linux:
 ```
-BenchmarkDotNet=v0.11.5, OS=ubuntu 18.04
-Intel Xeon CPU E5-2673 v4 2.30GHz, 1 CPU, 4 logical and 2 physical cores
-.NET Core SDK=3.0.100
-[Host]     : .NET Core 3.0.0 (CoreCLR 4.700.19.46205, CoreFX 4.700.19.46214), 64bit RyuJIT DEBUG
-DefaultJob : .NET Core 3.0.0 (CoreCLR 4.700.19.46205, CoreFX 4.700.19.46214), 64bit RyuJIT
+BenchmarkDotNet=v0.12.1, OS=ubuntu 20.04
+AMD EPYC 7452, 1 CPU, 4 logical and 2 physical cores
+.NET Core SDK=5.0.100-rc.2.20479.15
+  [Host]     : .NET Core 5.0.0 (CoreCLR 5.0.20.47505, CoreFX 5.0.20.47505), X64 RyuJIT DEBUG
+  DefaultJob : .NET Core 5.0.0 (CoreCLR 5.0.20.47505, CoreFX 5.0.20.47505), X64 RyuJIT
 ```
 You can find the benchmarks project [here](https://github.com/eiriktsarpalis/TypeShape/tree/master/tests/TypeShape.Benchmarks).
 Without further ado, here are the results:
@@ -35,12 +35,12 @@ The following implementations were benchmarked:
 * [A pretty-printer written using TypeShape](https://github.com/eiriktsarpalis/TypeShape/blob/57845c26d55d2d0ac9b4a2ead47cee446dbd2db7/samples/TypeShape.Samples/HKT/PrettyPrinter.fs).
   
 ### Results
-  
-|                      Method |         Mean |       Error |      StdDev |    Ratio | RatioSD |
-|---------------------------- |-------------:|------------:|------------:|---------:|--------:|
-| &#39;FSharp.Core PrettyPrinter&#39; | 2,449.132 us | 146.3810 us | 388.1817 us | 2,034.44 |  179.25 |
-|    &#39;Baseline PrettyPrinter&#39; |     1.202 us |   0.0237 us |   0.0439 us |     1.00 |    0.00 |
-|   &#39;TypeShape PrettyPrinter&#39; |     2.182 us |   0.0423 us |   0.0416 us |     1.82 |    0.09 |
+
+|                      Method |         Mean |       Error |      StdDev |    Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|---------------------------- |-------------:|------------:|------------:|---------:|--------:|-------:|------:|------:|----------:|
+| &#39;FSharp.Core PrettyPrinter&#39; | 985,625.2 ns | 4,027.69 ns | 3,767.50 ns | 1,172.63 |    7.25 | 1.9531 |     - |     - | 156.42 KB |
+|    &#39;Baseline PrettyPrinter&#39; |     841.2 ns |     4.41 ns |     3.68 ns |     1.00 |    0.00 | 0.0172 |     - |     - |   1.13 KB |
+|   &#39;TypeShape PrettyPrinter&#39; |   3,364.0 ns |    21.32 ns |    17.81 ns |     4.00 |    0.03 | 0.0229 |     - |     - |   1.69 KB |
 
 The bespoke implementation is twice as fast as the TypeShape program,
 however it is still significantly faster than the default core implementation.
@@ -68,12 +68,12 @@ The following implementations were benchmarked:
 
 ### Results
 
-|                             Method |        Mean |       Error |     StdDev |  Ratio | RatioSD |
-|----------------------------------- |------------:|------------:|-----------:|-------:|--------:|
-|                  &#39;Baseline Cloner&#39; |    12.92 us |   0.8312 us |   2.289 us |   1.00 |    0.00 |
-|                 &#39;TypeShape Cloner&#39; |   144.48 us |  11.3463 us |  32.372 us |  11.58 |    3.82 |
-|  &#39;TypeShape Unquote Staged Cloner&#39; | 1,548.06 us | 158.5485 us | 464.995 us | 126.61 |   38.88 |
-| &#39;TypeShape Compiled Staged Cloner&#39; |    22.10 us |   2.6079 us |   7.313 us |   1.77 |    0.73 |
+|                             Method |         Mean |      Error |     StdDev |  Ratio | RatioSD |   Gen 0 | Gen 1 | Gen 2 | Allocated |
+|----------------------------------- |-------------:|-----------:|-----------:|-------:|--------:|--------:|------:|------:|----------:|
+|                  &#39;Baseline Cloner&#39; |     3.237 μs |  0.0312 μs |  0.0292 μs |   1.00 |    0.00 |  0.1106 |     - |     - |   7.24 KB |
+|                 &#39;TypeShape Cloner&#39; |   252.932 μs |  3.0226 μs |  2.6795 μs |  78.14 |    1.14 |  1.4648 |     - |     - | 120.81 KB |
+|  &#39;TypeShape Unquote Staged Cloner&#39; | 1,074.877 μs | 13.0047 μs | 12.1646 μs | 332.10 |    5.19 | 11.7188 |     - |     - | 778.44 KB |
+| &#39;TypeShape Compiled Staged Cloner&#39; |     4.055 μs |  0.0307 μs |  0.0287 μs |   1.25 |    0.01 |  0.1144 |     - |     - |   7.62 KB |
 
 The standard TypeShape cloner is an order of magnitude slower than the bespoke implementation, 
 however the compiled staged cloner offers very comparable performance.
@@ -106,11 +106,11 @@ For the purposes of this benchmark, we'll be comparing:
 
 ### Results
 
-|             Method |       Mean |     Error |    StdDev | Ratio | RatioSD |
-|------------------- |-----------:|----------:|----------:|------:|--------:|
-|   'Baseline Empty' |   113.4 ns |  3.126 ns |  8.969 ns |  1.00 |    0.00 |
-| 'Reflection Empty' | 3,955.1 ns | 76.374 ns | 71.441 ns | 32.35 |    2.92 |
-|  'TypeShape Empty' |   815.3 ns | 16.177 ns | 21.596 ns |  7.02 |    0.76 |
+|             Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+|   &#39;Baseline Empty&#39; |    83.05 ns |  0.396 ns |  0.351 ns |  1.00 |    0.00 | 0.0039 |     - |     - |     264 B |
+| &#39;Reflection Empty&#39; | 1,487.92 ns |  8.743 ns |  8.179 ns | 17.91 |    0.13 | 0.0114 |     - |     - |     864 B |
+|  &#39;TypeShape Empty&#39; | 3,138.24 ns | 23.273 ns | 20.631 ns | 37.79 |    0.24 | 0.0038 |     - |     - |     408 B |
 
 ## UnionContract
 
@@ -125,11 +125,11 @@ For this benchmark we will be comparing the following implementations:
 
 ### Results
 
-|                     Method |        Mean |     Error |    StdDev | Ratio | RatioSD |
-|--------------------------- |------------:|----------:|----------:|------:|--------:|
-|   &#39;Baseline Union Encoder&#39; |    701.4 ns |  13.95 ns |  24.06 ns |  1.00 |    0.00 |
-| &#39;Reflection Union Encoder&#39; | 10,867.8 ns | 210.06 ns | 196.49 ns | 15.66 |    0.62 |
-|  &#39;TypeShape Union Encoder&#39; |  2,363.3 ns |  45.65 ns |  50.74 ns |  3.43 |    0.17 |
+|                     Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|--------------------------- |-----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
+|   &#39;Baseline Union Encoder&#39; |   686.7 ns |  7.78 ns |  7.27 ns |  1.00 |    0.00 | 0.0105 |     - |     - |     720 B |
+| &#39;Reflection Union Encoder&#39; | 4,261.3 ns | 18.40 ns | 15.36 ns |  6.21 |    0.08 | 0.0229 |     - |     - |    1688 B |
+|  &#39;TypeShape Union Encoder&#39; | 8,504.1 ns | 35.03 ns | 32.76 ns | 12.39 |    0.14 | 0.0153 |     - |     - |    1648 B |
 
 ## FsPickler
 

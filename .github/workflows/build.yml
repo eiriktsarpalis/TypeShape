@@ -12,6 +12,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.100-rc.2.20479.15
     - name: Build
       run: .\build.cmd -t Bundle
       
@@ -28,9 +32,9 @@ jobs:
 
   #   steps:
   #   - uses: actions/checkout@v2
-  #   - name: Setup .NET Core
+  #   - name: Setup .NET
   #     uses: actions/setup-dotnet@v1
   #     with:
-  #       dotnet-version: 3.1.301
+  #       dotnet-version: 5.0.100-rc.2.20479.15
   #   - name: Build
   #     run: ./build.sh -t Bundle

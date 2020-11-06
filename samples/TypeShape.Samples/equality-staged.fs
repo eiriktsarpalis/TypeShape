@@ -33,8 +33,9 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
                 wrap(fun (ts : Expr<'t []>) ts' ->
                     <@
                         match %ts, %ts' with
-                        | null, null -> true
-                        | null, _ | _, null -> false
+                        // pattern matching weirdness due to https://github.com/dotnet/fsharp/issues/10389
+                        | ts, ts' when isNull ts && isNull ts' -> true
+                        | ts, ts' when isNull ts || isNull ts' -> false
                         | ts, ts' when ts.Length <> ts'.Length -> false
                         | ts, ts' ->
                             let mutable i = 0
