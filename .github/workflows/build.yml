@@ -1,4 +1,4 @@
-name: Build
+name: Build & Tests
 
 on:
   push:
@@ -7,15 +7,10 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
-
+  Linux:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 3.1.301
     - name: Build
-      run: ./build.sh -t Bundle
+      run: ./docker-build.sh -t Bundle
