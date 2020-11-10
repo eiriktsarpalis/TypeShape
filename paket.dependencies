@@ -7,7 +7,7 @@ nuget Microsoft.SourceLink.GitHub ~> 1.0.0 copy_local:true
 
 group Test
   source https://api.nuget.org/v3/index.json
-  framework: net5.0, net472
+  framework: net5.0
 
   nuget FSharp.Core >= 4.7.0
   nuget Microsoft.NET.Test.Sdk ~> 16.0
