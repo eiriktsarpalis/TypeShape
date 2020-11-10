@@ -31,7 +31,7 @@ type ClonerBuilder() =
         member __.BigInt () = HKT.pack id
 
         member __.Unit() = HKT.pack id
-        member __.String () = HKT.pack (fun s -> if s = null then null else String.Copy s)
+        member __.String () = HKT.pack id
         member __.Guid () = HKT.pack id
 
         member __.TimeSpan () = HKT.pack id
