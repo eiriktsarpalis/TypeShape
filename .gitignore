@@ -206,4 +206,3 @@ BenchmarkDotNet.Artifacts
 .ionide/
 
 .fake/
-.github/
