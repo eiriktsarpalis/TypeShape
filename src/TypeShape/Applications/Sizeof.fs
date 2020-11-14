@@ -49,7 +49,7 @@ and private mkCounterAux<'T> (ctx : TypeGenerationContext) : SizeCounter<'T> =
 
     let mkMemberCounter (shape : IShapeMember<'DeclaringType>) =
         shape.Accept { new IMemberVisitor<'DeclaringType, SizeCounter<'DeclaringType>> with
-            member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
+            member _.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                 let fe = mkCounterCached<'Field> ctx
                 fun s t -> fe s (shape.Get t)
         }
@@ -68,7 +68,7 @@ and private mkCounterAux<'T> (ctx : TypeGenerationContext) : SizeCounter<'T> =
 
     | Shape.Nullable s ->
         s.Accept { new INullableVisitor<SizeCounter<'T>> with
-            member __.Visit<'t when 't : struct and 't :> ValueType and 't : (new : unit -> 't)>() = // 'T = 't
+            member _.Visit<'t when 't : struct and 't :> ValueType and 't : (new : unit -> 't)>() = // 'T = 't
                 let ts = mkCounterCached<'t> ctx
                 fun s (n:Nullable<'t>) -> if n.HasValue then 1L + ts s n.Value else 1L
                 |> wrap
@@ -76,14 +76,14 @@ and private mkCounterAux<'T> (ctx : TypeGenerationContext) : SizeCounter<'T> =
 
     | Shape.FSharpOption s ->
         s.Element.Accept { new ITypeVisitor<SizeCounter<'T>> with
-            member __.Visit<'t>() = // 'T = 't option
+            member _.Visit<'t>() = // 'T = 't option
                 let tc = mkCounterCached<'t> ctx
                 fun s (topt:'t option) -> match topt with None -> 1L | Some t -> 1L + tc s t
                 |> wrap }
 
     | Shape.FSharpList s ->
         s.Element.Accept { new ITypeVisitor<SizeCounter<'T>> with
-            member __.Visit<'t>() = 
+            member _.Visit<'t>() = 
                 let tc = mkCounterCached<'t> ctx
                 fun s (ts:'t list) -> 
                     let mutable c = 1L
@@ -93,14 +93,14 @@ and private mkCounterAux<'T> (ctx : TypeGenerationContext) : SizeCounter<'T> =
 
     | Shape.SystemArray s when s.Element.Type.IsPrimitive ->
         s.Accept { new ISystemArrayVisitor<SizeCounter<'T>> with
-            member __.Visit<'Array when 'Array :> System.Array>() =
+            member _.Visit<'Array when 'Array :> System.Array>() =
                 fun _ (a:'Array) -> Buffer.ByteLength a |> int64
                 |> wrap
         }
 
     | Shape.Array s ->
         s.Element.Accept { new ITypeVisitor<SizeCounter<'T>> with
-            member __.Visit<'t> () =
+            member _.Visit<'t> () =
                 let tc = mkCounterCached<'t> ctx
                 match s.Rank with
                 | 1 ->
@@ -117,14 +117,14 @@ and private mkCounterAux<'T> (ctx : TypeGenerationContext) : SizeCounter<'T> =
 
     | Shape.FSharpSet s ->
         s.Accept { new IFSharpSetVisitor<SizeCounter<'T>> with
-            member __.Visit<'t when 't : comparison>() = // 'T = Set<'t>
+            member _.Visit<'t when 't : comparison>() = // 'T = Set<'t>
                 let tc = mkCounterCached<'t> ctx
                 mkSeqCounter tc : SizeCounter<Set<'t>>
                 |> wrap }
 
     | Shape.FSharpMap s ->
         s.Accept { new IFSharpMapVisitor<SizeCounter<'T>> with
-            member __.Visit<'k, 'v when 'k : comparison>() = // 'T = Map<'k,'v>
+            member _.Visit<'k, 'v when 'k : comparison>() = // 'T = Map<'k,'v>
                 let kvc = mkCounterCached<KeyValuePair<'k,'v>> ctx
                 mkSeqCounter kvc : SizeCounter<Map<'k,'v>>
                 |> wrap }

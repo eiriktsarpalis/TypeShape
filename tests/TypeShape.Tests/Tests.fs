@@ -34,7 +34,7 @@ type NoEqNoComp = NoEqNoComp
 let testPrim<'T>() = 
     let shape = shapeof<'T>
     test <@ shape.GetType() = typeof<TypeShape<'T>> @>
-    let accepter = { new ITypeVisitor<bool> with member __.Visit<'a>() = typeof<'T> = typeof<'a> }
+    let accepter = { new ITypeVisitor<bool> with member _.Visit<'a>() = typeof<'T> = typeof<'a> }
     test <@ shape.Accept accepter @>
 
 [<Fact>]
@@ -73,13 +73,13 @@ let ``Shape BCL primitives`` () =
 
 type TypeWithDefaultCtor(x : int) =
     new () = new TypeWithDefaultCtor(42)
-    member __.Value = x
+    member _.Value = x
 
 [<Fact>]
 let ``Shape Type with default ctor`` () =
     let accepter = 
         { new IDefaultConstructorVisitor<bool> with
-            member __.Visit<'T when 'T : (new : unit -> 'T)> () = 
+            member _.Visit<'T when 'T : (new : unit -> 'T)> () = 
                 let t = new 'T() :> obj :?> TypeWithDefaultCtor 
                 t.Value = 42 }
 
@@ -89,10 +89,10 @@ let ``Shape Type with default ctor`` () =
 let ``Shape Struct`` () =
     let accepter1 = 
         { new IStructVisitor<bool> with
-            member __.Visit<'T when 'T : struct> () = true }
+            member _.Visit<'T when 'T : struct> () = true }
     let accepter2 = 
         { new INotStructVisitor<bool> with
-            member __.Visit<'T when 'T : not struct and 'T : null> () = false }
+            member _.Visit<'T when 'T : not struct and 'T : null> () = false }
 
     test <@ match shapeof<int> with Shape.Struct s -> s.Accept accepter1 | Shape.NotStruct s -> s.Accept accepter2 | _ -> false @>    
     test <@ not <| match shapeof<string> with Shape.Struct s -> s.Accept accepter1 | Shape.NotStruct s -> s.Accept accepter2 | _ -> false @>    
@@ -101,7 +101,7 @@ let ``Shape Struct`` () =
 let ``Shape Binding Flags`` () =
     let accepter = 
         { new IEnumVisitor<bool> with 
-            member __.Visit<'T, 'U when 'T : enum<'U>
+            member _.Visit<'T, 'U when 'T : enum<'U>
                                     and 'T : struct
                                     and 'T :> ValueType
                                     and 'T : (new : unit -> 'T)>() = 
@@ -112,7 +112,7 @@ let ``Shape Binding Flags`` () =
 let ``Shape Nullable`` () =
     let accepter = 
         { new INullableVisitor<bool> with 
-            member __.Visit<'T when 'T : struct and 'T : (new : unit -> 'T) and 'T :> ValueType>() = 
+            member _.Visit<'T when 'T : struct and 'T : (new : unit -> 'T) and 'T :> ValueType>() = 
                 typeof<'T> = typeof<int> }
 
     test <@ match shapeof<Nullable<int>> with Shape.Nullable e -> e.Accept accepter | _ -> false @>
@@ -130,7 +130,7 @@ let ``Shape Equality`` () =
         | Shape.Equality s ->
             if not expected then false else
             s.Accept { new IEqualityVisitor<bool> with
-                        member __.Visit<'T when 'T : equality> () = typeof<'T> = t }
+                        member _.Visit<'T when 'T : equality> () = typeof<'T> = t }
 
         | _ -> not expected
 
@@ -156,7 +156,7 @@ let ``Shape Comparison`` () =
         | Shape.Comparison s ->
             if not expected then false else
             s.Accept { new IComparisonVisitor<bool> with
-                member __.Visit<'T when 'T : comparison>() = typeof<'T> = t }
+                member _.Visit<'T when 'T : comparison>() = typeof<'T> = t }
 
         | _ -> not expected
 
@@ -185,7 +185,7 @@ let ``Shape Generic Tuple`` () =
         match TypeShape.Create tupleType with
         | Shape.Tuple shape ->
             shape.Accept { new ITupleVisitor<bool> with
-                member __.Visit (tuple : ShapeTuple<'Tuple>) =
+                member _.Visit (tuple : ShapeTuple<'Tuple>) =
                     typeof<'Tuple> = tupleType &&
                     tuple.Elements.Length = FSharpType.GetTupleElements(tupleType).Length }
 
@@ -209,7 +209,7 @@ type CSharpDTO() =
     member val Baz = 0 with get,set
     member val TimeSpan = TimeSpan.Zero with get,set
 
-    member __.GetterOnly = count
+    member _.GetterOnly = count
 
     override x.Equals y =
         match y with
@@ -225,7 +225,7 @@ let ``Shape CliMutable`` () =
     match TypeShape.Create<CSharpDTO>() with
     | Shape.CliMutable r -> 
         r.Accept { new ICliMutableVisitor<bool> with
-            member __.Visit (shape : ShapeCliMutable<'R>) =
+            member _.Visit (shape : ShapeCliMutable<'R>) =
                 test <@ typeof<'R> = typeof<CSharpDTO> @>
                 test <@ shape.Properties.Length = 4 @>
                 true }
@@ -248,15 +248,15 @@ let ``Shape CliMutable`` () =
 
 type SimplePoco(x : string, y : int) =
     static let staticField = 42
-    member __.X = x
-    member __.Y = y
+    member _.X = x
+    member _.Y = y
 
 [<Fact>]
 let ``Shape Poco`` () =
     match TypeShape.Create<SimplePoco>() with
     | Shape.Poco s ->
         s.Accept { new IPocoVisitor<bool> with
-            member __.Visit (shape : ShapePoco<'P>) =
+            member _.Visit (shape : ShapePoco<'P>) =
                 test <@ typeof<'P> = typeof<SimplePoco> @>
                 test <@ shape.Fields.Length = 2 @>
                 test <@ shape.Properties.Length = 2 @>
@@ -284,28 +284,28 @@ let ``Shape Poco`` () =
 let ``Shape FSharpFunc`` () =
     let accepter =
         { new IFSharpFuncVisitor<bool> with
-            member __.Visit<'D,'C>() = typeof<'D> = typeof<int> && typeof<'C> = typeof<string>}
+            member _.Visit<'D,'C>() = typeof<'D> = typeof<int> && typeof<'C> = typeof<string>}
     test <@ match shapeof<int -> string> with Shape.FSharpFunc s -> s.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Exception`` () =
     let accepter =
         { new IExceptionVisitor<bool> with
-            member __.Visit<'exn when 'exn :> exn and 'exn : not struct and 'exn : null>() = typeof<'exn> = typeof<System.IO.FileNotFoundException> }
+            member _.Visit<'exn when 'exn :> exn and 'exn : not struct and 'exn : null>() = typeof<'exn> = typeof<System.IO.FileNotFoundException> }
     test <@ match shapeof<System.IO.FileNotFoundException> with Shape.Exception s -> s.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Delegate`` () =
     let accepter =
         { new IDelegateVisitor<bool> with
-            member __.Visit<'Delegate when 'Delegate :> Delegate>() = typeof<'Delegate> = typeof<Predicate<string>> }
+            member _.Visit<'Delegate when 'Delegate :> Delegate>() = typeof<'Delegate> = typeof<Predicate<string>> }
     test <@ match shapeof<Predicate<string>> with Shape.Delegate s -> s.Accept accepter | _ -> false @>
 
 [<Fact>]
 let ``Shape Enumerable`` () =
     let accepter e t =
         { new IEnumerableVisitor<bool> with
-            member __.Visit<'E, 'T when 'E :> seq<'T>>() = typeof<'T> = t && typeof<'E> = e }
+            member _.Visit<'E, 'T when 'E :> seq<'T>>() = typeof<'T> = t && typeof<'E> = e }
     test <@ match shapeof<int []> with Shape.Enumerable s -> s.Accept (accepter typeof<int []> typeof<int>) | _ -> false @>
     test <@ match shapeof<int list> with Shape.Enumerable s -> s.Accept (accepter typeof<int list> typeof<int>) | _ -> false @>
     test <@ match shapeof<seq<int>> with Shape.Enumerable s -> s.Accept (accepter typeof<seq<int>> typeof<int>) | _ -> false @>
@@ -321,7 +321,7 @@ let ``Shape Enumerable`` () =
 let ``Shape Collection`` () =
     let accepter c t =
         { new ICollectionVisitor<bool> with
-            member __.Visit<'C, 'T when 'C :> ICollection<'T>>() = typeof<'T> = t && typeof<'C> = c}
+            member _.Visit<'C, 'T when 'C :> ICollection<'T>>() = typeof<'T> = t && typeof<'C> = c}
     test <@ match shapeof<int []> with Shape.Collection s -> s.Accept (accepter typeof<int []> typeof<int>) | _ -> false @>
     test <@ match shapeof<seq<int>> with Shape.Collection s -> false | _ -> true @>
     test <@ match shapeof<ResizeArray<int>> with Shape.Collection s -> s.Accept (accepter typeof<ResizeArray<int>> typeof<int>) | _ -> false @>
@@ -335,7 +335,7 @@ let ``Shape Collection`` () =
 let ``Shape KeyValuePair`` () =
     let accepter = 
         { new IKeyValuePairVisitor<bool> with
-            member __.Visit<'K,'V>() = typeof<'K> = typeof<int> && typeof<'V> = typeof<string> }
+            member _.Visit<'K,'V>() = typeof<'K> = typeof<int> && typeof<'V> = typeof<string> }
 
     test <@ match shapeof<KeyValuePair<int,string>> with Shape.KeyValuePair s -> s.Accept accepter | _ -> false @>
 
@@ -344,7 +344,7 @@ let ``Shape KeyValuePair`` () =
 let ``Shape Array`` () =
     let accepter = 
         { new ITypeVisitor<bool> with
-            member __.Visit<'T> () = typeof<'T> = typeof<int> }
+            member _.Visit<'T> () = typeof<'T> = typeof<int> }
 
     test <@ match shapeof<int []>    with Shape.Array s when s.Rank = 1 -> s.Element.Accept accepter | _ -> false @>    
     test <@ match shapeof<int [,]>   with Shape.Array s when s.Rank = 2 -> s.Element.Accept accepter | _ -> false @>
@@ -355,7 +355,7 @@ let ``Shape Array`` () =
 let ``Shape ResizeArray`` () =
     let accepter = 
         { new ITypeVisitor<bool> with
-            member __.Visit<'T>() = typeof<'T> = typeof<int> }
+            member _.Visit<'T>() = typeof<'T> = typeof<int> }
 
     test <@ match shapeof<ResizeArray<int>> with Shape.ResizeArray s -> s.Element.Accept accepter | _ -> false @>
 
@@ -363,7 +363,7 @@ let ``Shape ResizeArray`` () =
 let ``Shape Dictionary`` () =
     let accepter = 
         { new IDictionaryVisitor<bool> with
-            member __.Visit<'K, 'V when 'K : equality>() = typeof<'K> = typeof<int> && typeof<'V> = typeof<string> }
+            member _.Visit<'K, 'V when 'K : equality>() = typeof<'K> = typeof<int> && typeof<'V> = typeof<string> }
 
     test <@ match shapeof<Dictionary<int, string>> with Shape.Dictionary s -> s.Accept accepter | _ -> false @>
 
@@ -371,7 +371,7 @@ let ``Shape Dictionary`` () =
 let ``Shape F# Set`` () =
     let accepter = 
         { new IFSharpSetVisitor<bool> with
-            member __.Visit<'T when 'T : comparison>() = typeof<'T> = typeof<string> }
+            member _.Visit<'T when 'T : comparison>() = typeof<'T> = typeof<string> }
 
     test <@ match shapeof<Set<string>> with Shape.FSharpSet s -> s.Accept accepter | _ -> false @>
 
@@ -379,7 +379,7 @@ let ``Shape F# Set`` () =
 let ``Shape ISerializable`` () =
     let accepter =
         { new ISerializableVisitor<bool> with
-            member __.Visit<'T when 'T :> ISerializable> (_ : ShapeISerializable<'T>) = typeof<'T> = typeof<exn> }
+            member _.Visit<'T when 'T :> ISerializable> (_ : ShapeISerializable<'T>) = typeof<'T> = typeof<exn> }
 
     test <@ match shapeof<exn> with Shape.ISerializable s -> s.Accept accepter | _ -> false @>
 
@@ -400,20 +400,20 @@ let ``Shape Subtype`` () =
     match shapeof<exn> with
     | ISerializable s -> s.Accept {
         new ISubtypeVisitor<ISerializable, bool> with
-            member __.Visit<'S when 'S :> ISerializable>() = test <@ typeof<'S> = typeof<exn> @> ; true }
+            member _.Visit<'S when 'S :> ISerializable>() = test <@ typeof<'S> = typeof<exn> @> ; true }
     | _ -> test <@ false @> ; true
 
 [<Fact>]
 let ``Shape F# Option`` () =
     let visitor ty =
-        { new ITypeVisitor<bool> with member __.Visit<'T>() = typeof<'T> = ty }
+        { new ITypeVisitor<bool> with member _.Visit<'T>() = typeof<'T> = ty }
 
     test <@ match shapeof<int option> with Shape.FSharpOption s -> s.Element.Accept (visitor typeof<int>) | _ -> false @>
 
 [<Fact>]
 let ``Shape F# list`` () =
     let visitor ty =
-        { new ITypeVisitor<bool> with member __.Visit<'T>() = typeof<'T> = ty }
+        { new ITypeVisitor<bool> with member _.Visit<'T>() = typeof<'T> = ty }
 
     test <@ match shapeof<int list> with Shape.FSharpList s -> s.Element.Accept (visitor typeof<int>) | _ -> false @>
 
@@ -421,7 +421,7 @@ let ``Shape F# list`` () =
 let ``Shape F# Map`` () =
     let accepter = 
         { new IFSharpMapVisitor<bool> with
-            member __.Visit<'K, 'V when 'K : comparison>() = typeof<'K> = typeof<string> && typeof<'V> = typeof<int> }
+            member _.Visit<'K, 'V when 'K : comparison>() = typeof<'K> = typeof<string> && typeof<'V> = typeof<int> }
 
     test <@ match shapeof<Map<string, int>> with Shape.FSharpMap s -> s.Accept accepter | _ -> false @>
 
@@ -473,7 +473,7 @@ let ``Anonymous struct Record cloning`` () =
 [<Fact>]
 let ``Shape F# ref`` () =
     test <@ match shapeof<int ref> with Shape.FSharpRecord r -> r.Fields.Length = 1 | _ -> false @>
-    let accepter = { new ITypeVisitor<bool> with member __.Visit<'T>() = typeof<'T> = typeof<int> }
+    let accepter = { new ITypeVisitor<bool> with member _.Visit<'T>() = typeof<'T> = typeof<int> }
     test <@ match shapeof<int ref> with Shape.FSharpRef s -> s.Element.Accept accepter | _ -> false @>
 
 type Union7 = 
@@ -491,7 +491,7 @@ let ``Shape Union 7`` () =
         match shapeof<Union7> with 
         | Shape.FSharpUnion s -> 
             s.Accept { new IFSharpUnionVisitor<bool> with
-                member __.Visit (shape : ShapeFSharpUnion<'U>) =
+                member _.Visit (shape : ShapeFSharpUnion<'U>) =
                     test <@ typeof<'U> = typeof<Union7> @>
                     test <@ shape.UnionCases.Length = 7 @>
                     true
@@ -769,7 +769,7 @@ module GenericClone =
     [<Fact>]
     let ``Generic Clone should produde equal values`` () =
         { new Predicate with 
-            member __.Invoke (t : 'T) = t = clone(t) }
+            member _.Invoke (t : 'T) = t = clone(t) }
         |> Check.GenericPredicate false false 100 10
 
 module GenericCloneStaged =
@@ -777,7 +777,7 @@ module GenericCloneStaged =
     [<Fact>]
     let ``Generic Staged Clone should produde equal values`` () =
         { new Predicate with 
-            member __.Invoke (t : 'T) = 
+            member _.Invoke (t : 'T) = 
                 let c = mkStagedCloner<'T>()
                 c(t) = t }
         |> Check.GenericPredicate false false 100 1
@@ -787,7 +787,7 @@ module GenericCloneHKT =
     [<Fact>]
     let ``HKT-clone should produce equal values`` () =
         { new Predicate with
-            member __.Invoke (t : 'T) =
+            member _.Invoke (t : 'T) =
                 let c = HktClone.mkCloner<'T>()
                 if c(t) <> t then failwithf "%A != %A" (c t) t else true}
         |> Check.GenericPredicate false false 100 10
@@ -797,7 +797,7 @@ module GenericEmpty =
     [<Fact>]
     let ``Empty should always produce equal values`` () =
         { new Predicate with 
-            member __.Invoke (t : 'T) = 
+            member _.Invoke (t : 'T) = 
                 empty<'T> = empty<'T> }
         |> Check.GenericPredicate false false 100 10
 
@@ -808,7 +808,7 @@ module ``Generic SizeOf`` =
     [<Fact>]
     let ``Sizeof should terminate for all inputs`` () =
         { new Predicate with 
-            member __.Invoke (t : 'T) = gsizeof t >= 0L }
+            member _.Invoke (t : 'T) = gsizeof t >= 0L }
         |> Check.GenericPredicate false false 100 10
 
     [<Fact>]
@@ -827,7 +827,7 @@ module ``Generic Combinators`` =
     [<Fact>]
     let ``Generic map should support generic types`` () =
         { new Predicate with 
-            member __.Invoke (t : 'T) = 
+            member _.Invoke (t : 'T) = 
                 let _ = Generic.map ((+) 1) t in true }
         |> Check.GenericPredicate false false 100 10
 
@@ -841,7 +841,7 @@ module ``Generic Combinators`` =
     [<Fact>]
     let ``Generic fold should support generic types`` () =
         { new Predicate with 
-            member __.Invoke (t : 'T) = 
+            member _.Invoke (t : 'T) = 
                 Generic.fold (fun c _ -> c + 1) 0 t >= 0 }
         |> Check.GenericPredicate false false 100 10
 

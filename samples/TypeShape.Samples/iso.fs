@@ -44,9 +44,9 @@ and private mkProjAux<'a, 'b> (ctx : TypeGenerationContext) : Proj<'a,'b> =
         | None -> notProj()
         | Some source ->
             source.Accept { new IMemberVisitor<'a, ('a -> 'b -> 'b)> with
-              member __.Visit (src : ShapeMember<'a, 'F>) =
+              member _.Visit (src : ShapeMember<'a, 'F>) =
                 target.Accept { new IMemberVisitor<'b, ('a -> 'b -> 'b)> with
-                  member __.Visit (tgt : ShapeMember<'b, 'G>) =
+                  member _.Visit (tgt : ShapeMember<'b, 'G>) =
                     let (Proj conv) = mkProjCached<'F, 'G> ctx
                     fun (a:'a) (b:'b) -> 
                         let f = src.Get a

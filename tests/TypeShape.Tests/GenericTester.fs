@@ -370,7 +370,7 @@ type Check with
         let verbose = defaultArg verbose false
         let runOnType (tAlg : TypeAlg) =
             tAlg.Accept {  new IEqualityVisitor<bool> with
-                member __.Visit<'T when 'T : equality>() =
+                member _.Visit<'T when 'T : equality>() =
                     if verbose then printfn "Testing type %s" (PrettyPrint.typeAlg tAlg)
                     checker.Invoke<'T> tAlg }
     
@@ -390,7 +390,7 @@ type Check with
 
         let checker =
             { new Checker with
-                member __.Invoke<'T when 'T : equality> tAlg =
+                member _.Invoke<'T when 'T : equality> tAlg =
                     Check.One<'T -> bool>(vconf, predicate.Invoke) ; true }
 
         Check.Generic(checker, tconf, verbose = verbose)
@@ -409,7 +409,7 @@ type Check with
 
         let checker =
             { new Checker with
-                member __.Invoke<'T when 'T : equality> tAlg =
+                member _.Invoke<'T when 'T : equality> tAlg =
                     Check.One<'T * 'T -> bool>(vconf, fun (t1,t2) -> predicate2.Invoke t1 t2) ; true }
 
         Check.Generic(checker, tconf, verbose = verbose)
@@ -428,7 +428,7 @@ type Check with
 
         let checker =
             { new Checker with
-                member __.Invoke<'T when 'T : equality> tAlg =
+                member _.Invoke<'T when 'T : equality> tAlg =
                     Check.One<'T * 'T * 'T -> bool>(vconf, fun (t1,t2,t3) -> predicate3.Invoke t1 t2 t3) ; true }
 
         Check.Generic(checker, tconf, verbose = verbose)

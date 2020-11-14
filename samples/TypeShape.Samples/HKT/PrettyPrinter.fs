@@ -23,40 +23,40 @@ module Impl =
 
     let prettyPrinterBuilder =
         { new ITypeBuilder<PrettyPrinter, PrettyPrinter> with
-            member __.Bool () = HKT.pack(PP(fun s b -> append s (if b then "true" else "false")))
-            member __.Byte () = HKT.pack(PP(fun s b -> s.Append(b).Append("uy") |> ignore))
-            member __.SByte() = HKT.pack(PP(fun s b -> s.Append(b).Append("y") |> ignore))
-            member __.Char () = HKT.pack(PP(fun s c -> s.Append('\'').Append(c).Append('\'') |> ignore))
+            member _.Bool () = HKT.pack(PP(fun s b -> append s (if b then "true" else "false")))
+            member _.Byte () = HKT.pack(PP(fun s b -> s.Append(b).Append("uy") |> ignore))
+            member _.SByte() = HKT.pack(PP(fun s b -> s.Append(b).Append("y") |> ignore))
+            member _.Char () = HKT.pack(PP(fun s c -> s.Append('\'').Append(c).Append('\'') |> ignore))
         
-            member __.Int16 () = HKT.pack(PP(fun s i -> s.Append(i).Append('s') |> ignore))
-            member __.Int32 () = HKT.pack(PP(fun s i -> s.Append(i) |> ignore))
-            member __.Int64 () = HKT.pack(PP(fun s i -> s.Append(i).Append('L') |> ignore))
+            member _.Int16 () = HKT.pack(PP(fun s i -> s.Append(i).Append('s') |> ignore))
+            member _.Int32 () = HKT.pack(PP(fun s i -> s.Append(i) |> ignore))
+            member _.Int64 () = HKT.pack(PP(fun s i -> s.Append(i).Append('L') |> ignore))
 
-            member __.UInt16 () = HKT.pack(PP(fun s i -> s.Append(i).Append("us") |> ignore))
-            member __.UInt32 () = HKT.pack(PP(fun s i -> s.Append(i).Append('u' ) |> ignore))
-            member __.UInt64 () = HKT.pack(PP(fun s i -> s.Append(i).Append("uL") |> ignore))
+            member _.UInt16 () = HKT.pack(PP(fun s i -> s.Append(i).Append("us") |> ignore))
+            member _.UInt32 () = HKT.pack(PP(fun s i -> s.Append(i).Append('u' ) |> ignore))
+            member _.UInt64 () = HKT.pack(PP(fun s i -> s.Append(i).Append("uL") |> ignore))
 
-            member __.Single () = HKT.pack(PP(fun s f -> s.Append(f).Append('f') |> ignore))
-            member __.Double () = HKT.pack(PP(fun s f -> s.Append(f) |> ignore))
-            member __.Decimal() = HKT.pack(PP(fun s f -> s.Append(f).Append('M') |> ignore))
-            member __.BigInt () = HKT.pack(PP(fun s f -> s.Append(f).Append('I') |> ignore))
+            member _.Single () = HKT.pack(PP(fun s f -> s.Append(f).Append('f') |> ignore))
+            member _.Double () = HKT.pack(PP(fun s f -> s.Append(f) |> ignore))
+            member _.Decimal() = HKT.pack(PP(fun s f -> s.Append(f).Append('M') |> ignore))
+            member _.BigInt () = HKT.pack(PP(fun s f -> s.Append(f).Append('I') |> ignore))
 
-            member __.Unit() = HKT.pack(PP(fun s () -> append s "()"))
-            member __.String () = HKT.pack(PP(fun s str -> s.Append('"').Append(str).Append('"') |> ignore))
-            member __.Guid () = HKT.pack(PP(fun s g -> s.Append(g) |> ignore))
+            member _.Unit() = HKT.pack(PP(fun s () -> append s "()"))
+            member _.String () = HKT.pack(PP(fun s str -> s.Append('"').Append(str).Append('"') |> ignore))
+            member _.Guid () = HKT.pack(PP(fun s g -> s.Append(g) |> ignore))
 
-            member __.TimeSpan () = HKT.pack(PP(fun s t -> s.Append(t) |> ignore))
-            member __.DateTime () = HKT.pack(PP(fun s d -> s.Append(d) |> ignore))
-            member __.DateTimeOffset() = HKT.pack(PP(fun s d -> s.Append(d) |> ignore))
+            member _.TimeSpan () = HKT.pack(PP(fun s t -> s.Append(t) |> ignore))
+            member _.DateTime () = HKT.pack(PP(fun s d -> s.Append(d) |> ignore))
+            member _.DateTimeOffset() = HKT.pack(PP(fun s d -> s.Append(d) |> ignore))
 
-            member __.Nullable (HKT.Unpack ep) = HKT.pack(PP(fun s x -> if x.HasValue then ep.Invoke(s, x.Value) else append s "null"))
-            member __.Enum _ = HKT.pack(PP(fun s e -> s.Append e |> ignore))
-            member __.Array (HKT.Unpack ep) = HKT.pack(PP(fun s xs -> append s "[|" ; appendSeq s xs ep ; append s "|]"))
+            member _.Nullable (HKT.Unpack ep) = HKT.pack(PP(fun s x -> if x.HasValue then ep.Invoke(s, x.Value) else append s "null"))
+            member _.Enum _ = HKT.pack(PP(fun s e -> s.Append e |> ignore))
+            member _.Array (HKT.Unpack ep) = HKT.pack(PP(fun s xs -> append s "[|" ; appendSeq s xs ep ; append s "|]"))
 
-            member __.Option (HKT.Unpack ep) = HKT.pack(PP(fun s x -> match x with None -> append s "None" | Some x -> append s "Some(" ; ep.Invoke(s, x) ; append s ")"))
-            member __.List (HKT.Unpack ep) = HKT.pack(PP(fun s xs -> append s "[" ; appendSeq s xs ep ; append s "]"))
-            member __.Set (HKT.Unpack ep) = HKT.pack(PP(fun s xs -> append s "set [" ; appendSeq s xs ep ; append s "]"))
-            member __.Map (HKT.Unpack kp) (HKT.Unpack vp) = 
+            member _.Option (HKT.Unpack ep) = HKT.pack(PP(fun s x -> match x with None -> append s "None" | Some x -> append s "Some(" ; ep.Invoke(s, x) ; append s ")"))
+            member _.List (HKT.Unpack ep) = HKT.pack(PP(fun s xs -> append s "[" ; appendSeq s xs ep ; append s "]"))
+            member _.Set (HKT.Unpack ep) = HKT.pack(PP(fun s xs -> append s "set [" ; appendSeq s xs ep ; append s "]"))
+            member _.Map (HKT.Unpack kp) (HKT.Unpack vp) = 
                 HKT.pack(PP(fun s xs -> 
                     let mutable first = true
                     append s "map ["
@@ -70,9 +70,9 @@ module Impl =
                         append s ")"
                     append s "]"))
 
-            member __.Field shape (HKT.Unpack fp) = HKT.pack(PP(fun s t -> fp.Invoke(s, shape.Get t)))
+            member _.Field shape (HKT.Unpack fp) = HKT.pack(PP(fun s t -> fp.Invoke(s, shape.Get t)))
 
-            member __.Tuple shape (HKT.Unpacks fields) =
+            member _.Tuple shape (HKT.Unpacks fields) =
                 let isStruct = shape.IsStructTuple
                 HKT.pack(PP(fun s tuple ->
                     if isStruct then append s "struct(" else append s "("
@@ -82,7 +82,7 @@ module Impl =
                         f.Invoke(s, tuple)
                     append s ")"))
 
-            member __.Record shape (HKT.Unpacks fields) =
+            member _.Record shape (HKT.Unpacks fields) =
                 let isAnon = shape.IsAnonymousRecord
                 let isStruct = shape.IsStructRecord
                 let fieldLabels = 
@@ -106,7 +106,7 @@ module Impl =
                
                     if isAnon then append s "|}" else append s "}"))
 
-            member __.Union shape (HKT.Unpackss fieldss) =
+            member _.Union shape (HKT.Unpackss fieldss) =
                 HKT.pack(PP(fun s union ->
                     let tag = shape.GetTag union
                     let case = shape.UnionCases.[tag]
@@ -119,7 +119,7 @@ module Impl =
                             f.Invoke(s, union)
                         append s ")"))
 
-            member __.CliMutable shape (HKT.Unpacks fields) =
+            member _.CliMutable shape (HKT.Unpacks fields) =
                 let name = shape.DefaultCtorInfo.DeclaringType.Name
                 let fieldProps =
                     shape.Properties
@@ -137,7 +137,7 @@ module Impl =
                         f.Invoke(s, record)
                     append s ")"))
 
-            member __.Delay f = HKT.pack(PP(fun s x -> (HKT.unpack f.Value).Invoke(s, x))) }
+            member _.Delay f = HKT.pack(PP(fun s x -> (HKT.unpack f.Value).Invoke(s, x))) }
 
 /// builds printer function for given type
 let mkPrinter<'t> () : 't -> string = 

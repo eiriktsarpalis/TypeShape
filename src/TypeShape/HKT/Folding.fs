@@ -29,7 +29,7 @@ module FoldContext =
         let resolve (ctx : TypeGenerationContext) =
             let rec self =
                 { new IGenericProgram<'F> with 
-                    member __.Resolve<'a>() = 
+                    member _.Resolve<'a>() = 
                         match ctx.InitOrGetCachedValue<App<'F, 'a>> (folder.Delay) with
                         | Cached(value = f) -> f
                         | NotCached t ->
@@ -171,7 +171,7 @@ module Fold =
         match shape with
         | Shape.Array s when s.Rank = 1 ->
             s.Element.Accept { new ITypeVisitor<App<'F, 't> option> with
-                member __.Visit<'e> () =
+                member _.Visit<'e> () =
                     let rt = ctx.Resolve<'e> ()
                     builder.Array rt |> unwrap |> Some
             }
@@ -182,7 +182,7 @@ module Fold =
         match shape with
         | Shape.Array s when s.Rank = 2 ->
             s.Element.Accept { new ITypeVisitor<App<'F, 't> option> with
-                member __.Visit<'e> () =
+                member _.Visit<'e> () =
                     let rt = ctx.Resolve<'e> ()
                     builder.Array2D rt |> unwrap |> Some
             }
@@ -193,7 +193,7 @@ module Fold =
         match shape with
         | Shape.Array s when s.Rank = 3 ->
             s.Element.Accept { new ITypeVisitor<App<'F, 't> option> with
-                member __.Visit<'e> () =
+                member _.Visit<'e> () =
                     let rt = ctx.Resolve<'e> ()
                     builder.Array3D rt |> unwrap |> Some
             }
@@ -204,7 +204,7 @@ module Fold =
         match shape with
         | Shape.Array s when s.Rank = 4 ->
             s.Element.Accept { new ITypeVisitor<App<'F, 't> option> with
-                member __.Visit<'e> () =
+                member _.Visit<'e> () =
                     let rt = ctx.Resolve<'e> ()
                     builder.Array4D rt |> unwrap |> Some
             }
@@ -215,7 +215,7 @@ module Fold =
         match shape with
         | Shape.Nullable s ->
             s.Accept { new INullableVisitor<App<'F, 't> option> with
-                member __.Visit<'e when 'e : struct and 'e :> ValueType and 'e : (new : unit -> 'e)>() =
+                member _.Visit<'e when 'e : struct and 'e :> ValueType and 'e : (new : unit -> 'e)>() =
                     let e = self.Resolve<'e>()
                     builder.Nullable e |> unwrap |> Some
             }
@@ -225,7 +225,7 @@ module Fold =
         match shape with
         | Shape.Enum s ->
             s.Accept { new IEnumVisitor<App<'F, 't> option> with
-                member __.Visit<'e, 'u when 'e : enum<'u>
+                member _.Visit<'e, 'u when 'e : enum<'u>
                                         and 'e : struct
                                         and 'e :> ValueType
                                         and 'e : (new : unit -> 'e)> () =
@@ -239,7 +239,7 @@ module Fold =
         match shape with
         | Shape.Dictionary s ->
             s.Accept { new IDictionaryVisitor<App<'F, 't> option> with
-                member __.Visit<'k, 'v when 'k : equality> () =
+                member _.Visit<'k, 'v when 'k : equality> () =
                     let k = self.Resolve<'k>()
                     let v = self.Resolve<'v>()
                     builder.Dictionary k v |> unwrap |> Some
@@ -250,7 +250,7 @@ module Fold =
         match shape with
         | Shape.KeyValuePair s ->
             s.Accept { new IKeyValuePairVisitor<App<'F, 't> option> with
-                member __.Visit<'k, 'v> () =
+                member _.Visit<'k, 'v> () =
                     let k = self.Resolve<'k>()
                     let v = self.Resolve<'v>()
                     builder.KeyValuePair k v |> unwrap |> Some
@@ -265,7 +265,7 @@ module Fold =
         | Shape.FSharpOption s ->
             s.Element.Accept {
                 new ITypeVisitor<App<'F, 't> option> with
-                    member __.Visit<'e> () =
+                    member _.Visit<'e> () =
                         let rt = self.Resolve<'e> ()
                         builder.Option rt |> unwrap |> Some
             }
@@ -276,7 +276,7 @@ module Fold =
         match shape with
         | Shape.FSharpList s ->
             s.Element.Accept { new ITypeVisitor<App<'F, 't> option> with
-                member __.Visit<'e>() =
+                member _.Visit<'e>() =
                     let elem = self.Resolve<'e>()
                     builder.List elem |> unwrap |> Some }
         | _ -> None
@@ -285,7 +285,7 @@ module Fold =
         match shape with
         | Shape.FSharpSet s ->
             s.Accept { new IFSharpSetVisitor<App<'F, 't> option> with
-                member __.Visit<'e when 'e : comparison>() =
+                member _.Visit<'e when 'e : comparison>() =
                     let elem = self.Resolve<'e>()
                     builder.Set elem |> unwrap |> Some 
             }
@@ -295,7 +295,7 @@ module Fold =
         match shape with
         | Shape.FSharpMap s ->
             s.Accept { new IFSharpMapVisitor<App<'F, 't> option> with
-                member __.Visit<'k, 'v when 'k : comparison>() =
+                member _.Visit<'k, 'v when 'k : comparison>() =
                     let k = self.Resolve<'k>()
                     let v = self.Resolve<'v>()
                     builder.Map k v |> unwrap |> Some 
@@ -306,7 +306,7 @@ module Fold =
         match shape with
         | Shape.FSharpFunc s ->
             s.Accept { new IFSharpFuncVisitor<App<'F, 't> option> with
-                member __.Visit<'a, 'b>() =
+                member _.Visit<'a, 'b>() =
                     let a = self.Resolve<'a>()
                     let b = self.Resolve<'b>()
                     builder.Func a b |> unwrap |> Some 
@@ -320,10 +320,10 @@ module Fold =
 
             l.Accept {
                 new ITypeVisitor<App<'F, 't> option> with
-                    member __.Visit<'a> () =
+                    member _.Visit<'a> () =
                         r.Accept {
                             new ITypeVisitor<App<'F, 't> option> with
-                                member __.Visit<'b> () =
+                                member _.Visit<'b> () =
                                     let la = self.Resolve<'a>()
                                     let ra = self.Resolve<'b>()
                                     builder.Tuple2 la ra |> unwrap |> Some
@@ -337,7 +337,7 @@ module Fold =
     let private handleField (self : IGenericProgram<'F>) (fieldBuilder : IFieldExtractor<'F, 'G>) (mem : IShapeMember<'t>) =
         mem.Accept {
             new IMemberVisitor<'t, App<'G, 't>> with
-                member __.Visit(m : ShapeMember<'t, 'f>) =
+                member _.Visit(m : ShapeMember<'t, 'f>) =
                     let inner = self.Resolve<'f> ()
                     fieldBuilder.Field m inner
         }

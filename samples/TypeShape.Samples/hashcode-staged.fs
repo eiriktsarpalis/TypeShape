@@ -17,7 +17,7 @@ let mkStagedHasher<'T> (self : StagedGenerator1) (expr : Expr<'T>) : Expr<int> =
 
     let stageMemberHash (shape : IShapeReadOnlyMember<'DeclaringType>) (dExpr : Expr<'DeclaringType>) =
         shape.Accept { new IReadOnlyMemberVisitor<'DeclaringType, Expr<int>> with
-            member __.Visit (shape : ReadOnlyMember<'DeclaringType, 'FieldType>) =
+            member _.Visit (shape : ReadOnlyMember<'DeclaringType, 'FieldType>) =
                 let fExpr = shape.GetExpr dExpr
                 self.Generate fExpr }
 
@@ -29,7 +29,7 @@ let mkStagedHasher<'T> (self : StagedGenerator1) (expr : Expr<'T>) : Expr<int> =
     | Shape.String -> <@ hash<string> (% unwrap()) @>
     | Shape.Array s when s.Rank = 1 ->
         s.Element.Accept { new ITypeVisitor<Expr<int>> with
-            member __.Visit<'t> () =
+            member _.Visit<'t> () =
                 <@
                     match (% unwrap()) with
                     | null -> 0
@@ -43,7 +43,7 @@ let mkStagedHasher<'T> (self : StagedGenerator1) (expr : Expr<'T>) : Expr<int> =
 
     | Shape.FSharpOption s ->
         s.Element.Accept { new ITypeVisitor<Expr<int>> with
-            member __.Visit<'t> () =
+            member _.Visit<'t> () =
                 <@
                     match (% (unwrap() : Expr<'t option>)) with
                     | None -> 0
@@ -54,7 +54,7 @@ let mkStagedHasher<'T> (self : StagedGenerator1) (expr : Expr<'T>) : Expr<int> =
 
     | Shape.FSharpList s ->
         s.Element.Accept { new ITypeVisitor<Expr<int>> with
-            member __.Visit<'t> () =
+            member _.Visit<'t> () =
                 <@
                     let mutable agg = 0
                     let mutable ts = (% (unwrap() : Expr<'t list>))
@@ -119,7 +119,7 @@ let mkStagedHasher<'T> (self : StagedGenerator1) (expr : Expr<'T>) : Expr<int> =
 let mkHashCodeExpr<'T> () =
     let F self = 
         { new StagedGenerator1 with 
-            member __.Generate<'T,'R> (e:Expr<'T>) : Expr<'R> =
+            member _.Generate<'T,'R> (e:Expr<'T>) : Expr<'R> =
                 mkStagedHasher self e |> unbox }
 
     let gen = Expr.Y1 F

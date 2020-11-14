@@ -23,7 +23,7 @@ let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
                             (tgt : Expr<'DeclaringType>) =
         fieldShape.Accept {
             new IMemberVisitor<'DeclaringType, Expr<'DeclaringType>> with
-                member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
+                member _.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                     <@
                         let sourceField = (% shape.GetExpr src)
                         let clonedField = (% stageCloner self) sourceField
@@ -43,7 +43,7 @@ let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
     | Shape.String -> wrap <@ %e @>
     | Shape.Nullable s ->
         s.Accept { new INullableVisitor<Expr<'T>> with
-            member __.Visit<'t when 't : (new : unit -> 't) 
+            member _.Visit<'t when 't : (new : unit -> 't) 
                                 and 't :> ValueType 
                                 and 't : struct> () =
 
@@ -59,7 +59,7 @@ let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
 
     | Shape.Array s when s.Rank = 1 ->
         s.Element.Accept { new ITypeVisitor<Expr<'T>> with
-            member __.Visit<'t> () =
+            member _.Visit<'t> () =
                 if typeof<'t>.IsPrimitive then
                     // pattern matching weirdness due to https://github.com/dotnet/fsharp/issues/10389
                     wrap <@ match (% unwrap e) : 't[] with ts when isNull ts -> null | ts -> ts.Clone() :?> 't[] @>
@@ -68,24 +68,24 @@ let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
 
     | Shape.FSharpOption s ->
         s.Element.Accept { new ITypeVisitor<Expr<'T>> with
-            member __.Visit<'t> () =
+            member _.Visit<'t> () =
                 wrap <@ Option.map (% stageCloner self) (% unwrap e) : 't option @> }
 
     | Shape.FSharpList s ->
         s.Element.Accept { new ITypeVisitor<Expr<'T>> with
-            member __.Visit<'t> () =
+            member _.Visit<'t> () =
                 wrap <@ List.map (% stageCloner self) (% unwrap e) : 't list @> }
 
     | Shape.FSharpSet s ->
         s.Accept {
             new IFSharpSetVisitor<Expr<'T>> with
-                member __.Visit<'t when 't : comparison> () =
+                member _.Visit<'t when 't : comparison> () =
                     wrap <@ Set.map (% stageCloner self) (% unwrap e) : Set<'t> @> }
 
     | Shape.FSharpMap s ->
         s.Accept {
             new IFSharpMapVisitor<Expr<'T>> with
-                member __.Visit<'k, 'v when 'k : comparison> () =
+                member _.Visit<'k, 'v when 'k : comparison> () =
                     <@ 
                         ((% unwrap e) : Map<'k, 'v>)
                         |> Map.toSeq
@@ -115,7 +115,7 @@ let stageCloner<'T> (self : StagedGenerator1) (e : Expr<'T>) : Expr<'T> =
 
     | Shape.ISerializable s ->
         s.Accept { new ISerializableVisitor<Expr<'T>> with
-            member __.Visit (shape : ShapeISerializable<'S>) =
+            member _.Visit (shape : ShapeISerializable<'S>) =
                 <@
                     let sc = new StreamingContext()
                     let si = new SerializationInfo(typeof<'S>, FormatterConverter())
@@ -142,7 +142,7 @@ let mkCloneExpr<'T> () : Expr<'T -> 'T> =
         let recGen = 
             fun self ->
                 { new StagedGenerator1 with 
-                    member __.Generate<'a,'b> (e:Expr<'a>) : Expr<'b> = 
+                    member _.Generate<'a,'b> (e:Expr<'a>) : Expr<'b> = 
                         stageCloner<'a> self e |> unbox }
             |> Expr.Y1
 

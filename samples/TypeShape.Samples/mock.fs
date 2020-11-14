@@ -60,7 +60,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
             |> invalidArg (string typeof<'T>)
 
         shape.Accept { new IMemberVisitor<'T, 'T -> 'T> with
-            member __.Visit (shape : ShapeMember<'T, 'Field>) =
+            member _.Visit (shape : ShapeMember<'T, 'Field>) =
                 let mockValue =
                     match mockValue with
                     | Some((:? 'Field as f), _, _) -> Static f
@@ -109,7 +109,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
     | Shape.String -> EQ(fun mv -> getPrimMock mv "")
     | Shape.Enum s ->
         s.Accept { new IEnumVisitor<Mocker<'T>> with
-            member __.Visit<'t, 'u when 't : enum<'u>
+            member _.Visit<'t, 'u when 't : enum<'u>
                                     and 't : struct
                                     and 't :> ValueType
                                     and 't : (new : unit -> 't)>() = // 'T = 't
@@ -122,7 +122,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
 
     | Shape.Nullable s ->
         s.Accept { new INullableVisitor<Mocker<'T>> with
-            member __.Visit<'t when 't : struct and 't :> ValueType and 't : (new : unit -> 't)>() = // 'T = Nullable<'t>
+            member _.Visit<'t when 't : struct and 't :> ValueType and 't : (new : unit -> 't)>() = // 'T = Nullable<'t>
                 let tm = mkMockerCached<'t> ctx
                 fun mv ->
                     match mv with
@@ -137,7 +137,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
     | Shape.FSharpFunc s ->
         // mock<'T -> 'S> = fun (_ : 'T) -> mock<'S>
         s.Accept { new IFSharpFuncVisitor<Mocker<'T>> with
-            member __.Visit<'Dom, 'Cod> () = // 'T = 'Cod -> 'Dom
+            member _.Visit<'Dom, 'Cod> () = // 'T = 'Cod -> 'Dom
                 let dm = mkMockerCached<'Cod> ctx
                 fun mv ->
                     match mv with
@@ -147,7 +147,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
 
     | Shape.FSharpOption s ->
         s.Element.Accept { new ITypeVisitor<Mocker<'T>> with
-            member __.Visit<'t>() = // 'T = 't option
+            member _.Visit<'t>() = // 'T = 't option
                 let em = mkMockerCached<'t> ctx
                 fun mv ->
                     match mv with
@@ -161,7 +161,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
 
     | Shape.KeyValuePair s ->
         s.Accept { new IKeyValuePairVisitor<Mocker<'T>> with
-            member __.Visit<'k,'v>() = // 'T = KeyValuePair<'k,'v>
+            member _.Visit<'k,'v>() = // 'T = KeyValuePair<'k,'v>
                 let km,vm = mkMockerCached<'k> ctx, mkMockerCached<'v> ctx
                 fun mv ->
                     match mv with
@@ -171,7 +171,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
 
     | Shape.Array s when s.Rank = 1 ->
         s.Element.Accept { new ITypeVisitor<Mocker<'T>> with
-            member __.Visit<'t> () = // 'T = 't []
+            member _.Visit<'t> () = // 'T = 't []
                 let em = mkMockerCached<'t> ctx
                 fun mv ->
                     match mv with
@@ -185,7 +185,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
 
     | Shape.FSharpList s ->
         s.Element.Accept { new ITypeVisitor<Mocker<'T>> with
-            member __.Visit<'t>() = // 'T = 't list
+            member _.Visit<'t>() = // 'T = 't list
                 let em = mkMockerCached<'t> ctx
                 fun mv ->
                     match mv with
@@ -199,7 +199,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
 
     | Shape.FSharpSet s ->
         s.Accept { new IFSharpSetVisitor<Mocker<'T>> with
-            member __.Visit<'t when 't : comparison>() = // 'T = Set<'t>
+            member _.Visit<'t when 't : comparison>() = // 'T = Set<'t>
                 let em = mkMockerCached<'t> ctx
                 let init n f = Seq.init n f |> Set.ofSeq
                 fun mv ->
@@ -214,7 +214,7 @@ and private mkMockerAux<'T> (ctx : TypeGenerationContext) : Mocker<'T> =
 
     | Shape.FSharpMap s ->
         s.Accept { new IFSharpMapVisitor<Mocker<'T>> with
-            member __.Visit<'k, 'v when 'k : comparison>() = // 'T = Map<'k,'v>
+            member _.Visit<'k, 'v when 'k : comparison>() = // 'T = Map<'k,'v>
                 let km, vm = mkMockerCached<'k> ctx, mkMockerCached<'v> ctx
                 let init n f = Seq.init n f |> Map.ofSeq
                 fun mv ->

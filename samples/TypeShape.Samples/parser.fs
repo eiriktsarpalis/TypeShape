@@ -40,7 +40,7 @@ and private genParserAux<'T> (ctx : TypeGenerationContext) : Parser<'T> =
 
     let mkMemberParser (shape : IShapeMember<'Class>) =
         shape.Accept { new IMemberVisitor<'Class, Parser<'Class -> 'Class>> with
-            member __.Visit (shape : ShapeMember<'Class, 'Field>) =
+            member _.Visit (shape : ShapeMember<'Class, 'Field>) =
                 let fp = genParserCached<'Field> ctx
                 fp |>> fun f dt -> shape.Set dt f
         }
@@ -64,7 +64,7 @@ and private genParserAux<'T> (ctx : TypeGenerationContext) : Parser<'T> =
     | Shape.FSharpOption s ->
         s.Element.Accept {
             new ITypeVisitor<Parser<'T>> with
-                member __.Visit<'t> () =
+                member _.Visit<'t> () =
                     let tp = genParserCached<'t> ctx |>> Some
                     let nP = stringReturn "None" None
                     let vp = attempt (paren tp) <|> tp
@@ -75,7 +75,7 @@ and private genParserAux<'T> (ctx : TypeGenerationContext) : Parser<'T> =
     | Shape.FSharpList s ->
         s.Element.Accept {
             new ITypeVisitor<Parser<'T>> with
-                member __.Visit<'t> () =
+                member _.Visit<'t> () =
                     let tp = genParserCached<'t> ctx
                     let sep = pchar ';'
                     let lp = between (pchar '[') (pchar ']') (sepBy tp sep)
@@ -85,7 +85,7 @@ and private genParserAux<'T> (ctx : TypeGenerationContext) : Parser<'T> =
     | Shape.Array s when s.Rank = 1 ->
         s.Element.Accept {
             new ITypeVisitor<Parser<'T>> with
-                member __.Visit<'t> () =
+                member _.Visit<'t> () =
                     let tp = genParserCached<'t> ctx
                     let sep = pchar ';'
                     let lp = between (pstring "[|") (pstring "|]") (sepBy tp sep)

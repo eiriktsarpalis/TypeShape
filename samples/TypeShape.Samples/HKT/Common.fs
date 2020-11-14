@@ -18,10 +18,10 @@ module TypeBuilder =
     let fold (builder : ITypeBuilder<'F, 'G>) =
         FoldContext.fold (Some cache)
             { new IFoldContext<'F> with 
-                member __.Fold<'t> self =
+                member _.Fold<'t> self =
                     match shapeof<'t> with
                     | Fold.FSharpType builder self s -> s
                     | Fold.CliMutable builder self s -> s
                     | _ -> failwithf "Type %O not recognized as an F# data type." typeof<'t>
 
-                member __.Delay c = builder.Delay c }
+                member _.Delay c = builder.Delay c }

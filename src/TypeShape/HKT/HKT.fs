@@ -8,8 +8,8 @@ open System.ComponentModel
 [<Struct; NoEquality; NoComparison>]
 type App<'F, 't> [<EditorBrowsable(EditorBrowsableState.Never)>] (payload : obj) =
     [<EditorBrowsable(EditorBrowsableState.Never)>] 
-    member __.Payload = payload
-    override __.ToString() = match payload with null -> "null" | p -> p.ToString()
+    member _.Payload = payload
+    override _.ToString() = match payload with null -> "null" | p -> p.ToString()
 
 /// HKT encoding that encapsulates an underlying materialized value.
 and App<'F, 't1, 't2> = App<'F, Tup<'t1, 't2>>

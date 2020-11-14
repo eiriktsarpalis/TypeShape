@@ -63,15 +63,15 @@ type TypeShape<'T> private () =
     [<EditorBrowsable(EditorBrowsableState.Never)>]
     static member val internal Instance = new TypeShape<'T>()
         
-    override __.Type = typeof<'T>
-    override __.ShapeInfo = shapeInfo
-    override __.Accept v = v.Visit<'T> ()
-    override __.Equals o = o :? TypeShape<'T>
-    override __.GetHashCode() = hash typeof<'T>
+    override _.Type = typeof<'T>
+    override _.ShapeInfo = shapeInfo
+    override _.Accept v = v.Visit<'T> ()
+    override _.Equals o = o :? TypeShape<'T>
+    override _.GetHashCode() = hash typeof<'T>
 
 exception UnsupportedShape of Type:Type
     with
-    override __.Message = sprintf "Unsupported TypeShape '%O'" __.Type
+    override e.Message = sprintf "Unsupported TypeShape '%O'" e.Type
 
 [<AutoOpen>]
 module private TypeShapeImpl =
@@ -230,8 +230,8 @@ type private ShapeEnum<'Enum, 'Underlying when 'Enum : enum<'Underlying>
                                            and 'Enum :> ValueType
                                            and 'Enum : (new : unit -> 'Enum)>() =
     interface IShapeEnum with
-        member __.Underlying = shapeof<'Underlying> :> _
-        member __.Accept v = v.Visit<'Enum, 'Underlying> ()
+        member _.Underlying = shapeof<'Underlying> :> _
+        member _.Accept v = v.Visit<'Enum, 'Underlying> ()
 
 // Nullable types
 
@@ -244,8 +244,8 @@ type IShapeNullable =
 
 type private ShapeNullable<'T when 'T : (new : unit -> 'T) and 'T :> ValueType and 'T : struct> () =
     interface IShapeNullable with
-        member __.Element = shapeof<'T> :> _
-        member __.Accept v = v.Visit<'T> ()
+        member _.Element = shapeof<'T> :> _
+        member _.Accept v = v.Visit<'T> ()
 
 
 // Default Constructor types
@@ -258,7 +258,7 @@ type IShapeDefaultConstructor =
 
 type private ShapeDefaultConstructor<'T when 'T : (new : unit -> 'T)>() =
     interface IShapeDefaultConstructor with
-        member __.Accept v = v.Visit<'T>()
+        member _.Accept v = v.Visit<'T>()
 
 // Equality Types
     
@@ -270,7 +270,7 @@ type IShapeEquality =
 
 type private ShapeEquality<'T when 'T : equality>() =
     interface IShapeEquality with
-        member __.Accept v = v.Visit<'T>()
+        member _.Accept v = v.Visit<'T>()
 
 // Comparison Types
     
@@ -282,7 +282,7 @@ type IShapeComparison =
 
 type private ShapeComparison<'T when 'T : comparison>() =
     interface IShapeComparison with
-        member __.Accept v = v.Visit<'T>()
+        member _.Accept v = v.Visit<'T>()
 
 // Struct Types
 
@@ -294,7 +294,7 @@ type IShapeStruct =
 
 type private ShapeStruct<'T when 'T : struct>() =
     interface IShapeStruct with
-        member __.Accept v = v.Visit<'T>()
+        member _.Accept v = v.Visit<'T>()
 
 // Reference Types
 
@@ -306,7 +306,7 @@ type IShapeNotStruct =
 
 type private ShapeNotStruct<'T when 'T : not struct and 'T : null>() =
     interface IShapeNotStruct with
-        member __.Accept v = v.Visit<'T>()
+        member _.Accept v = v.Visit<'T>()
 
 // Delegates
 
@@ -318,7 +318,7 @@ type IShapeDelegate =
 
 type private ShapeDelegate<'Delegate when 'Delegate :> Delegate>() =
     interface IShapeDelegate with
-        member __.Accept v = v.Visit<'Delegate>()
+        member _.Accept v = v.Visit<'Delegate>()
 
 // F# functions
 
@@ -332,9 +332,9 @@ type IShapeFSharpFunc =
 
 type private ShapeFSharpFunc<'Domain, 'CoDomain> () =
     interface IShapeFSharpFunc with
-        member __.Domain = shapeof<'Domain> :> _
-        member __.CoDomain = shapeof<'CoDomain> :> _
-        member __.Accept v = v.Visit<'Domain, 'CoDomain> ()
+        member _.Domain = shapeof<'Domain> :> _
+        member _.CoDomain = shapeof<'CoDomain> :> _
+        member _.Accept v = v.Visit<'Domain, 'CoDomain> ()
 
 // System.Exception
 
@@ -347,8 +347,8 @@ type IShapeException =
 
 type private ShapeException<'exn when 'exn :> exn and 'exn : not struct and 'exn : null> (isFSharpExn : bool) =
     interface IShapeException with
-        member __.IsFSharpException = isFSharpExn
-        member __.Accept v = v.Visit<'exn> ()
+        member _.IsFSharpException = isFSharpExn
+        member _.Accept v = v.Visit<'exn> ()
 
 
 //-----------------------------------
@@ -365,8 +365,8 @@ type IShapeEnumerable =
 
 type private ShapeEnumerable<'Enum, 'T when 'Enum :> seq<'T>> () =
     interface IShapeEnumerable with
-        member __.Element = shapeof<'T> :> _
-        member __.Accept v = v.Visit<'Enum, 'T> ()
+        member _.Element = shapeof<'T> :> _
+        member _.Accept v = v.Visit<'Enum, 'T> ()
 
 // Collection
 
@@ -379,8 +379,8 @@ type IShapeCollection =
 
 type private ShapeCollection<'Collection, 'T when 'Collection :> ICollection<'T>> () =
     interface IShapeCollection with
-        member __.Element = shapeof<'T> :> _
-        member __.Accept v = v.Visit<'Collection, 'T> ()
+        member _.Element = shapeof<'T> :> _
+        member _.Accept v = v.Visit<'Collection, 'T> ()
 
 // KeyValuePair
 
@@ -394,9 +394,9 @@ type IShapeKeyValuePair =
 
 type private ShapeKeyValuePair<'K,'V> () =
     interface IShapeKeyValuePair with
-        member __.Key = shapeof<'K> :> _
-        member __.Value = shapeof<'V> :> _
-        member __.Accept v = v.Visit<'K, 'V> ()
+        member _.Key = shapeof<'K> :> _
+        member _.Value = shapeof<'V> :> _
+        member _.Accept v = v.Visit<'K, 'V> ()
 
 // System.Array
 
@@ -407,8 +407,8 @@ type IShapeArray =
 
 type private ShapeArray<'T>(rank : int) =
     interface IShapeArray with
-        member __.Rank = rank
-        member __.Element = shapeof<'T> :> _
+        member _.Rank = rank
+        member _.Element = shapeof<'T> :> _
 
 type ISystemArrayVisitor<'R> =
     abstract Visit<'Array when 'Array :> System.Array> : unit -> 'R
@@ -420,9 +420,9 @@ type IShapeSystemArray =
 
 type private ShapeSystemArray<'Array when 'Array :> System.Array>(elem : Type, rank : int) =
     interface IShapeSystemArray with
-        member __.Rank = rank
-        member __.Element = TypeShape.Create elem
-        member __.Accept v = v.Visit<'Array> ()
+        member _.Rank = rank
+        member _.Element = TypeShape.Create elem
+        member _.Accept v = v.Visit<'Array> ()
     
 
 // System.Collections.List
@@ -435,7 +435,7 @@ type IShapeResizeArray =
 
 type private ShapeResizeArray<'T> () =
     interface IShapeResizeArray with
-        member __.Element = shapeof<'T> :> _
+        member _.Element = shapeof<'T> :> _
 
 
 // System.Collections.Dictionary
@@ -450,9 +450,9 @@ type IShapeDictionary =
 
 type private ShapeDictionary<'K, 'V when 'K : equality> () =
     interface IShapeDictionary with
-        member __.Key = shapeof<'K> :> _
-        member __.Value = shapeof<'V> :> _
-        member __.Accept v = v.Visit<'K, 'V> ()
+        member _.Key = shapeof<'K> :> _
+        member _.Value = shapeof<'V> :> _
+        member _.Accept v = v.Visit<'K, 'V> ()
 
 // System.Collections.HashSet
 
@@ -465,8 +465,8 @@ type IShapeHashSet =
 
 type private ShapeHashSet<'T when 'T : equality> () =
     interface IShapeHashSet with
-        member __.Element = shapeof<'T> :> _
-        member __.Accept v = v.Visit<'T> ()
+        member _.Element = shapeof<'T> :> _
+        member _.Accept v = v.Visit<'T> ()
 
 // F# Set
 
@@ -479,8 +479,8 @@ type IShapeFSharpSet =
 
 type private ShapeFSharpSet<'T when 'T : comparison> () =
     interface IShapeFSharpSet with
-        member __.Element = shapeof<'T> :> _
-        member __.Accept v = v.Visit<'T> ()
+        member _.Element = shapeof<'T> :> _
+        member _.Accept v = v.Visit<'T> ()
 
 // F# Map
 
@@ -494,9 +494,9 @@ type IShapeFSharpMap =
 
 type private ShapeFSharpMap<'K, 'V when 'K : comparison> () =
     interface IShapeFSharpMap with
-        member __.Key = shapeof<'K> :> _
-        member __.Value = shapeof<'V> :> _
-        member __.Accept v = v.Visit<'K, 'V>()
+        member _.Key = shapeof<'K> :> _
+        member _.Value = shapeof<'V> :> _
+        member _.Accept v = v.Visit<'K, 'V>()
 
 // F# ref
 
@@ -505,7 +505,7 @@ type IShapeFSharpRef =
 
 type private ShapeFSharpRef<'T> () =
     interface IShapeFSharpRef with
-        member __.Element = shapeof<'T> :> _
+        member _.Element = shapeof<'T> :> _
 
 // F# option
 
@@ -514,7 +514,7 @@ type IShapeFSharpOption =
 
 type private ShapeFSharpOption<'T> () =
     interface IShapeFSharpOption with
-        member __.Element = shapeof<'T> :> _
+        member _.Element = shapeof<'T> :> _
 
 // F# List
 
@@ -523,7 +523,7 @@ type IShapeFSharpList =
 
 type private ShapeFSharpList<'T> () =
     interface IShapeFSharpList with
-        member __.Element = shapeof<'T> :> _
+        member _.Element = shapeof<'T> :> _
 
 //-----------------------------
 // Section: Member-based Shapes
@@ -534,7 +534,7 @@ module private MemberUtils =
     let private untypedVisitor =
         {
             new ITypeVisitor<obj> with
-                member __.Visit<'T>() = Unchecked.defaultof<'T> :> obj
+                member _.Visit<'T>() = Unchecked.defaultof<'T> :> obj
         }
 
     let defaultOfUntyped (ty : Type) =
@@ -612,7 +612,7 @@ module private MemberUtils =
     let getDefaultValueExpr (t : Type) =
         TypeShape.Create(t).Accept {
             new ITypeVisitor<Expr> with
-                member __.Visit<'T> () = <@ Unchecked.defaultof<'T> @> :> _
+                member _.Visit<'T> () = <@ Unchecked.defaultof<'T> @> :> _
         }
 
     let private castFor (m : MemberInfo) (e : Expr) =
@@ -707,24 +707,24 @@ and ReadOnlyMember<'DeclaringType, 'MemberType> internal (label : string, member
     let isPublicMember = isPublicMember memberInfo
 
     /// Human-readable member identifier
-    member __.Label = label
+    member _.Label = label
     /// The actual System.Reflection.MemberInfo corresponding to member
-    member __.MemberInfo = memberInfo
+    member _.MemberInfo = memberInfo
     /// True iff member is contained within a struct
-    member __.IsStructMember = isStructMember
+    member _.IsStructMember = isStructMember
     /// True iff member is public
-    member __.IsPublic = isPublicMember
+    member _.IsPublic = isPublicMember
     /// Gets the current value from the given declaring type instance
-    member __.Get (instance : 'DeclaringType) : 'MemberType =
+    member _.Get (instance : 'DeclaringType) : 'MemberType =
         project path instance
 
     /// Gets the current value from the given declaring type instance
     [<Obsolete("Deprecated, please use the 'Get' method instead")>]
-    member __.Project (instance : 'DeclaringType) : 'MemberType = __.Get instance
+    member m.Project (instance : 'DeclaringType) : 'MemberType = m.Get instance
        
 #if TYPESHAPE_EXPR
     /// Projects an instance to member of given value
-    member __.GetExpr (instance : Expr<'DeclaringType>) =
+    member _.GetExpr (instance : Expr<'DeclaringType>) =
         projectExpr<'DeclaringType, 'MemberType> path instance
 #endif
 
@@ -756,17 +756,17 @@ and [<Sealed>] ShapeMember<'DeclaringType, 'MemberType> private (label : string,
     let isStructMember = isStructMember path
 
     /// Assigns value to the provided instance. NB this is a mutating operation
-    member __.Set (instance : 'DeclaringType) (field : 'MemberType) : 'DeclaringType =
+    member _.Set (instance : 'DeclaringType) (field : 'MemberType) : 'DeclaringType =
         inject isStructMember path instance field
 
     /// Assigns value to the provided instance. NB this is a mutating operation
     [<Obsolete("Deprecated, please use the 'Set' method instead")>]
-    member __.Inject (instance : 'DeclaringType) (field : 'MemberType) : 'DeclaringType =
-        __.Set instance field
+    member m.Inject (instance : 'DeclaringType) (field : 'MemberType) : 'DeclaringType =
+        m.Set instance field
 
 #if TYPESHAPE_EXPR
     /// Injects a value to member of given instance
-    member __.SetExpr (instance : Expr<'DeclaringType>) (field : Expr<'MemberType>) =
+    member _.SetExpr (instance : Expr<'DeclaringType>) (field : Expr<'MemberType>) =
         injectExpr path instance field
 #endif
 
@@ -804,13 +804,13 @@ and [<Sealed>] ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : C
         |_ -> FSharpValue.PreComputeTupleReader typeof<'CtorArgs>
 
     /// Creates an instance of declaring type with supplied constructor args
-    member __.Invoke(args : 'CtorArgs) =
+    member _.Invoke(args : 'CtorArgs) =
         let args = valueReader args
         ctorInfo.Invoke args :?> 'DeclaringType
 
 #if TYPESHAPE_EXPR
     /// Creates an instance of declaring type with supplied constructor args
-    member __.InvokeExpr(args : Expr<'CtorArgs>) : Expr<'DeclaringType> =
+    member _.InvokeExpr(args : Expr<'CtorArgs>) : Expr<'DeclaringType> =
         let exprArgs = 
             match arity with
             | 1 -> [args :> Expr]
@@ -820,11 +820,11 @@ and [<Sealed>] ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : C
 #endif
 
     interface IShapeConstructor<'DeclaringType> with
-        member __.IsPublic = ctorInfo.IsPublic
-        member __.Arity = arity
-        member __.ConstructorInfo = ctorInfo
-        member __.Arguments = shapeof<'CtorArgs> :> _
-        member __.Accept v = v.Visit __
+        member _.IsPublic = ctorInfo.IsPublic
+        member _.Arity = arity
+        member _.ConstructorInfo = ctorInfo
+        member _.Arguments = shapeof<'CtorArgs> :> _
+        member c.Accept v = v.Visit c
 
 and IConstructorVisitor<'CtorType, 'R> =
     abstract Visit<'CtorArgs> : ShapeConstructor<'CtorType, 'CtorArgs> -> 'R
@@ -958,11 +958,11 @@ and [<Sealed>] ShapeTuple<'Tuple> private () =
 
     let fieldStack = gatherNestedFields tupleInfo
 
-    member __.IsStructTuple = isStructTuple
+    member _.IsStructTuple = isStructTuple
     /// Tuple element shape definitions
-    member __.Elements = tupleElems
+    member _.Elements = tupleElems
     /// Creates an uninitialized tuple instance of given type
-    member __.CreateUninitialized() : 'Tuple =
+    member _.CreateUninitialized() : 'Tuple =
         if isStructTuple then Unchecked.defaultof<'Tuple>
         else
             let obj = FormatterServices.GetUninitializedObject typeof<'Tuple>
@@ -975,7 +975,7 @@ and [<Sealed>] ShapeTuple<'Tuple> private () =
             obj :?> 'Tuple
 
 #if TYPESHAPE_EXPR
-    member __.CreateUninitializedExpr() : Expr<'Tuple> =
+    member _.CreateUninitializedExpr() : Expr<'Tuple> =
         if isStructTuple then
             Expr.Cast<'Tuple>(Expr.DefaultValue typeof<'Tuple>)
         else
@@ -984,8 +984,8 @@ and [<Sealed>] ShapeTuple<'Tuple> private () =
 #endif
 
     interface IShapeTuple with
-        member __.Elements = tupleElems |> Array.map (fun e -> e :> _)
-        member __.Accept v = v.Visit __
+        member _.Elements = tupleElems |> Array.map (fun e -> e :> _)
+        member s.Accept v = v.Visit s
 
 //---------------------
 // F# Records
@@ -1016,32 +1016,32 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
     let recordFields = Array.map mkRecordField props
 
     /// True if an F# struct record
-    member __.IsStructRecord = isStructRecord
+    member _.IsStructRecord = isStructRecord
 
     /// True if F# 4.6 anonyous records
-    member __.IsAnonymousRecord = isAnonymousRecord
+    member _.IsAnonymousRecord = isAnonymousRecord
 
     /// F# record field shapes
-    member __.Fields = recordFields
+    member _.Fields = recordFields
 
     /// Creates an uninitialized instance for given record
-    member __.CreateUninitialized() : 'Record =
+    member _.CreateUninitialized() : 'Record =
         if isStructRecord then Unchecked.defaultof<'Record> else
         ctorInfo.Invoke ctorParams :?> 'Record
 
 #if TYPESHAPE_EXPR
-    member __.CreateUninitializedExpr() : Expr<'Record> =
+    member _.CreateUninitializedExpr() : Expr<'Record> =
         if isStructRecord then <@ Unchecked.defaultof<'Record> @> else
         let values = props |> Seq.map (fun p -> getDefaultValueExpr p.PropertyType)
         Expr.Cast<'Record>(Expr.NewObject(ctorInfo, Seq.toList values))
 #endif
 
     interface IShapeFSharpRecord with
-        member __.IsStructRecord = isStructRecord
-        member __.IsAnonymousRecord = isAnonymousRecord
+        member _.IsStructRecord = isStructRecord
+        member _.IsAnonymousRecord = isAnonymousRecord
 
-        member __.Fields = recordFields |> Array.map unbox
-        member __.Accept v = v.Visit __
+        member _.Fields = recordFields |> Array.map unbox
+        member s.Accept v = v.Visit s
 
 and IFSharpRecordVisitor<'R> =
     abstract Visit : ShapeFSharpRecord<'Record> -> 'R
@@ -1075,25 +1075,25 @@ type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
             Array.map mkUnionField properties
 
     /// Underlying FSharp.Reflection.UnionCaseInfo description
-    member __.CaseInfo = uci
+    member _.CaseInfo = uci
     /// Number of fields in the particular union case
-    member __.Arity = properties.Length
+    member _.Arity = properties.Length
     /// Field shapes for union case
-    member __.Fields = caseFields
+    member _.Fields = caseFields
 
     /// Creates an uninitialized instance for specific union case
-    member __.CreateUninitialized() : 'Union =
+    member _.CreateUninitialized() : 'Union =
         ctorInfo.Invoke(null, ctorParams) :?> 'Union
 
 #if TYPESHAPE_EXPR
-    member __.CreateUninitializedExpr() : Expr<'Union> =
+    member _.CreateUninitializedExpr() : Expr<'Union> =
         let fieldsExpr = properties |> Seq.map (fun p -> getDefaultValueExpr p.PropertyType)
         Expr.Cast<'Union>(Expr.Call(ctorInfo, Seq.toList fieldsExpr))
 #endif
 
     interface IShapeFSharpUnionCase with
-        member __.CaseInfo = uci
-        member __.Fields = caseFields |> Array.map (fun f -> f :> _)
+        member _.CaseInfo = uci
+        member _.Fields = caseFields |> Array.map (fun f -> f :> _)
 
 /// Denotes an F# Union shape
 type IShapeFSharpUnion =
@@ -1117,16 +1117,16 @@ and [<Sealed>] ShapeFSharpUnion<'U> private () =
 
     let caseNames = ucis |> Array.map (fun u -> u.CaseInfo.Name)
 
-    member __.IsStructUnion = isStructUnion
+    member _.IsStructUnion = isStructUnion
 
     /// Case shapes for given union type
-    member __.UnionCases = ucis
+    member _.UnionCases = ucis
     /// Gets the underlying tag id for given union instance
-    member __.GetTag (union : 'U) : int = 
+    member _.GetTag (union : 'U) : int = 
         tagReader union
 
     /// Gets the underlying tag id for given union case name
-    member __.GetTag (caseName : string) : int =
+    member _.GetTag (caseName : string) : int =
         let caseNames = caseNames
         let n = caseNames.Length
         let mutable i = 0
@@ -1140,7 +1140,7 @@ and [<Sealed>] ShapeFSharpUnion<'U> private () =
         i
 
 #if TYPESHAPE_EXPR
-    member __.GetTagExpr (union : Expr<'U>) : Expr<int> =
+    member _.GetTagExpr (union : Expr<'U>) : Expr<int> =
         let expr =
             match tagReaderInfo with
             | :? MethodInfo as m when m.IsStatic -> Expr.Call(m, [union])
@@ -1153,8 +1153,8 @@ and [<Sealed>] ShapeFSharpUnion<'U> private () =
         
         
     interface IShapeFSharpUnion with
-        member __.UnionCases = ucis |> Array.map (fun u -> u :> _)
-        member __.Accept v = v.Visit __
+        member _.UnionCases = ucis |> Array.map (fun u -> u :> _)
+        member s.Accept v = v.Visit s
 
 and IFSharpUnionVisitor<'R> =
     abstract Visit : ShapeFSharpUnion<'U> -> 'R
@@ -1179,23 +1179,23 @@ and [<Sealed>] ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) 
         |> Seq.toArray
 
     /// Creates an uninitialized instance for given C# record
-    member __.CreateUninitialized() : 'Record = 
+    member _.CreateUninitialized() : 'Record = 
         defaultCtor.Invoke [||] :?> 'Record
 
 #if TYPESHAPE_EXPR
     /// Creates an uninitialized instance for given C# record
-    member __.CreateUninitializedExpr() = 
+    member _.CreateUninitializedExpr() = 
         Expr.Cast<'Record>(Expr.NewObject(defaultCtor, []))
 #endif
 
     /// Property shapes for C# record
-    member __.Properties = properties
+    member _.Properties = properties
     /// Gets the default constructor info defined in the type
-    member __.DefaultCtorInfo = defaultCtor
+    member _.DefaultCtorInfo = defaultCtor
 
     interface IShapeCliMutable with
-        member __.Properties = properties |> Array.map (fun p -> p :> _)
-        member __.Accept v = v.Visit __
+        member _.Properties = properties |> Array.map (fun p -> p :> _)
+        member s.Accept v = v.Visit s
 
 and ICliMutableVisitor<'R> =
     abstract Visit : ShapeCliMutable<'Record> -> 'R
@@ -1244,33 +1244,33 @@ and [<Sealed>] ShapePoco<'Poco> private () =
         |> Seq.toArray
 
     /// True iff POCO is a struct
-    member __.IsStruct = isStruct
+    member _.IsStruct = isStruct
     /// True iff POCO is a C# 9 record
-    member __.IsCSharpRecord = isCSharpRecord
+    member _.IsCSharpRecord = isCSharpRecord
     /// Constructor shapes for the type
-    member __.Constructors = ctors
+    member _.Constructors = ctors
     /// Field shapes for the type
-    member __.Fields = fields
+    member _.Fields = fields
     /// Property shapes for the type
-    member __.Properties = properties
+    member _.Properties = properties
 
     /// Creates an uninitialized instance for POCO
-    member inline __.CreateUninitialized() : 'Poco = 
+    member inline _.CreateUninitialized() : 'Poco = 
         FormatterServices.GetUninitializedObject(typeof<'Poco>) :?> 'Poco
 
 #if TYPESHAPE_EXPR
     /// Creates an uninitialized instance for POCO
-    member inline __.CreateUninitializedExpr() : Expr<'Poco> =
+    member inline _.CreateUninitializedExpr() : Expr<'Poco> =
         <@ FormatterServices.GetUninitializedObject(typeof<'Poco>) :?> 'Poco @>
 #endif
 
     interface IShapePoco with
-        member __.Constructors = ctors |> Array.map (fun c -> c :> _)
-        member __.Fields = fields |> Array.map (fun f -> f :> _)
-        member __.Properties = properties |> Array.map (fun p -> p :> _)
-        member __.IsStruct = isStruct
-        member __.IsCSharpRecord = isCSharpRecord
-        member __.Accept v = v.Visit __
+        member _.Constructors = ctors |> Array.map (fun c -> c :> _)
+        member _.Fields = fields |> Array.map (fun f -> f :> _)
+        member _.Properties = properties |> Array.map (fun p -> p :> _)
+        member _.IsStruct = isStruct
+        member _.IsCSharpRecord = isCSharpRecord
+        member s.Accept v = v.Visit s
 
 and IPocoVisitor<'R> =
     abstract Visit : ShapePoco<'Poco> -> 'R
@@ -1293,18 +1293,18 @@ and ShapeISerializable<'T when 'T :> ISerializable> private () =
         | null -> invalidOp <| sprintf "ISerializable constructor not available for type '%O'" typeof<'T>
         | ctor -> ctor
 
-    member __.CtorInfo = ctorInfo
-    member __.Create(serializationInfo : SerializationInfo, streamingContext : StreamingContext) : 'T =
+    member _.CtorInfo = ctorInfo
+    member _.Create(serializationInfo : SerializationInfo, streamingContext : StreamingContext) : 'T =
         getCtorInfo().Invoke [| serializationInfo ; streamingContext |] :?> 'T
 
 #if TYPESHAPE_EXPR
-    member __.CreateExpr (serializationInfo : Expr<SerializationInfo>) (streamingContext : Expr<StreamingContext>) : Expr<'T> =
+    member _.CreateExpr (serializationInfo : Expr<SerializationInfo>) (streamingContext : Expr<StreamingContext>) : Expr<'T> =
         Expr.Cast<'T>(Expr.NewObject(getCtorInfo(), [serializationInfo; streamingContext]))
 #endif
 
     interface IShapeISerializable with
-        member __.CtorInfo = ctorInfo
-        member __.Accept v = v.Visit<'T> __
+        member _.CtorInfo = ctorInfo
+        member s.Accept v = v.Visit<'T> s
 
 //--------------------------------------
 // Section: TypeShape active recognizers

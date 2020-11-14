@@ -67,8 +67,8 @@ type Option() =
 
     static member Assign(_ : App<Option, 'a>, _ : 'a option) = ()
 
-    override __.Return x = HKT.pack (Some x)
-    override __.Bind (HKT.Unpack x, f) = HKT.pack (Option.bind (f >> HKT.unpack) x)
+    override _.Return x = HKT.pack (Some x)
+    override _.Bind (HKT.Unpack x, f) = HKT.pack (Option.bind (f >> HKT.unpack) x)
 
 let o1 = HKT.pack (Some 42) : App<Option, _>
 let o2 = HKT.pack None : App<Option, string>
@@ -85,8 +85,8 @@ type List() =
 
     static member Assign(_ : App<List, 'a>, _ : 'a list) = ()
 
-    override __.Return x = HKT.pack [x]
-    override __.Bind (HKT.Unpack xs, f) = HKT.pack (List.collect (f >> HKT.unpack) xs)
+    override _.Return x = HKT.pack [x]
+    override _.Bind (HKT.Unpack xs, f) = HKT.pack (List.collect (f >> HKT.unpack) xs)
 
 let l1 = HKT.pack [1 .. 10] : App<List, _>
 let l2 = HKT.pack [false ; true] : App<List, _>
@@ -102,8 +102,8 @@ type AsyncM() =
 
     static member Assign(_ : App<AsyncM, 'a>, _ : Async<'a>) = ()
 
-    override __.Return x = HKT.pack (async.Return x)
-    override __.Bind (HKT.Unpack xs, f) = HKT.pack (async.Bind(xs, f >> HKT.unpack))
+    override _.Return x = HKT.pack (async.Return x)
+    override _.Bind (HKT.Unpack xs, f) = HKT.pack (async.Bind(xs, f >> HKT.unpack))
 
 let runM (x : App<AsyncM, _>) = Async.RunSynchronously(HKT.unpack x)
 

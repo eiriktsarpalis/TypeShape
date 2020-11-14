@@ -46,7 +46,7 @@ let rec mkPrinter<'T> () : 'T -> string =
     | Shape.FSharpOption s ->
         s.Element.Accept {
             new ITypeVisitor<'T -> string> with
-                member __.Visit<'a> () =
+                member _.Visit<'a> () =
                     let tp = mkPrinter<'a>()
                     wrap(function None -> "None" | Some t -> sprintf "Some (%s)" (tp t))
         }
@@ -54,7 +54,7 @@ let rec mkPrinter<'T> () : 'T -> string =
     | Shape.FSharpList s ->
         s.Element.Accept {
             new ITypeVisitor<'T -> string> with
-                member __.Visit<'a> () =
+                member _.Visit<'a> () =
                     let tp = mkPrinter<'a>()
                     wrap(fun ts -> ts |> List.map tp |> String.concat "; " |> sprintf "[%s]")
         }
@@ -62,7 +62,7 @@ let rec mkPrinter<'T> () : 'T -> string =
     | Shape.Array s when s.Rank = 1 ->
         s.Element.Accept {
             new ITypeVisitor<'T -> string> with
-                member __.Visit<'a> () =
+                member _.Visit<'a> () =
                     let tp = mkPrinter<'a> ()
                     wrap(fun ts -> ts |> Array.map tp |> String.concat "; " |> sprintf "[|%s|]")
         }
@@ -70,7 +70,7 @@ let rec mkPrinter<'T> () : 'T -> string =
     | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
         let mkElemPrinter (shape : IShapeMember<'T>) =
            shape.Accept { new IMemberVisitor<'T, 'T -> string> with
-               member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
+               member _.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                    let fieldPrinter = mkPrinter<'Field>()
                    fieldPrinter << shape.Get }
 
@@ -85,7 +85,7 @@ let rec mkPrinter<'T> () : 'T -> string =
     | Shape.FSharpSet s ->
         s.Accept {
             new IFSharpSetVisitor<'T -> string> with
-                member __.Visit<'a when 'a : comparison> () =
+                member _.Visit<'a when 'a : comparison> () =
                     let tp = mkPrinter<'a>()
                     wrap(fun (s:Set<'a>) -> s |> Seq.map tp |> String.concat "; " |> sprintf "set [%s]")
         }
@@ -114,7 +114,7 @@ To make our pretty printer support these types, we first provide a pretty printe
 ```fsharp
 let mkMemberPrinter (shape : IShapeMember<'DeclaringType>) =
    shape.Accept { new IMemberVisitor<'DeclaringType, 'DeclaringType -> string> with
-       member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
+       member _.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
            let fieldPrinter = mkPrinter<'Field>()
            fieldPrinter << shape.Get }
 ```
@@ -221,13 +221,13 @@ type PrettyPrinter =
 // Implementing the interface
 let prettyPrinterBuilder =
     { new IMyTypesBuilder<PrettyPrinter> with
-        member __.Bool () = HKT.pack (function false -> "false" | true -> "true")
-        member __.Int32 () = HKT.pack (sprintf "%d")
-        member __.String () = HKT.pack (sprintf "\"%s\"")
+        member _.Bool () = HKT.pack (function false -> "false" | true -> "true")
+        member _.Int32 () = HKT.pack (sprintf "%d")
+        member _.String () = HKT.pack (sprintf "\"%s\"")
 
-        member __.Option (HKT.Unpack elemPrinter) = HKT.pack(function None -> "None" | Some a -> sprintf "Some(%s)" (elemPrinter a))
-        member __.Tuple2 (HKT.Unpack left) (HKT.Unpack right) = HKT.pack(fun (a,b) -> sprintf "(%s, %s)" (left a) (right b))
-        member __.List (HKT.Unpack elemPrinter) = HKT.pack(Seq.map elemPrinter >> String.concat "; " >> sprintf "[%s]") }
+        member _.Option (HKT.Unpack elemPrinter) = HKT.pack(function None -> "None" | Some a -> sprintf "Some(%s)" (elemPrinter a))
+        member _.Tuple2 (HKT.Unpack left) (HKT.Unpack right) = HKT.pack(fun (a,b) -> sprintf "(%s, %s)" (left a) (right b))
+        member _.List (HKT.Unpack elemPrinter) = HKT.pack(Seq.map elemPrinter >> String.concat "; " >> sprintf "[%s]") }
 ```
 
 Putting it all together gives us a working pretty-printer:

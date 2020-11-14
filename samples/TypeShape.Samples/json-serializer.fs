@@ -124,7 +124,7 @@ and private genPicklerAux<'T> (ctx : TypeGenerationContext) : JsonPickler<'T> =
     let mkMemberPickler (shape : IShapeMember<'Class>) =
         shape.Accept { new IMemberVisitor<'Class, (StringBuilder -> 'Class -> unit) * Parser<'Class -> 'Class>> with
 
-            member __.Visit (shape : ShapeMember<'Class, 'Field>) =
+            member _.Visit (shape : ShapeMember<'Class, 'Field>) =
                 let fP = genPicklerCached<'Field> ctx
                 let printer sb c = 
                     let field = shape.Get c
@@ -162,7 +162,7 @@ and private genPicklerAux<'T> (ctx : TypeGenerationContext) : JsonPickler<'T> =
     | Shape.FSharpOption s ->
         s.Element.Accept {
             new ITypeVisitor<JsonPickler<'T>> with
-                member __.Visit<'t> () =
+                member _.Visit<'t> () =
                     let tP = genPicklerCached<'t> ctx
                     let printer (sb : StringBuilder) (inp : 't option) =
                         match inp with
@@ -178,7 +178,7 @@ and private genPicklerAux<'T> (ctx : TypeGenerationContext) : JsonPickler<'T> =
     | Shape.FSharpList s ->
         s.Element.Accept {
             new ITypeVisitor<JsonPickler<'T>> with
-                member __.Visit<'t> () =
+                member _.Visit<'t> () =
                     let eP = genPicklerCached<'t> ctx
                     let printer sb (ts : 't list) =
                         append sb "["
@@ -200,7 +200,7 @@ and private genPicklerAux<'T> (ctx : TypeGenerationContext) : JsonPickler<'T> =
     | Shape.Array s when s.Rank = 1 ->
         s.Element.Accept {
             new ITypeVisitor<JsonPickler<'T>> with
-                member __.Visit<'t> () =
+                member _.Visit<'t> () =
                     let eP = genPicklerCached<'t> ctx
                     let printer sb (ts : 't []) =
                         append sb "["
@@ -220,7 +220,7 @@ and private genPicklerAux<'T> (ctx : TypeGenerationContext) : JsonPickler<'T> =
     | Shape.FSharpMap s ->
         s.Accept {
             new IFSharpMapVisitor<JsonPickler<'T>> with
-                member __.Visit<'k,'v when 'k : comparison> () =
+                member _.Visit<'k,'v when 'k : comparison> () =
                     if typeof<'k> <> typeof<string> then failwithf "Type '%O' is not supported" typeof<'T>
                     let vp = genPicklerCached<'v> ctx
                     let printer sb (m : Map<string, 'v>) =

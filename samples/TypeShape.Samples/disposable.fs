@@ -26,14 +26,14 @@ and private mkDisposerAux<'T> (ctx : TypeGenerationContext) : 'T -> unit =
 
     let mkMemberDisposer (shape : IShapeMember<'DeclaringType>) =
         shape.Accept { new IMemberVisitor<'DeclaringType, 'DeclaringType -> unit> with
-            member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
+            member _.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                 let fd = mkDisposerCached<'Field> ctx
                 fun inst -> let f = shape.Get inst in fd f }
 
     match shapeof<'T> with
     | Shape.IDisposable s ->
         s.Accept { new ISubtypeVisitor<IDisposable, ('T -> unit)> with
-            member __.Visit<'D when 'D :> IDisposable> () =
+            member _.Visit<'D when 'D :> IDisposable> () =
                 if typeof<'D>.IsValueType then
                     fun (d:'D) -> d.Dispose()
                 else
@@ -42,32 +42,32 @@ and private mkDisposerAux<'T> (ctx : TypeGenerationContext) : 'T -> unit =
 
     | Shape.Nullable s ->
         s.Accept { new INullableVisitor<'T -> unit> with
-            member __.Visit<'t when 't : struct and 't :> ValueType and 't : (new : unit -> 't)>() = // 'T = 't
+            member _.Visit<'t when 't : struct and 't :> ValueType and 't : (new : unit -> 't)>() = // 'T = 't
                 let td = mkDisposerCached<'t> ctx
                 EQ (fun (t : Nullable<'t>) -> if t.HasValue then td t.Value)
         }
 
     | Shape.FSharpList s ->
         s.Element.Accept { new ITypeVisitor<'T -> unit> with
-            member __.Visit<'t>() = // 'T = 't list
+            member _.Visit<'t>() = // 'T = 't list
                 let td = mkDisposerCached<'t> ctx
                 EQ (fun (ts : 't list) -> for t in ts do td t) } 
 
     | Shape.Array s when s.Rank = 1 ->
         s.Element.Accept { new ITypeVisitor<'T -> unit> with
-            member __.Visit<'t> () = // 'T = 't []
+            member _.Visit<'t> () = // 'T = 't []
                 let td = mkDisposerCached<'t> ctx
                 EQ (fun (ts : 't []) -> for t in ts do td t) } 
 
     | Shape.FSharpSet s ->
         s.Accept { new IFSharpSetVisitor<'T -> unit> with
-            member __.Visit<'t when 't : comparison>() = // 'T = Set<'t>
+            member _.Visit<'t when 't : comparison>() = // 'T = Set<'t>
                 let td = mkDisposerCached<'t> ctx
                 EQ (fun (ts : Set<'t>) -> for t in ts do td t) } 
 
     | Shape.FSharpMap s ->
         s.Accept { new IFSharpMapVisitor<'T -> unit> with
-            member __.Visit<'k, 'v when 'k : comparison>() = // 'T = Map<'k,'v>
+            member _.Visit<'k, 'v when 'k : comparison>() = // 'T = Map<'k,'v>
                 let kd, vd = mkDisposerCached<'k> ctx, mkDisposerCached<'v> ctx
                 EQ(fun (m : Map<'k,'v>) -> for kv in m do kd kv.Key ; vd kv.Value) }
 
@@ -92,7 +92,7 @@ and private cache : TypeCache = new TypeCache()
 /// Performs a structural disposal of provided type
 let dispose (t : 'T) = mkDisposer<'T> () t
 /// Creates an IDisposable token that structurally disposes contents
-let mkDisposable (t : 'T) = { new IDisposable with member __.Dispose() = dispose t }
+let mkDisposable (t : 'T) = { new IDisposable with member _.Dispose() = dispose t }
 
 
 //-------------------------
@@ -102,7 +102,7 @@ type Disposable() =
     static let mutable counter = 0
     let id = System.Threading.Interlocked.Increment &counter
     interface IDisposable with 
-        member __.Dispose() = printfn "Disposing %d" id
+        member _.Dispose() = printfn "Disposing %d" id
     
 let d() = new Disposable()
 

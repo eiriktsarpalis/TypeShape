@@ -225,7 +225,7 @@ module Expr =
                 <@ (%selfExpr) %e @>
 
         and mkRecursiveGen stack : StagedGenerator1 = 
-            { new StagedGenerator1 with member __.Generate e = aux stack e }
+            { new StagedGenerator1 with member _.Generate e = aux stack e }
 
         mkRecursiveGen []
 
@@ -265,6 +265,6 @@ module Expr =
                 <@ (%selfExpr) %e1 %e2 @>
 
         and mkRecursiveGen stack : StagedGenerator2 = 
-            { new StagedGenerator2 with member __.Generate e1 e2 = aux stack e1 e2 }
+            { new StagedGenerator2 with member _.Generate e1 e2 = aux stack e1 e2 }
 
         mkRecursiveGen []

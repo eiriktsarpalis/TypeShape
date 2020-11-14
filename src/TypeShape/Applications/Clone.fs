@@ -19,7 +19,7 @@ module private Impl =
         if obj.ReferenceEquals(o,null) then null else
         let shape = o.GetType() |> TypeShape.Create
         shape.Accept { new ITypeVisitor<obj> with
-            member __.Visit<'T>() = mkCloner () s c (o :?> 'T) :> obj }
+            member _.Visit<'T>() = mkCloner () s c (o :?> 'T) :> obj }
 
     and mkRefEqCloner<'T> (cloner : Cloner<'T>) : Cloner<'T> =
         match shapeof<'T> with
@@ -27,7 +27,7 @@ module private Impl =
         | Shape.Struct _ -> cloner
         | Shape.NotStruct s ->
             s.Accept { new INotStructVisitor<Cloner<'T>> with
-                member __.Visit<'t when 't : not struct and 't : null>() =
+                member _.Visit<'t when 't : not struct and 't : null>() =
                     cloner
                     |> unbox<Cloner<'t>> 
                     |> mkRefEqClonerAux
@@ -71,7 +71,7 @@ module private Impl =
         let mkMemberCloner (fieldShape : IShapeMember<'DeclaringType>) =
             fieldShape.Accept {
                 new IMemberVisitor<'DeclaringType, ObjectStack -> ObjectCache -> 'DeclaringType -> 'DeclaringType -> 'DeclaringType> with
-                    member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
+                    member _.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                         let fieldCloner = mkClonerCached<'FieldType> ctx
                         fun s c src tgt ->
                             let field = shape.Get src
@@ -92,7 +92,7 @@ module private Impl =
         | Shape.Array s when s.Rank = 1 ->
             s.Element.Accept {
                 new ITypeVisitor<Cloner<'T>> with
-                    member __.Visit<'t> () =
+                    member _.Visit<'t> () =
                         if typeof<'t>.IsPrimitive then
                             EQ(fun _ _ (ts:'t[]) -> ts.Clone() :?> 't[])
                         else
@@ -107,7 +107,7 @@ module private Impl =
 
         | Shape.Nullable s ->
             s.Accept { new INullableVisitor<Cloner<'T>> with
-                member __.Visit<'t when 't : (new : unit -> 't) 
+                member _.Visit<'t when 't : (new : unit -> 't) 
                                     and 't :> ValueType 
                                     and 't : struct> () =
 
@@ -119,21 +119,21 @@ module private Impl =
         | Shape.FSharpList s ->
             s.Element.Accept {
                 new ITypeVisitor<Cloner<'T>> with
-                    member __.Visit<'t> () =
+                    member _.Visit<'t> () =
                         let ec = mkClonerCached<'t> ctx
                         EQ(fun s c ts -> List.map (ec s c) ts) }
 
         | Shape.FSharpSet s ->
             s.Accept {
                 new IFSharpSetVisitor<Cloner<'T>> with
-                    member __.Visit<'t when 't : comparison> () =
+                    member _.Visit<'t when 't : comparison> () =
                         let tc = mkClonerCached<'t> ctx
                         EQ(fun s c ts -> Set.map (tc s c) ts) }
 
         | Shape.FSharpMap s ->
             s.Accept {
                 new IFSharpMapVisitor<Cloner<'T>> with
-                    member __.Visit<'k, 'v when 'k : comparison> () =
+                    member _.Visit<'k, 'v when 'k : comparison> () =
                         let kc = mkClonerCached<'k> ctx
                         let vc = mkClonerCached<'v> ctx
                         EQ(fun s c (ts:Map<'k,'v>) -> ts |> Seq.map (fun kv -> kc s c kv.Key, vc s c kv.Value) |> Map.ofSeq) }
@@ -170,7 +170,7 @@ module private Impl =
 
         | Shape.ISerializable s ->
             s.Accept { new ISerializableVisitor<Cloner<'T>> with
-                member __.Visit (shape : ShapeISerializable<'S>) =
+                member _.Visit (shape : ShapeISerializable<'S>) =
                     fun s c (source : 'S) ->
                         let sc = new StreamingContext()
                         let si = new SerializationInfo(typeof<'S>, FormatterConverter())

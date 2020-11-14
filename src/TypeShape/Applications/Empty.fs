@@ -26,7 +26,7 @@ and private mkEmptyFuncAux<'T> (ctx : TypeGenerationContext) : bool -> 'T =
 
     let mkMemberInitializer (shape : IShapeMember<'DeclaringType>) =
         shape.Accept { new IMemberVisitor<'DeclaringType, bool -> 'DeclaringType -> 'DeclaringType> with
-            member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
+            member _.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                 let fe = mkEmptyFuncCached<'Field> ctx
                 fun m inst -> shape.Set inst (fe m)
         }
@@ -43,7 +43,7 @@ and private mkEmptyFuncAux<'T> (ctx : TypeGenerationContext) : bool -> 'T =
     | Shape.Unit -> EQ (fun _ -> ())
     | Shape.Enum s ->
         s.Accept { new IEnumVisitor<bool -> 'T> with
-            member __.Visit<'t, 'u when 't : enum<'u>
+            member _.Visit<'t, 'u when 't : enum<'u>
                                     and 't : struct
                                     and 't :> ValueType
                                     and 't : (new : unit -> 't)>() = // 'T = 't
@@ -52,38 +52,38 @@ and private mkEmptyFuncAux<'T> (ctx : TypeGenerationContext) : bool -> 'T =
 
     | Shape.Nullable s ->
         s.Accept { new INullableVisitor<bool -> 'T> with
-            member __.Visit<'t when 't : struct and 't :> ValueType and 't : (new : unit -> 't)>() = // 'T = Nullable<'t>
+            member _.Visit<'t when 't : struct and 't :> ValueType and 't : (new : unit -> 't)>() = // 'T = Nullable<'t>
                 let em = mkEmptyFuncCached<'t> ctx
                 EQ(fun max -> if max then Nullable(em true) else Nullable()) }
 
     | Shape.FSharpFunc s ->
         // empty<'T -> 'S> = fun (_ : 'T) -> empty<'S>
         s.Accept { new IFSharpFuncVisitor<bool -> 'T> with
-            member __.Visit<'Dom, 'Cod> () = // 'T = 'Cod -> 'Dom
+            member _.Visit<'Dom, 'Cod> () = // 'T = 'Cod -> 'Dom
                 let de = mkEmptyFuncAux<'Cod> ctx
                 EQ(fun max -> fun (_ : 'Dom) -> de max) }
 
     | Shape.FSharpOption s ->
         s.Element.Accept { new ITypeVisitor<bool -> 'T> with
-            member __.Visit<'t>() = // 'T = 't option
+            member _.Visit<'t>() = // 'T = 't option
                 let et = mkEmptyFuncCached<'t> ctx
                 EQ(fun max -> if max then Some (et max) else None) }
 
     | Shape.KeyValuePair s ->
         s.Accept { new IKeyValuePairVisitor<bool -> 'T> with
-            member __.Visit<'k,'v>() = // 'T = KeyValuePair<'k,'v>
+            member _.Visit<'k,'v>() = // 'T = KeyValuePair<'k,'v>
                 let ke,ve = mkEmptyFuncCached<'k> ctx, mkEmptyFuncCached<'v> ctx
                 EQ(fun max -> new KeyValuePair<'k,'v>(ke max,ve max)) }
 
     | Shape.FSharpList s ->
         s.Element.Accept { new ITypeVisitor<bool -> 'T> with
-            member __.Visit<'t>() = // 'T = 't list
+            member _.Visit<'t>() = // 'T = 't list
                 let te = mkEmptyFuncCached<'t> ctx
                 EQ(fun max -> if max then [te max] else []) } 
 
     | Shape.Array s ->
         s.Element.Accept { new ITypeVisitor<bool -> 'T> with
-            member __.Visit<'t> () = 
+            member _.Visit<'t> () = 
                 let te = mkEmptyFuncCached<'t> ctx
                 let inline sz m = if m then 1 else 0
                 match s.Rank with
@@ -95,13 +95,13 @@ and private mkEmptyFuncAux<'T> (ctx : TypeGenerationContext) : bool -> 'T =
 
     | Shape.FSharpSet s ->
         s.Accept { new IFSharpSetVisitor<bool -> 'T> with
-            member __.Visit<'t when 't : comparison>() = // 'T = Set<'t>
+            member _.Visit<'t when 't : comparison>() = // 'T = Set<'t>
                 let te = mkEmptyFuncCached<'t> ctx
                 EQ(fun max -> if max then set [|te max|] else Set.empty) } 
 
     | Shape.FSharpMap s ->
         s.Accept { new IFSharpMapVisitor<bool -> 'T> with
-            member __.Visit<'k, 'v when 'k : comparison>() = // 'T = Map<'k,'v>
+            member _.Visit<'k, 'v when 'k : comparison>() = // 'T = Map<'k,'v>
                 let ke, ve = mkEmptyFuncCached<'k> ctx, mkEmptyFuncCached<'v> ctx
                 fun max -> 
                     if max then Map.ofArray [|(ke max, ve max)|] 
@@ -110,7 +110,7 @@ and private mkEmptyFuncAux<'T> (ctx : TypeGenerationContext) : bool -> 'T =
 
     | Shape.Dictionary s ->
         s.Accept { new IDictionaryVisitor<bool -> 'T> with
-            member __.Visit<'k, 'v when 'k : equality>() = // 'T = Dictionary<'k,'v>
+            member _.Visit<'k, 'v when 'k : equality>() = // 'T = Dictionary<'k,'v>
                 let kve = mkEmptyFuncCached<KeyValuePair<'k, 'v>> ctx
                 fun max -> 
                     let d = new Dictionary<'k,'v>()

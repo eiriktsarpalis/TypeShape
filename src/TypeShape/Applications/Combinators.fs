@@ -53,7 +53,7 @@ module private GIterator =
 
         let mkMemberIter (shape : IShapeReadOnlyMember<'T>) =
             shape.Accept { new IReadOnlyMemberVisitor<'T, Iterator<'E,'T>> with
-                member __.Visit (shape : ReadOnlyMember<'T, 'F>) =
+                member _.Visit (shape : ReadOnlyMember<'T, 'F>) =
                     let fIter = mkIteratorCached<'E, 'F> ctx
                     fun c t -> shape.Get t |> fIter c }
 
@@ -61,13 +61,13 @@ module private GIterator =
         | :? TypeShape<'E> -> wrap(fun c (t:'E) -> c.Action t)
         | Shape.SubtypeOf (shapeof<'E>) s ->
             s.Accept { new ISubtypeWitnessVisitor<'E, Iterator<'E,'T>> with
-                member __.Visit(witness) =
+                member _.Visit(witness) =
                     wrap(fun c t -> c.Action (witness.Upcast t))
             }
 
         | Shape.Enum s ->
             s.Accept { new IEnumVisitor<Iterator<'E,'T>> with
-                member __.Visit<'t, 'u when 't : enum<'u>
+                member _.Visit<'t, 'u when 't : enum<'u>
                                         and 't : struct
                                         and 't :> ValueType
                                         and 't : (new : unit -> 't)>() =
@@ -79,7 +79,7 @@ module private GIterator =
 
         | Shape.Nullable s ->
             s.Accept { new INullableVisitor<Iterator<'E,'T>> with
-                member __.Visit<'t when 't : struct 
+                member _.Visit<'t when 't : struct 
                                     and 't :> ValueType 
                                     and 't : (new : unit -> 't)>() =
                     let ti = mkIteratorCached<'E,'t> ctx
@@ -88,7 +88,7 @@ module private GIterator =
         | Shape.FSharpOption s ->
             s.Element.Accept {
                 new ITypeVisitor<Iterator<'E,'T>> with
-                    member __.Visit<'t>() =
+                    member _.Visit<'t>() =
                         let ei = mkIteratorCached<'E, 't> ctx
                         fun c tOpt ->
                             match tOpt with
@@ -99,7 +99,7 @@ module private GIterator =
         | Shape.Array s ->
             s.Element.Accept {
                 new ITypeVisitor<Iterator<'E,'T>> with
-                    member __.Visit<'t> () =
+                    member _.Visit<'t> () =
                         let ei = mkIteratorCached<'E, 't> ctx
                         match s.Rank with
                         | 1 -> wrap(fun c (ts : 't[]) -> for t in ts do ei c t)
@@ -111,7 +111,7 @@ module private GIterator =
         | Shape.FSharpList s ->
             s.Element.Accept {
                 new ITypeVisitor<Iterator<'E,'T>> with
-                    member __.Visit<'t>() =
+                    member _.Visit<'t>() =
                         let ei = mkIteratorCached<'E, 't> ctx
                         wrap(fun c (ts : 't list) -> for t in ts do ei c t)
             }
@@ -119,7 +119,7 @@ module private GIterator =
         | Shape.FSharpSet s ->
             s.Accept {
                 new IFSharpSetVisitor<Iterator<'E,'T>> with
-                    member __.Visit<'t when 't : comparison> () =
+                    member _.Visit<'t when 't : comparison> () =
                         let ei = mkIteratorCached<'E, 't> ctx
                         wrap(fun c (ts:Set<'t>) -> for t in ts do ei c t)
             }
@@ -140,7 +140,7 @@ module private GIterator =
 
         | Shape.Collection s ->
             s.Accept { new ICollectionVisitor<Iterator<'E,'T>> with
-                member __.Visit<'Collection, 't when 'Collection :> ICollection<'t>>() =
+                member _.Visit<'Collection, 't when 'Collection :> ICollection<'t>>() =
                     let tIter = mkIteratorCached<'E,'t> ctx
                     wrap(fun c (ts:'Collection) -> for t in ts do tIter c t) }
 
@@ -199,7 +199,7 @@ module private GMapper =
 
         let mkMemberMapper (shape : IShapeMember<'T>) =
             shape.Accept { new IMemberVisitor<'T, ObjectStack -> ObjectCache -> ('E -> 'E) -> 'T -> 'T -> 'T> with
-                member __.Visit (shape : ShapeMember<'T, 'F>) =
+                member _.Visit (shape : ShapeMember<'T, 'F>) =
                     let fMapper = mkMapperCached<'E, 'F> ctx
                     fun s c f src tgt ->
                         let srcField = shape.Get src
@@ -210,7 +210,7 @@ module private GMapper =
         | :? TypeShape<'E> -> wrap(fun _ _ f (t:'E) -> f t)
         | Shape.Enum s ->
             s.Accept { new IEnumVisitor<Mapper<'E,'T>> with
-                member __.Visit<'t, 'u when 't : enum<'u>
+                member _.Visit<'t, 'u when 't : enum<'u>
                                         and 't : struct
                                         and 't :> ValueType
                                         and 't : (new : unit -> 't)>() =
@@ -223,7 +223,7 @@ module private GMapper =
 
         | Shape.Nullable s ->
             s.Accept { new INullableVisitor<Mapper<'E,'T>> with
-                member __.Visit<'t when 't : struct 
+                member _.Visit<'t when 't : struct 
                                     and 't :> ValueType 
                                     and 't : (new : unit -> 't)>() =
                     let tm = mkMapperCached<'E,'t> ctx
@@ -232,7 +232,7 @@ module private GMapper =
         | Shape.FSharpOption s ->
             s.Element.Accept {
                 new ITypeVisitor<Mapper<'E,'T>> with
-                    member __.Visit<'t>() =
+                    member _.Visit<'t>() =
                         let em = mkMapperCached<'E, 't> ctx
                         fun s c f tOpt ->
                             match tOpt with
@@ -243,7 +243,7 @@ module private GMapper =
         | Shape.Array s ->
             s.Element.Accept {
                 new ITypeVisitor<Mapper<'E,'T>> with
-                    member __.Visit<'t> () =
+                    member _.Visit<'t> () =
                         let em = mkMapperCached<'E, 't> ctx
                         match s.Rank with
                         | 1 -> wrap(fun s c f (ts : 't[]) -> ts |> Array.map (em s c f))
@@ -255,7 +255,7 @@ module private GMapper =
         | Shape.FSharpList s ->
             s.Element.Accept {
                 new ITypeVisitor<Mapper<'E,'T>> with
-                    member __.Visit<'t>() =
+                    member _.Visit<'t>() =
                         let em = mkMapperCached<'E, 't> ctx
                         wrap(fun s c f (ts : 't list) -> ts |> List.map (em s c f))
             }
@@ -263,7 +263,7 @@ module private GMapper =
         | Shape.FSharpSet s ->
             s.Accept {
                 new IFSharpSetVisitor<Mapper<'E,'T>> with
-                    member __.Visit<'t when 't : comparison> () =
+                    member _.Visit<'t when 't : comparison> () =
                         let em = mkMapperCached<'E, 't> ctx
                         wrap(fun s c f ts -> ts |> Set.map (em s c f))
             }

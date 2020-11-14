@@ -21,9 +21,9 @@ type CartItemRemoved = { id : string ; retail_sku_id : string ; date : DateTimeO
 
 type JsonEncoder() =
     interface IEncoder<JToken> with
-        member __.Empty = JValue.CreateNull() :> _
-        member __.Encode t = match box t with null -> JValue.CreateNull() :> _ | o -> JToken.FromObject o
-        member __.Decode t = t.ToObject()
+        member _.Empty = JValue.CreateNull() :> _
+        member _.Encode t = match box t with null -> JValue.CreateNull() :> _ | o -> JToken.FromObject o
+        member _.Decode t = t.ToObject()
 
 type BasicEventSum =
     | NullaryEvent

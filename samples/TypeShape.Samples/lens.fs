@@ -39,7 +39,7 @@ module private Impl =
 
         let nest path (m : IShapeMember<'T>) =
             m.Accept { new IMemberVisitor<'T, Lens<'T, 'F>> with
-                member __.Visit<'F0> (m : ShapeMember<'T, 'F0>) =
+                member _.Visit<'F0> (m : ShapeMember<'T, 'F0>) =
                     let inner = mkLensAux<'F0, 'F> path
                     {
                         get = fun (t:'T) -> inner.get (m.Get t)
@@ -52,7 +52,7 @@ module private Impl =
         | _, [] -> wrap { get = id<'F> ; set = fun (_:'F) (y:'F) -> y }
         | Shape.FSharpOption s, Property "Value" :: rest ->
             s.Element.Accept { new ITypeVisitor<Lens<'T,'F>> with
-                member __.Visit<'t> () =
+                member _.Visit<'t> () =
                     let inner = mkLensAux<'t, 'F> rest
                     wrap {
                         get = fun (ts : 't option) -> inner.get (Option.get ts)
@@ -62,7 +62,7 @@ module private Impl =
 
         | Shape.Array s, Item(:? int as i) :: rest when s.Rank = 1 ->
             s.Element.Accept { new ITypeVisitor<Lens<'T,'F>> with
-                member __.Visit<'t> () =
+                member _.Visit<'t> () =
                     let inner = mkLensAux<'t, 'F> rest
                     wrap {
                         get = fun (ts : 't[]) -> inner.get ts.[i]
@@ -72,7 +72,7 @@ module private Impl =
 
         | Shape.FSharpList s, Item (:? int as i) :: rest ->
             s.Element.Accept { new ITypeVisitor<Lens<'T,'F>> with
-                member __.Visit<'t> () =
+                member _.Visit<'t> () =
                     let inner = mkLensAux<'t, 'F> rest
                     wrap {
                         get = fun (ts : 't list) -> inner.get ts.[i]
@@ -82,7 +82,7 @@ module private Impl =
 
         | Shape.FSharpMap s, Item key :: rest ->
             s.Accept { new IFSharpMapVisitor<Lens<'T, 'F>> with
-                member __.Visit<'k, 'v when 'k : comparison>() =
+                member _.Visit<'k, 'v when 'k : comparison>() =
                     let key = key :?> 'k
                     let inner = mkLensAux<'v, 'F> rest
                     wrap {

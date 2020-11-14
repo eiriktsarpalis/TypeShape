@@ -40,10 +40,10 @@ let testValue : TestType =
 [<MemoryDiagnoser>]
 type CloneBenchmarks() =
     [<Benchmark(Description = "Baseline Cloner", Baseline = true)>]
-    member __.Baseline() = baselineCloner testValue |> ignore
+    member _.Baseline() = baselineCloner testValue |> ignore
     [<Benchmark(Description = "TypeShape Cloner")>]
-    member __.Reflection() = typeShapeCloner testValue |> ignore
+    member _.Reflection() = typeShapeCloner testValue |> ignore
     [<Benchmark(Description = "TypeShape Unquote Staged Cloner")>]
-    member __.Unquote() = unquoteStagedCloner testValue |> ignore
+    member _.Unquote() = unquoteStagedCloner testValue |> ignore
     [<Benchmark(Description = "TypeShape Compiled Staged Cloner")>]
-    member __.TypeShape() = compiledStagedCloner testValue |> ignore
+    member _.TypeShape() = compiledStagedCloner testValue |> ignore

@@ -22,9 +22,9 @@ type IEncoder<'Format> =
 /// Generic encoder that simply upcasts values to System.Object
 type BoxEncoder() =
     interface IEncoder<obj> with
-        member __.Empty    = null
-        member __.Encode t = box t
-        member __.Decode o = unbox o
+        member _.Empty    = null
+        member _.Encode t = box t
+        member _.Decode o = unbox o
 
 /// Represents an encoded union case
 type EncodedUnion<'Encoding> =
@@ -64,7 +64,7 @@ module private Impl =
         let mkFieldEncoders (field : IShapeMember<'Union>) (encoder : IEncoder<'Format>) =
             field.Accept {
                 new IMemberVisitor<'Union, ('Union -> 'Format) * ('Union -> 'Format -> 'Union)> with
-                    member __.Visit(sfield : ShapeMember<'Union, 'Field>) =
+                    member _.Visit(sfield : ShapeMember<'Union, 'Field>) =
                         let enc u =
                             let f = sfield.Get u
                             encoder.Encode f
@@ -165,22 +165,22 @@ module private Impl =
                 |> Array.unzip
 
             { new UnionContractEncoder<'Union, 'Format>() with
-                member __.GetCaseName(u:'Union) =
+                member _.GetCaseName(u:'Union) =
                     let tag = shape.GetTag u
                     labels.[tag]
 
-                member __.Encode(u:'Union) =
+                member _.Encode(u:'Union) =
                     let tag = shape.GetTag u
                     caseEncoders.[tag] u
 
-                member __.Decode e =
+                member _.Decode e =
                     match labelIndex.TryFindIndex e.CaseName with
                     |  -1 ->
                         let msg = sprintf "Unrecognized case name '%O.%s'" typeof<'Union> e.CaseName
                         raise <| FormatException msg
                     | tag -> caseDecoders.[tag] e.Payload
 
-                member __.TryDecode e =
+                member _.TryDecode e =
                     match labelIndex.TryFindIndex e.CaseName with
                     |  -1 -> None
                     | tag -> caseDecoders.[tag] e.Payload |> Some }

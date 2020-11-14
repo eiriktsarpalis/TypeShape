@@ -54,139 +54,139 @@ type PickerBuilder() =
         | _ -> None
 
     interface ITypeBuilder<Pickler, FieldPickler> with
-        member __.Bool () = 
+        member _.Bool () = 
             HKT.pack {  
                 pickle = fun k b -> k (Bool b)
                 unpickle = fun r -> match r true with Bool b -> b | t -> invalidTok t
             }
 
-        member __.Byte () =
+        member _.Byte () =
             HKT.pack {
                 pickle = fun k b -> k (Number (decimal b))
                 unpickle = fun r -> match r true with AsNumber i -> byte i | t -> invalidTok t
             }
 
-        member __.SByte() =
+        member _.SByte() =
             HKT.pack {
                 pickle = fun k b -> k (Number (decimal b))
                 unpickle = fun r -> match r true with AsNumber i -> sbyte i | t -> invalidTok t
             }
 
-        member __.Char() =
+        member _.Char() =
             HKT.pack {
                 pickle = fun k c -> k (String (string c))
                 unpickle = fun r -> match r true with String s -> s.[0] | t -> invalidTok t
             }
 
-        member __.Int16 () =
+        member _.Int16 () =
             HKT.pack {
                 pickle = fun k b -> k (Number (decimal b))
                 unpickle = fun r -> match r true with AsNumber i -> int16 i | t -> invalidTok t
             }
 
-        member __.Int32 () =
+        member _.Int32 () =
             HKT.pack {
                 pickle = fun k b -> k (Number (decimal b))
                 unpickle = fun r -> match r true with AsNumber i -> int i | t -> invalidTok t
             }
 
-        member __.Int64 () =
+        member _.Int64 () =
             HKT.pack {
                 pickle = fun k b -> k (Number (decimal b))
                 unpickle = fun r -> match r true with AsNumber i -> int64 i | t -> invalidTok t
             }
 
-        member __.UInt16 () =
+        member _.UInt16 () =
             HKT.pack {
                 pickle = fun k b -> k (Number (decimal b))
                 unpickle = fun r -> match r true with AsNumber i -> uint16 i | t -> invalidTok t
             }
 
-        member __.UInt32 () =
+        member _.UInt32 () =
             HKT.pack {
                 pickle = fun k b -> k (Number (decimal b))
                 unpickle = fun r -> match r true with AsNumber i -> uint32 i | t -> invalidTok t
             }
 
-        member __.UInt64 () =
+        member _.UInt64 () =
             HKT.pack {
                 pickle = fun k b -> k (Number (decimal b))
                 unpickle = fun r -> match r true with AsNumber i -> uint64 i | t -> invalidTok t
             }
 
-        member __.Single () =
+        member _.Single () =
             HKT.pack {
                 pickle = fun k b -> k (Number (decimal b))
                 unpickle = fun r -> match r true with AsNumber i -> single i | t -> invalidTok t
             }
 
-        member __.Double () =
+        member _.Double () =
             HKT.pack {
                 pickle = fun k b -> k (Number (decimal b))
                 unpickle = fun r -> match r true with AsNumber i -> float i | t -> invalidTok t
             }
 
-        member __.Decimal() =
+        member _.Decimal() =
             HKT.pack {
                 pickle = fun k b -> k (Number (decimal b))
                 unpickle = fun r -> match r true with AsNumber i -> i | t -> invalidTok t
             }
 
-        member __.BigInt () =
+        member _.BigInt () =
             HKT.pack {
                 pickle = fun k i -> k (String (i.ToString()))
                 unpickle = fun r -> match r true with String s -> bigint.Parse s | AsNumber i -> bigint i | t -> invalidTok t
             }
 
-        member __.Unit() =
+        member _.Unit() =
             HKT.pack {
                 pickle = fun k i -> k Null
                 unpickle = fun r -> match r true with Null -> () | t -> invalidTok t
             }
 
-        member __.String () =
+        member _.String () =
             HKT.pack {
                 pickle = fun k s -> k (String s)
                 unpickle = fun r -> match r true with String s -> s | t -> invalidTok t
             }
 
-        member __.Guid () =
+        member _.Guid () =
             HKT.pack {
                 pickle = fun k s -> k (String (s.ToString()))
                 unpickle = fun r -> match r true with String s -> System.Guid.Parse s | t -> invalidTok t
             }
 
-        member __.TimeSpan () =
+        member _.TimeSpan () =
             HKT.pack {
                 pickle = fun k s -> k (String (s.ToString()))
                 unpickle = fun r -> match r true with String s -> System.TimeSpan.Parse s | t -> invalidTok t
             }
 
-        member __.DateTime () =
+        member _.DateTime () =
             HKT.pack {
                 pickle = fun k s -> k (String (s.ToString("O")))
                 unpickle = fun r -> match r true with String s -> System.DateTime.Parse s | t -> invalidTok t
             }
 
-        member __.DateTimeOffset() =
+        member _.DateTimeOffset() =
             HKT.pack {
                 pickle = fun k s -> k (String (s.ToString("O")))
                 unpickle = fun r -> match r true with String s -> System.DateTimeOffset.Parse s | t -> invalidTok t
             }
 
-        member __.Enum (HKT.Unpack ep) =
+        member _.Enum (HKT.Unpack ep) =
             HKT.pack {
                 pickle = fun k e -> ep.pickle k (LanguagePrimitives.EnumToValue e)
                 unpickle = fun r -> ep.unpickle r |> LanguagePrimitives.EnumOfValue
             }
 
-        member __.Nullable (HKT.Unpack ep) = 
+        member _.Nullable (HKT.Unpack ep) = 
             HKT.pack {
                 pickle = fun k e -> if e.HasValue then ep.pickle k e.Value else k Null
                 unpickle = fun r -> match r false with Null -> r true |> ignore; System.Nullable() | _ -> System.Nullable(ep.unpickle r)
             }
 
-        member __.Array (HKT.Unpack ep) = 
+        member _.Array (HKT.Unpack ep) = 
             HKT.pack {
                 pickle = fun k xs -> k StartArray ; (for x in xs do ep.pickle k x); k EndArray
                 unpickle = fun r -> 
@@ -202,7 +202,7 @@ type PickerBuilder() =
                     | t -> invalidTok t
             }
 
-        member __.Option (HKT.Unpack ep) =
+        member _.Option (HKT.Unpack ep) =
             HKT.pack {
                 pickle = fun k xs -> match xs with None -> k Null | Some x -> ep.pickle k x
                 unpickle = fun r ->
@@ -211,7 +211,7 @@ type PickerBuilder() =
                     | _ -> ep.unpickle r |> Some
             }
 
-        member __.List (HKT.Unpack ep) =
+        member _.List (HKT.Unpack ep) =
             HKT.pack {
                 pickle = fun k xs -> k StartArray ; (for x in xs do ep.pickle k x); k EndArray
                 unpickle = fun r -> 
@@ -227,7 +227,7 @@ type PickerBuilder() =
                     | t -> invalidTok t
             }
 
-        member __.Set (HKT.Unpack ep) =
+        member _.Set (HKT.Unpack ep) =
             HKT.pack {
                 pickle = fun k xs -> k StartArray ; (for x in xs do ep.pickle k x); k EndArray
                 unpickle = fun r -> 
@@ -243,7 +243,7 @@ type PickerBuilder() =
                     | t -> invalidTok t
             }
 
-        member __.Map (HKT.Unpack kp) (HKT.Unpack vp) =
+        member _.Map (HKT.Unpack kp) (HKT.Unpack vp) =
             match box kp with
             | :? Pickler<string> ->
                 (HKT.pack << unbox) { 
@@ -265,14 +265,14 @@ type PickerBuilder() =
 
             | _ -> failwith "unsupported map type"
 
-        member __.Field shape (HKT.Unpack fc) = 
+        member _.Field shape (HKT.Unpack fc) = 
             HKT.pack {
                 label = shape.Label
                 fpickle = fun k t -> fc.pickle k (shape.Get t)
                 funpickle = fun r t -> shape.Set t (fc.unpickle r)
             }
 
-        member __.Tuple shape (HKT.Unpacks fields) =
+        member _.Tuple shape (HKT.Unpacks fields) =
             HKT.pack {
                 pickle = fun k t -> k StartArray; for f in fields do f.fpickle k t; k EndArray
                 unpickle = fun r ->
@@ -284,7 +284,7 @@ type PickerBuilder() =
                     | t -> invalidTok t
             }
 
-        member __.Record shape (HKT.Unpacks fields) =
+        member _.Record shape (HKT.Unpacks fields) =
             let fieldDict = fields |> Seq.map (fun f -> f.label, f) |> dict
             HKT.pack {
                 pickle = fun k record -> k StartObject; (for f in fields do k (Label f.label) ; f.fpickle k record); k EndObject
@@ -305,7 +305,7 @@ type PickerBuilder() =
                     | t -> invalidTok t
             }
 
-        member __.Union shape (HKT.Unpackss fieldss) =
+        member _.Union shape (HKT.Unpackss fieldss) =
             let fieldDicts = fieldss |> Seq.map (Seq.map (fun f -> f.label, f) >> dict) |> Seq.toArray
             HKT.pack {
                 pickle = fun k union -> 
@@ -336,7 +336,7 @@ type PickerBuilder() =
                     | t -> invalidTok t
             }
 
-        member __.CliMutable shape (HKT.Unpacks fields) =
+        member _.CliMutable shape (HKT.Unpacks fields) =
             let fieldDict = fields |> Seq.map (fun f -> f.label, f) |> dict
             HKT.pack {
                 pickle = fun k record -> k StartObject; (for f in fields do k (Label f.label) ; f.fpickle k record); k EndObject
@@ -357,7 +357,7 @@ type PickerBuilder() =
                     | t -> invalidTok t
             }
 
-        member __.Delay cell =
+        member _.Delay cell =
             HKT.pack { 
                 pickle = fun k t -> (HKT.unpack cell.Value).pickle k t ; 
                 unpickle = fun r -> (HKT.unpack cell.Value).unpickle r 

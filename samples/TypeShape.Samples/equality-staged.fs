@@ -14,7 +14,7 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
 
     let stageMemberCmp (shape : IShapeReadOnlyMember<'DeclaringType>) =
         shape.Accept { new IReadOnlyMemberVisitor<'DeclaringType, CmpExpr<'DeclaringType>> with
-            member __.Visit (shape : ReadOnlyMember<'DeclaringType, 'FieldType>) =
+            member _.Visit (shape : ReadOnlyMember<'DeclaringType, 'FieldType>) =
                 let fcmp = stageCmp<'FieldType>()
                 fun dt dt' ->
                     fcmp (shape.GetExpr dt) 
@@ -28,7 +28,7 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
     | Shape.String -> wrap(fun (s: Expr<string>) s' -> <@ %s = %s' @>)
     | Shape.Array s when s.Rank = 1 ->
         s.Element.Accept { new ITypeVisitor<CmpExpr<'T>> with
-            member __.Visit<'t> () =
+            member _.Visit<'t> () =
                 let ec = stageCmp<'t>()
                 wrap(fun (ts : Expr<'t []>) ts' ->
                     <@
@@ -48,7 +48,7 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
 
     | Shape.FSharpOption s ->
         s.Element.Accept { new ITypeVisitor<CmpExpr<'T>> with
-            member __.Visit<'t> () =
+            member _.Visit<'t> () =
                 let ec = stageCmp<'t> ()
                 wrap(fun topt topt' ->
                     <@
@@ -60,7 +60,7 @@ let rec stageCmp<'T> () : CmpExpr<'T> =
 
     | Shape.FSharpList s ->
         s.Element.Accept { new ITypeVisitor<CmpExpr<'T>> with
-            member __.Visit<'t> () =
+            member _.Visit<'t> () =
                 let ec = stageCmp<'t> ()
                 wrap(fun ts ts' ->
                     <@

@@ -94,8 +94,8 @@ let typeShapePrinter = TypeShape.HKT.PrettyPrinter.mkPrinter<TestType>()
 [<MemoryDiagnoser>]
 type PrettyPrinterBenchmarks() =
     [<Benchmark(Description = "Baseline PrettyPrinter", Baseline = true)>]
-    member __.Baseline() = baselinePrinter testValue |> ignore
+    member _.Baseline() = baselinePrinter testValue |> ignore
     [<Benchmark(Description = "FSharp.Core PrettyPrinter")>]
-    member __.FSharpCore() = fsharpCorePrinter testValue |> ignore
+    member _.FSharpCore() = fsharpCorePrinter testValue |> ignore
     [<Benchmark(Description = "TypeShape PrettyPrinter")>]
-    member __.TypeShape() = typeShapePrinter testValue |> ignore
+    member _.TypeShape() = typeShapePrinter testValue |> ignore

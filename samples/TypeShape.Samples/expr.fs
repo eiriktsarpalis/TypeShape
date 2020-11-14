@@ -14,11 +14,11 @@ type CompiledExpr<'T> = Environment -> 'T
 
 and Environment private (index : Map<Var, obj ref>) =
     new () = new Environment(Map.empty)
-    member __.NewVar(v : Var, value : obj) = new Environment(Map.add v (ref value) index)
-    member __.GetVar(v : Var) = index.[v].Value
-    member __.UpdateVar(v : Var, value : obj) = index.[v] := value
+    member _.NewVar(v : Var, value : obj) = new Environment(Map.add v (ref value) index)
+    member _.GetVar(v : Var) = index.[v].Value
+    member _.UpdateVar(v : Var, value : obj) = index.[v] := value
 
-    member __.Splice(e : Expr) =
+    member _.Splice(e : Expr) =
         e.Substitute(fun var ->
             match index.TryFind var with
             | None -> None
@@ -32,21 +32,21 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
     let meaningUntyped (e : Expr) =
         TypeShape.Create(e.Type).Accept {
             new ITypeVisitor<CompiledExpr<obj>> with
-                member __.Visit<'t>() =
+                member _.Visit<'t>() =
                     let ce = meaning<'t>(cast e)
                     fun env -> ce env :> obj
         }
 
     let mkMemberWriter (s : IShapeMember<'T>) (e : Expr) =
         s.Accept { new IMemberVisitor<'T, CompiledExpr<'T -> 'T>> with
-            member __.Visit(s : ShapeMember<'T, 'Elem>) =
+            member _.Visit(s : ShapeMember<'T, 'Elem>) =
                 let cElem = meaning<'Elem> (cast e)
                 fun env t -> let e = cElem env in s.Set t e }
 
     let mkProjection (s : IShapeReadOnlyMember) (value : Expr) =
         TypeShape.Create(value.Type).Accept { 
             new ITypeVisitor<CompiledExpr<'T>> with
-                member __.Visit<'Value> () =
+                member _.Visit<'Value> () =
                     let s = s :?> ReadOnlyMember<'Value, 'T>
                     let cvalue = meaning<'Value> (cast value)
                     fun env -> let v = cvalue env in s.Get v }
@@ -59,7 +59,7 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
     | Application(func, arg) ->
         let argShape = TypeShape.Create arg.Type
         argShape.Accept { new ITypeVisitor<CompiledExpr<'T>> with
-            member __.Visit<'Arg>() =
+            member _.Visit<'Arg>() =
                 let cfunc = meaning<'Arg -> 'T> (cast func)
                 let carg = meaning<'Arg> (cast arg)
                 EQ(fun env -> (cfunc env) (carg env)) }
@@ -68,7 +68,7 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
         match shapeof<'T> with
         | Shape.FSharpFunc s ->
             s.Accept { new IFSharpFuncVisitor<CompiledExpr<'T>> with
-                member __.Visit<'Dom, 'Cod> () = 
+                member _.Visit<'Dom, 'Cod> () = 
                     let cbody = meaning<'Cod> (cast body)
                     EQ(fun env (v : 'Dom) -> let env' = env.NewVar(var, v) in cbody env') }
 
@@ -77,7 +77,7 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
     | Let(var, bind, cont) ->
         let vShape = TypeShape.Create var.Type
         vShape.Accept { new ITypeVisitor<CompiledExpr<'T>> with
-            member __.Visit<'Var>() = 
+            member _.Visit<'Var>() = 
                 let cbind = meaning<'Var> (cast bind)
                 let ccont = meaning<'T> (cast cont)
                 fun env -> 
@@ -143,7 +143,7 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
         match TypeShape.Create left.Type with
         | Shape.Equality s ->
             s.Accept { new IEqualityVisitor<CompiledExpr<'T>> with
-                member __.Visit<'a when 'a : equality>() =
+                member _.Visit<'a when 'a : equality>() =
                     let cleft = meaning<'a> (cast left)
                     let cright = meaning<'a> (cast right)
                     EQ(fun env -> cleft env = cright env) }
@@ -216,7 +216,7 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
         match TypeShape.Create uci.DeclaringType with
         | Shape.FSharpUnion s ->
             s.Accept { new IFSharpUnionVisitor<CompiledExpr<'T>> with
-                member __.Visit<'Union> (shape : ShapeFSharpUnion<'Union>) =
+                member _.Visit<'Union> (shape : ShapeFSharpUnion<'Union>) =
                     let tag = uci.Tag
                     let cmv = meaning<'Union> (cast matchValue)
                     EQ(fun env -> shape.GetTag(cmv env) = tag) }
@@ -227,7 +227,7 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
         let mkRecBinding (var : Var, body : Expr) =
             let s = TypeShape.Create var.Type
             s.Accept { new ITypeVisitor<Var * (Environment -> unit)> with
-                member __.Visit<'Body>() =
+                member _.Visit<'Body>() =
                     let cbody = meaning<'Body> (cast body)
                     var, fun env -> env.UpdateVar(var, cbody env) }
 
@@ -247,7 +247,7 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
     | VarSet(var, expr) ->
         TypeShape.Create(expr.Type).Accept {
           new ITypeVisitor<CompiledExpr<'T>> with
-            member __.Visit<'t>() =
+            member _.Visit<'t>() =
                 let cexpr = meaning<'t>(cast expr)
                 EQ(fun env -> env.UpdateVar(var, cexpr env))
         }
@@ -255,7 +255,7 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
     | Coerce(target, _) ->
         TypeShape.Create(target.Type).Accept {
           new ITypeVisitor<CompiledExpr<'T>> with
-            member __.Visit<'t>() =
+            member _.Visit<'t>() =
                 let cexpr = meaning<'t>(cast expr)
                 fun env -> cexpr env |> unbox<'T>
         }
@@ -263,11 +263,11 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
     | TypeTest(target, ty) ->
         TypeShape.Create(target.Type).Accept {
           new ITypeVisitor<CompiledExpr<'T>> with
-            member __.Visit<'t>() =
+            member _.Visit<'t>() =
               let ctarget = meaning<'t>(cast expr)
               TypeShape.Create(ty).Accept {
                 new ITypeVisitor<CompiledExpr<'T>> with
-                  member __.Visit<'s>() =
+                  member _.Visit<'s>() =
                     EQ(fun env -> box (ctarget env) :? 's)
               }
         }
@@ -276,7 +276,7 @@ let rec meaning<'T> (expr : Expr<'T>) : CompiledExpr<'T> =
     | QuoteTyped q ->
         TypeShape.Create(q.Type).Accept {
             new ITypeVisitor<CompiledExpr<'T>> with
-                member __.Visit<'t> () = // 'T = Expr<'t>
+                member _.Visit<'t> () = // 'T = Expr<'t>
                     EQ(fun env -> Expr.Cast<'t> (env.Splice q))
         }
 

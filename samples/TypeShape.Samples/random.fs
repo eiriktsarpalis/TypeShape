@@ -11,7 +11,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
     let wrap (t : Gen<'a>) = unbox<Gen<'T>> t
     let mkRandomMember (shape : IShapeMember<'DeclaringType>) =
         shape.Accept { new IMemberVisitor<'DeclaringType, Gen<'DeclaringType -> 'DeclaringType>> with
-            member __.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
+            member _.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                 let rf = mkGenerator<'Field>()
                 gen { let! f = rf in return fun dt -> shape.Set dt f } }
 
@@ -23,7 +23,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
     | Shape.DateTime -> wrap Arb.generate<DateTime>
     | Shape.FSharpOption s ->
         s.Element.Accept { new ITypeVisitor<Gen<'T>> with
-            member __.Visit<'t> () =
+            member _.Visit<'t> () =
                 let tGen = mkGenerator<'t>()
                 Gen.frequency 
                     [ (10, tGen |> Gen.map Some) ; 
@@ -33,7 +33,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
 
     | Shape.Array s when s.Rank = 1 ->
         s.Element.Accept { new ITypeVisitor<Gen<'T>> with
-            member __.Visit<'t> () =
+            member _.Visit<'t> () =
                 let tG = mkGenerator<'t>()
                 gen {
                     let! length = Gen.sized(fun n -> Gen.choose(-1, n))
@@ -48,7 +48,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
 
     | Shape.FSharpList s ->
         s.Element.Accept { new ITypeVisitor<Gen<'T>> with
-            member __.Visit<'t> () =
+            member _.Visit<'t> () =
                 let tG = mkGenerator<'t>()
                 gen {
                     let! length = Gen.sized(fun n -> Gen.choose(0, n))
@@ -65,7 +65,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
 
     | Shape.FSharpSet s ->
         s.Accept { new IFSharpSetVisitor<Gen<'T>> with
-            member __.Visit<'t when 't : comparison> () =
+            member _.Visit<'t when 't : comparison> () =
                 let tG = mkGenerator<'t list>()
                 wrap(tG |> Gen.map Set.ofList)
         }
@@ -73,7 +73,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
     | Shape.FSharpMap s ->
         s.Accept {
             new IFSharpMapVisitor<Gen<'T>> with
-                member __.Visit<'k, 'v when 'k : comparison> () =
+                member _.Visit<'k, 'v when 'k : comparison> () =
                     let kvG = mkGenerator<('k * 'v) list>()
                     wrap(kvG |> Gen.map Map.ofList)
         }
@@ -123,7 +123,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
         | Some ctor ->
 
         ctor.Accept { new IConstructorVisitor<'T, Gen<'T>> with
-            member __.Visit<'CtorParams> (ctor : ShapeConstructor<'T, 'CtorParams>) =
+            member _.Visit<'CtorParams> (ctor : ShapeConstructor<'T, 'CtorParams>) =
                 let paramGen = mkGenerator<'CtorParams>()
                 gen {
                     let! args = paramGen
@@ -138,9 +138,9 @@ let rec mkGenerator<'T> () : Gen<'T> =
 // Example
 
 type Person(name : string, age : int) =
-    member __.Name = name
-    member __.Age = age
-    override __.ToString() = sprintf "{ Name = \"%s\" ; Age = %d }" __.Name __.Age
+    member _.Name = name
+    member _.Age = age
+    override p.ToString() = sprintf "{ Name = \"%s\" ; Age = %d }" p.Name p.Age
 
 type Customer() =
     member val Person = Unchecked.defaultof<Person> with get, set

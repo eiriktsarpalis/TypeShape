@@ -60,8 +60,8 @@ let typeShapeEmpty () = notEmpty<TestType>
 type EmptyBenchmark() =
 
     [<Benchmark(Description = "Baseline Empty", Baseline = true)>]
-    member __.Baseline() = baselineEmpty() |> ignore
+    member _.Baseline() = baselineEmpty() |> ignore
     [<Benchmark(Description = "Reflection Empty")>]
-    member __.Reflection() = reflectionEmpty() |> ignore
+    member _.Reflection() = reflectionEmpty() |> ignore
     [<Benchmark(Description = "TypeShape Empty")>]
-    member __.TypeShape() = typeShapeEmpty() |> ignore
+    member _.TypeShape() = typeShapeEmpty() |> ignore
