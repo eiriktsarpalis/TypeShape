@@ -21,7 +21,7 @@ namespace TypeShape.Core
         /// </summary>
         /// <param name="value"></param>
         /// <returns>The upcast value</returns>
-        public TBase Upcast(TSubtype value) => (TBase)value;
+        public TBase Upcast(TSubtype value) => value;
 
         /// <summary>
         ///     Unsafe downcast
@@ -38,9 +38,9 @@ namespace TypeShape.Core
         /// <returns></returns>
         public bool TryDowncast(TBase value, out TSubtype result)
         {
-            if (value is TSubtype)
+            if (value is TSubtype subtypeValue)
             {
-                result = (TSubtype)value;
+                result = subtypeValue;
                 return true;
             }
             else

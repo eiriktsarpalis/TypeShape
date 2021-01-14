@@ -82,13 +82,13 @@ module private TypeShapeImpl =
     let fsharpCore41Version = Version(4,4,1,0)
 
     [<Literal>]
-    let allMembers =
+    let AllMembers =
         BindingFlags.NonPublic ||| BindingFlags.Public |||
             BindingFlags.Instance ||| BindingFlags.Static |||
                 BindingFlags.FlattenHierarchy 
 
     [<Literal>]
-    let allInstanceMembers =
+    let AllInstanceMembers =
         BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance
 
     type MemberInfo with
@@ -110,7 +110,7 @@ module private TypeShapeImpl =
                 templateTy.MakeGenericType typeArgs
 
         let ctypes = args |> Array.map (fun o -> o.GetType())
-        let ctor = templateTy.GetConstructor(allMembers, null, CallingConventions.Standard, ctypes, [||])
+        let ctor = templateTy.GetConstructor(AllMembers, null, CallingConventions.Standard, ctypes, [||])
         ctor.Invoke args
 
     /// correctly resolves if type is assignable to interface
@@ -161,7 +161,7 @@ module private TypeShapeImpl =
 #endif
 
     let resolveTypeShape(typ : Type) =
-        if typ = null then raise <| ArgumentNullException("TypeShape: System.Type cannot be null.")
+        if isNull typ then raise <| ArgumentNullException("TypeShape: System.Type cannot be null.")
 
         if  typ.IsGenericTypeDefinition ||
             typ.IsGenericParameter ||
@@ -1004,9 +1004,9 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
     let isStructRecord = typeof<'Record>.IsValueType
     // Warning: ugly hack -- should derive from FSharp.Reflection
     let isAnonymousRecord = typeof<'Record>.Name.StartsWith "<>f__AnonymousType"
-    let ctorInfo = FSharpValue.PreComputeRecordConstructorInfo(typeof<'Record>, allMembers)
-    let props = FSharpType.GetRecordFields(typeof<'Record>, allMembers)
-    let fields = typeof<'Record>.GetFields(allInstanceMembers)
+    let ctorInfo = FSharpValue.PreComputeRecordConstructorInfo(typeof<'Record>, AllMembers)
+    let props = FSharpType.GetRecordFields(typeof<'Record>, AllMembers)
+    let fields = typeof<'Record>.GetFields(AllInstanceMembers)
     let mkRecordField (prop : PropertyInfo) =
         let backingField = fields |> Array.find (fun f -> f.Name = prop.Name + "@")
         mkWriteMemberUntyped<'Record> prop.Name prop [|backingField :> MemberInfo|]
@@ -1059,7 +1059,7 @@ type IShapeFSharpUnionCase =
 /// Denotes an F# union case shape
 type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
     let properties = uci.GetFields()
-    let ctorInfo = FSharpValue.PreComputeUnionConstructorInfo(uci, allMembers)
+    let ctorInfo = FSharpValue.PreComputeUnionConstructorInfo(uci, AllMembers)
     let ctorParams = properties |> Array.map (fun p -> defaultOfUntyped p.PropertyType)
 
     let caseFields =
@@ -1067,7 +1067,7 @@ type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
         | [||] -> [||]
         | _ ->
             let underlyingType = properties.[0].DeclaringType
-            let allFields = underlyingType.GetFields(allInstanceMembers)
+            let allFields = underlyingType.GetFields(AllInstanceMembers)
             let mkUnionField (p : PropertyInfo) =
                 let fieldInfo = allFields |> Array.find (fun f -> f.Name = "_" + p.Name || f.Name.ToLower() = p.Name.ToLower())
                 mkWriteMemberUntyped<'Union> p.Name p [|fieldInfo|]
@@ -1105,15 +1105,15 @@ type IShapeFSharpUnion =
 and [<Sealed>] ShapeFSharpUnion<'U> private () =
     let isStructUnion = typeof<'U>.IsValueType
     let ucis = 
-        FSharpType.GetUnionCases(typeof<'U>, allMembers)
+        FSharpType.GetUnionCases(typeof<'U>, AllMembers)
         |> Array.map (fun uci -> 
             Activator.CreateInstanceGeneric<ShapeFSharpUnionCase<'U>>([||],[|uci|]) 
             :?> ShapeFSharpUnionCase<'U>)
 
 #if TYPESHAPE_EXPR
-    let tagReaderInfo = FSharpValue.PreComputeUnionTagMemberInfo(typeof<'U>, allMembers)
+    let tagReaderInfo = FSharpValue.PreComputeUnionTagMemberInfo(typeof<'U>, AllMembers)
 #endif
-    let tagReader = FSharpValue.PreComputeUnionTagReader(typeof<'U>, allMembers)
+    let tagReader = FSharpValue.PreComputeUnionTagReader(typeof<'U>, AllMembers)
 
     let caseNames = ucis |> Array.map (fun u -> u.CaseInfo.Name)
 
@@ -1173,7 +1173,7 @@ type IShapeCliMutable =
 /// Carries a parameterless constructor and settable properties
 and [<Sealed>] ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) =
     let properties =
-        typeof<'Record>.GetProperties(allInstanceMembers)
+        typeof<'Record>.GetProperties(AllInstanceMembers)
         |> Seq.filter (fun p -> p.CanRead && p.CanWrite && p.GetIndexParameters().Length = 0)
         |> Seq.map (fun p -> mkWriteMemberUntyped<'Record> p.Name p [|p|])
         |> Seq.toArray
@@ -1222,23 +1222,23 @@ and [<Sealed>] ShapePoco<'Poco> private () =
     let isStruct = typeof<'Poco>.IsValueType
 
     let fields = 
-        gatherMembers (fun t -> t.GetFields(allInstanceMembers ||| BindingFlags.FlattenHierarchy)) typeof<'Poco>
+        gatherMembers (fun t -> t.GetFields(AllInstanceMembers ||| BindingFlags.FlattenHierarchy)) typeof<'Poco>
         |> Array.map (fun f -> mkWriteMemberUntyped<'Poco> f.Name f [|f|])
 
     let isCSharpRecord =
         typeof<IEquatable<'Poco>>.IsAssignableFrom(typeof<'Poco>) &&
         let cloner = typeof<'Poco>.GetMethod("<Clone>$", BindingFlags.Instance ||| BindingFlags.Public, null, types = [||], modifiers = null) in
-        cloner <> null && cloner.IsVirtual
+        not (isNull cloner) && cloner.IsVirtual
 
     let ctors =
-        typeof<'Poco>.GetConstructors(allInstanceMembers)
+        typeof<'Poco>.GetConstructors(AllInstanceMembers)
         // filter any ctors that accept byrefs or pointers
         |> Seq.filter (fun c -> c.GetParameters() |> Array.forall(fun p -> not <| isUnsupported p.ParameterType))
         |> Seq.map (fun c -> mkCtorUntyped<'Poco> c)
         |> Seq.toArray
 
     let properties =
-        typeof<'Poco>.GetProperties(allInstanceMembers)
+        typeof<'Poco>.GetProperties(AllInstanceMembers)
         |> Seq.filter (fun p -> p.CanRead)
         |> Seq.map (fun p -> mkMemberUntyped<'Poco> p.Name p [|p|])
         |> Seq.toArray
@@ -1287,7 +1287,7 @@ and IShapeISerializable =
 
 and ShapeISerializable<'T when 'T :> ISerializable> private () =
     let ctorTypes = [|typeof<SerializationInfo>; typeof<StreamingContext>|]
-    let ctorInfo = typeof<'T>.GetConstructor(allInstanceMembers, null, ctorTypes, [||])
+    let ctorInfo = typeof<'T>.GetConstructor(AllInstanceMembers, null, ctorTypes, [||])
     let getCtorInfo () =
         match ctorInfo with
         | null -> invalidOp <| sprintf "ISerializable constructor not available for type '%O'" typeof<'T>
@@ -1371,9 +1371,9 @@ module Shape =
         // c.f. Section 5.2.10 of the F# Spec
         let rec isEqualityConstraint (stack:Type list) (t:Type) =
             if stack |> List.exists ((=) t) then true // recursive paths resolve to true always
-            elif FSharpType.IsUnion(t, allMembers) then 
+            elif FSharpType.IsUnion(t, AllMembers) then 
                 if t.IsValueType then
-                    t.GetProperties(allMembers)
+                    t.GetProperties(AllMembers)
                     |> Seq.filter (fun p -> p.Name <> "Tag")
                     |> Seq.map (fun p -> p.PropertyType)
                     |> Seq.distinct
@@ -1382,17 +1382,17 @@ module Shape =
                 elif t.ContainsAttr<NoEqualityAttribute>(true) then false
                 elif t.ContainsAttr<CustomEqualityAttribute>(true) then true
                 else
-                    FSharpType.GetUnionCases(t, allMembers)
+                    FSharpType.GetUnionCases(t, AllMembers)
                     |> Seq.collect (fun uci -> uci.GetFields())
                     |> Seq.map (fun p -> p.PropertyType)
                     |> Seq.distinct
                     |> Seq.forall (isEqualityConstraint (t :: stack))
 
             elif t.ContainsAttr<NoEqualityAttribute>(false) then false
-            elif FSharpType.IsRecord(t, allMembers) then
+            elif FSharpType.IsRecord(t, AllMembers) then
                 if t.ContainsAttr<CustomEqualityAttribute>(true) then false
                 else
-                    FSharpType.GetRecordFields(t, allMembers)
+                    FSharpType.GetRecordFields(t, AllMembers)
                     |> Seq.map (fun p -> p.PropertyType)
                     |> Seq.distinct
                     |> Seq.forall (isEqualityConstraint (t :: stack))
@@ -1424,9 +1424,9 @@ module Shape =
         let rec isComparisonConstraint (stack:Type list) (t:Type) =
             if t = typeof<IntPtr> || t = typeof<UIntPtr> then true
             elif stack |> List.exists ((=) t) then true // recursive paths resolve to true always
-            elif FSharpType.IsUnion(t, allMembers) then 
+            elif FSharpType.IsUnion(t, AllMembers) then 
                 if t.IsValueType then
-                    t.GetProperties(allMembers)
+                    t.GetProperties(AllMembers)
                     |> Seq.filter (fun p -> p.Name <> "Tag")
                     |> Seq.map (fun p -> p.PropertyType)
                     |> Seq.distinct
@@ -1435,17 +1435,17 @@ module Shape =
                 elif t.ContainsAttr<NoComparisonAttribute>(true) then false 
                 elif t.ContainsAttr<CustomComparisonAttribute>(true) then true
                 else
-                    FSharpType.GetUnionCases(t, allMembers)
+                    FSharpType.GetUnionCases(t, AllMembers)
                     |> Seq.collect (fun uci -> uci.GetFields())
                     |> Seq.map (fun p -> p.PropertyType)
                     |> Seq.distinct
                     |> Seq.forall (isComparisonConstraint (t :: stack))
 
             elif t.ContainsAttr<NoComparisonAttribute>(false) then false
-            elif FSharpType.IsRecord(t, allMembers) then
+            elif FSharpType.IsRecord(t, AllMembers) then
                 if t.ContainsAttr<CustomComparisonAttribute>(true) then false
                 else
-                    FSharpType.GetRecordFields(t, allMembers)
+                    FSharpType.GetRecordFields(t, AllMembers)
                     |> Seq.map (fun p -> p.PropertyType)
                     |> Seq.distinct
                     |> Seq.forall (isComparisonConstraint (t :: stack))
@@ -1457,10 +1457,8 @@ module Shape =
 
             elif t.IsArray then
                 isComparisonConstraint (t :: stack) (t.GetElementType())
-
-            elif isInterfaceAssignableFrom typeof<IComparable> t then true
             else
-                false
+                isInterfaceAssignableFrom typeof<IComparable> t
 
         if isComparisonConstraint [] s.Type then
             Activator.CreateInstanceGeneric<ShapeComparison<_>> [|s.Type|]
@@ -1544,7 +1542,7 @@ module Shape =
     /// Recognizes shapes that inherit from System.Exception
     let (|Exception|_|) (s : TypeShape) =
         if typeof<System.Exception>.IsAssignableFrom s.Type then
-            let isFSharpExn = FSharpType.IsExceptionRepresentation(s.Type, allMembers)
+            let isFSharpExn = FSharpType.IsExceptionRepresentation(s.Type, AllMembers)
             Activator.CreateInstanceGeneric<ShapeException<_>>([|s.Type|], [|isFSharpExn|])
             :?> IShapeException
             |> Some
@@ -1667,7 +1665,7 @@ module Shape =
 
     /// Recognizes shapes that are F# records
     let (|FSharpRecord|_|) (s : TypeShape) =
-        if FSharpType.IsRecord(s.Type, allMembers) then
+        if FSharpType.IsRecord(s.Type, AllMembers) then
             Activator.CreateInstanceGeneric<ShapeFSharpRecord<_>>([|s.Type|], [||])
             :?> IShapeFSharpRecord
             |> Some
@@ -1676,7 +1674,7 @@ module Shape =
 
     /// Recognizes shapes that are F# unions
     let (|FSharpUnion|_|) (s : TypeShape) =
-        if FSharpType.IsUnion(s.Type, allMembers) then
+        if FSharpType.IsUnion(s.Type, AllMembers) then
             if s.Type.IsValueType && fsharpCoreRuntimeVersion < fsharpCore41Version then
                 sprintf "TypeShape error: FSharp.Core Runtime %A does not support struct unions. %A or later is required"
                     fsharpCoreRuntimeVersion fsharpCore41Version
@@ -1701,7 +1699,7 @@ module Shape =
     /// They are classes with parameterless constructors and settable properties
     let (|CliMutable|_|) (s : TypeShape) =
         if s.Type.IsAbstract then None else
-        match s.Type.GetConstructor(allInstanceMembers, null, [||], [||]) with
+        match s.Type.GetConstructor(AllInstanceMembers, null, [||], [||]) with
         | null -> None
         | ctor -> 
             Activator.CreateInstanceGeneric<ShapeCliMutable<_>>([|s.Type|], [|ctor|])
@@ -1727,7 +1725,7 @@ module Shape =
                 | _ -> false
 
             let hasPointers () =
-                s.Type.GetMembers allInstanceMembers
+                s.Type.GetMembers AllInstanceMembers
                 |> Seq.choose (function 
                     | :? PropertyInfo as p -> Some p.PropertyType
                     | :? FieldInfo as f -> Some f.FieldType

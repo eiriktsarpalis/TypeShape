@@ -88,7 +88,7 @@ module private Impl =
         | Shape.Unit
         | Shape.Decimal
         | Shape.Enum _ -> fun _ _ x -> x
-        | Shape.String -> EQ(fun _ _ s -> if s = null then null else String.Copy(s))
+        | Shape.String -> EQ(fun _ _ s -> if isNull s then null else String.Copy(s))
         | Shape.Array s when s.Rank = 1 ->
             s.Element.Accept {
                 new ITypeVisitor<Cloner<'T>> with

@@ -40,7 +40,7 @@ and private mkEmptyFuncAux<'T> (ctx : TypeGenerationContext) : bool -> 'T =
     | Shape.TimeSpan -> EQ(fun _ -> TimeSpan.Zero)
     | Shape.DateTime -> EQ(fun _ -> DateTime.MinValue)
     | Shape.DateTimeOffset -> EQ(fun _ -> DateTimeOffset.MinValue)
-    | Shape.Unit -> EQ (fun _ -> ())
+    | Shape.Unit -> EQ ignore
     | Shape.Enum s ->
         s.Accept { new IEnumVisitor<bool -> 'T> with
             member _.Visit<'t, 'u when 't : enum<'u>

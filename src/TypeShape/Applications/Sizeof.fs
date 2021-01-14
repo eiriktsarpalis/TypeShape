@@ -4,7 +4,6 @@ module TypeShape.Sizeof
 
 open System
 open System.Collections.Generic
-open System.Runtime.Serialization
 
 open TypeShape.Core
 open TypeShape.Core.Utils
