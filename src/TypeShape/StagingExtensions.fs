@@ -96,11 +96,7 @@ module Expr =
     let seq (comps : Expr<unit> []) : Expr<unit> =
         match comps with
         | [||] -> <@ () @>
-        | [|c|] -> c
-        | _ ->
-            Array.foldBack 
-                (fun c s -> <@ %c ; %s @>) 
-                comps.[..comps.Length - 2] comps.[comps.Length - 1]
+        | _ -> comps |> Array.reduceBack (fun c s -> <@ %c ; %s @>) 
 
     /// Expands a collection of folding computations into a statically
     /// expanded expression tree
