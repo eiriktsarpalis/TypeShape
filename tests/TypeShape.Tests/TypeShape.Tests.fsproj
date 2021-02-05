@@ -14,6 +14,7 @@
     <Compile Include="HktClone.fs" />
     <Compile Include="GenericTester.fs" />
     <Compile Include="Tests.fs" />
+    <Compile Include="StagingExtensionsTests.fs" />
     <Compile Include="UnionContractTests.fs" />
     <None Include="paket.references" />
     <None Include="Script.fsx" />
