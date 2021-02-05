@@ -178,11 +178,11 @@ module Expr =
         cast<'T> (aux expr)
 
     /// Performs the transformation
-    /// `let x = y in M[x]` => `M[y]` where y is a constant or variable.
+    /// `let x = y in M[x]` => `M[y]`
     let unlet (expr : Expr<'T>) : Expr<'T> =
         let rec aux e =
             match e with
-            | Let(x, (Var _ | Value _ as e), body) when not x.IsMutable ->
+            | Let(x, (Var _ | Value _ as e), body) when not x.IsMutable || x.Name = "copyOfStruct" ->
                 body.Substitute(function v when v = x -> Some e | _ -> None)
                 |> aux
             | ShapeVar _ -> e
