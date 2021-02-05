@@ -112,11 +112,9 @@ module Expr =
     /// Expands a collection of state-updating staged computations
     /// into a expression tree
     let update (varName : string, init : Expr<'T>) (comps : (Expr<'T> -> Expr<'T>) []) : Expr<'T> =
-        if comps.Length = 0 then init else
-        bindMutable (varName, init)
-            (fun getter setter -> 
-                let unfolded = comps |> Array.map (fun c -> setter (c getter)) |> seq
-                <@ %unfolded ; %getter @>)
+        let inputs = Array.map lam comps
+        let folder s c = <@ (%c) %s @> 
+        fold folder (varName, init) inputs
 
     /// expands a collection of expressions so that they
     /// branch according to the tag expression provided
