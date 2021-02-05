@@ -135,14 +135,13 @@ module Expr =
             aux <@ invalidOp "invalid tag" @> (cases.Length - 1))
 
     /// traverses an expression tree applying the transformation
-    /// `(fun x y z .. -> M[x,y,z,..]) a b c => M[a,b,c,..]`,
-    /// where a,b,c are variables or constants
+    /// `(fun x y z .. -> M[x,y,z,..]) a b c` => `M[a,b,c,..]`
     let unlambda (expr : Expr<'T>) =
         let (|AppLambdas|_|) (e : Expr) =
             // traverses the "App(App(App ... " part of the expression
             let rec gatherApps args e =
                 match e with
-                | Application(lhs, ((Var _ | Value _) as rhs)) -> gatherApps (rhs :: args) lhs
+                | Application(lhs, rhs) -> gatherApps (rhs :: args) lhs
                 | _ -> args, e
 
             // traverses the "Lambda(Lambda(Lambda ... " part of the expression
