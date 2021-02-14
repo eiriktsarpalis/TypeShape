@@ -170,7 +170,7 @@ module Expr =
         cast<'T> (aux expr)
 
     /// Performs the transformation
-    /// `let x = y in M[x]` => `M[y]`
+    /// `let x = y in M[x]` => `M[y]` where y is a constant or variable.
     let unlet (expr : Expr<'T>) : Expr<'T> =
         let rec aux e =
             match e with
