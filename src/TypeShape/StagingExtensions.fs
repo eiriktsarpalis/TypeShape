@@ -174,7 +174,7 @@ module Expr =
     let unlet (expr : Expr<'T>) : Expr<'T> =
         let rec aux e =
             match e with
-            | Let(x, (Var _ | Value _ as e), body) when not x.IsMutable || x.Name = "copyOfStruct" ->
+            | Let(x, (Var _ | Value _ as e), body) when not x.IsMutable || x.Type.IsValueType && x.Name = "copyOfStruct" ->
                 body.Substitute(function v when v = x -> Some e | _ -> None)
                 |> aux
             | ShapeVar _ -> e
