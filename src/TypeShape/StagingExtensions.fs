@@ -9,7 +9,6 @@ module internal TypeShape_StagingExtensions
 
 open FSharp.Quotations
 open FSharp.Quotations.Patterns
-open FSharp.Quotations.DerivedPatterns
 open FSharp.Quotations.ExprShape
 
 /// Rank-2 encoding of a generic staged computation
@@ -88,20 +87,16 @@ module Expr =
     /// expands a collection of boolean expressions
     /// into a sequence of inlined &&'s
     let forall (fs : Expr<bool> []) =
-        match Array.toList fs with
-        | [] -> <@ true @>
-        | hd :: tl -> tl |> List.fold (fun s f -> <@ %s && %f @>) hd
+        match fs with
+        | [||] -> <@ true @> 
+        | _ -> fs |> Array.reduce (fun s f -> <@ %s && %f @>)
 
     /// expands a collection of computations
     /// into a sequenced expression
     let seq (comps : Expr<unit> []) : Expr<unit> =
         match comps with
         | [||] -> <@ () @>
-        | [|c|] -> c
-        | _ ->
-            Array.foldBack 
-                (fun c s -> <@ %c ; %s @>) 
-                comps.[..comps.Length - 2] comps.[comps.Length - 1]
+        | _ -> comps |> Array.reduceBack (fun c s -> <@ %c ; %s @>) 
 
     /// Expands a collection of folding computations into a statically
     /// expanded expression tree
