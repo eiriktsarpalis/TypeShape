@@ -99,7 +99,7 @@ module Expr =
         | _ -> comps |> Array.reduceBack (fun c s -> <@ %c ; %s @>) 
 
     /// Expands a collection of state-updating staged computations
-    /// into a expression tree
+    /// into a statically expanded expression tree
     let update (varName : string, init : Expr<'T>) (comps : (Expr<'T> -> Expr<'T>) []) : Expr<'T> =
         if comps.Length = 0 then init else
         bindMutable (varName, init)
@@ -107,8 +107,8 @@ module Expr =
                 let unfolded = comps |> Array.map (fun c -> setter (c getter)) |> seq
                 <@ %unfolded ; %getter @>)
 
-    /// Expands a collection of folding computations into a statically
-    /// expanded expression tree
+    /// Expands a collection of folding computations 
+    /// into a statically expanded expression tree
     let fold (folder : Expr<'State> -> Expr<'T> -> Expr<'State>) 
                 (varName : string, init : Expr<'State>) (inputs : Expr<'T> []) : Expr<'State> =
 
