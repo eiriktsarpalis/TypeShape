@@ -144,16 +144,13 @@ module Expr =
                 | Lambda(v, body), hd :: tl -> gatherLambdas tl ((v, hd) :: acc) body
                 | _ -> None
 
-            // performs substitution of each recovered var with corresponding value
-            let substitute (vars: Map<Var, Expr>) (body : Expr) =
-                body.Substitute vars.TryFind
-
             match gatherApps [] e with
             | [], _ -> None
             | args, body ->
                 match gatherLambdas args [] body with
                 | None -> None
-                | Some(vars, body) -> Some(substitute vars body)
+                // performs substitution of each recovered var with corresponding value
+                | Some(bindings, body) -> Some(body.Substitute bindings.TryFind)
 
         // traverse the full expression tree
         let rec aux e =
