@@ -140,17 +140,13 @@ module Expr =
             // traverses the "Lambda(Lambda(Lambda ... " part of the expression
             let rec gatherLambdas args acc e =
                 match e, args with
-                | _, [] -> Some (acc, e)
+                | _, [] -> Some (Map acc, e)
                 | Lambda(v, body), hd :: tl -> gatherLambdas tl ((v, hd) :: acc) body
                 | _ -> None
 
             // performs substitution of each recovered var with corresponding value
-            let rec substitute vars (body : Expr) =
-                match vars with
-                | [] -> body
-                | (var, value) :: rest ->
-                    let body2 = body.Substitute(function v when v = var -> Some value | _ -> None)
-                    substitute rest body2
+            let substitute (vars: Map<Var, Expr>) (body : Expr) =
+                body.Substitute vars.TryFind
 
             match gatherApps [] e with
             | [], _ -> None
