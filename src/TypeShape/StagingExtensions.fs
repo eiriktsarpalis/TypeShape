@@ -98,17 +98,6 @@ module Expr =
         | [||] -> <@ () @>
         | _ -> comps |> Array.reduceBack (fun c s -> <@ %c ; %s @>) 
 
-    /// Expands a collection of folding computations into a statically
-    /// expanded expression tree
-    let fold (folder : Expr<'State> -> Expr<'T> -> Expr<'State>) 
-                (varName : string, init : Expr<'State>) (inputs : Expr<'T> []) : Expr<'State> =
-
-        if inputs.Length = 0 then init else
-        bindMutable (varName, init)
-            (fun getter setter ->
-                let body = inputs |> Array.map (fun t -> setter (folder getter t)) |> seq
-                <@ %body ; %getter @>)
-
     /// Expands a collection of state-updating staged computations
     /// into a expression tree
     let update (varName : string, init : Expr<'T>) (comps : (Expr<'T> -> Expr<'T>) []) : Expr<'T> =
@@ -117,6 +106,14 @@ module Expr =
             (fun getter setter -> 
                 let unfolded = comps |> Array.map (fun c -> setter (c getter)) |> seq
                 <@ %unfolded ; %getter @>)
+
+    /// Expands a collection of folding computations into a statically
+    /// expanded expression tree
+    let fold (folder : Expr<'State> -> Expr<'T> -> Expr<'State>) 
+                (varName : string, init : Expr<'State>) (inputs : Expr<'T> []) : Expr<'State> =
+
+        let comps = inputs |> Array.map (fun t getter -> folder getter t)
+        update (varName, init) comps
 
     /// expands a collection of expressions so that they
     /// branch according to the tag expression provided
