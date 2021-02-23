@@ -402,7 +402,7 @@ type Check with
     /// <param name="useNaN">Generate NaNs when the random information contains floats.</param>
     /// <param name="maxTypes">Maximum number of randomly generated types.</param>
     /// <param name="maxTestsPerType">Maximum number of randomly generated values per type.</param>
-    /// <param name="predicate">Predicate to check.</param>
+    /// <param name="predicate2">Predicate to check.</param>
     static member GenericPredicate2 verbose useNaN maxTypes maxTestsPerType (predicate2 : Predicate2) =
         let tconf = Config.CreateTypeConfig(maxTypes)
         let vconf = Config.CreateValueConfig(useNaN, maxTestsPerType)
@@ -421,7 +421,7 @@ type Check with
     /// <param name="useNaN">Generate NaNs when the random information contains floats.</param>
     /// <param name="maxTypes">Maximum number of randomly generated types.</param>
     /// <param name="maxTestsPerType">Maximum number of randomly generated values per type.</param>
-    /// <param name="predicate">Predicate to check.</param>
+    /// <param name="predicate3">Predicate to check.</param>
     static member GenericPredicate3 verbose useNaN maxTypes maxTestsPerType (predicate3 : Predicate3) =
         let tconf = Config.CreateTypeConfig(maxTypes)
         let vconf = Config.CreateValueConfig(useNaN, maxTestsPerType)
