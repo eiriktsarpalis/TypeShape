@@ -43,6 +43,7 @@ type ClonerBuilder() =
         member _.Array (HKT.Unpack ec) = HKT.pack(Array.map ec)
 
         member _.Option (HKT.Unpack ec) = HKT.pack(Option.map ec)
+        member _.Ref (HKT.Unpack ec) = HKT.pack(fun r -> ref (ec r.Value))
         member _.List (HKT.Unpack ec) = HKT.pack(List.map ec)
         member _.Set (HKT.Unpack ec) = HKT.pack(Set.map ec)
         member _.Map (HKT.Unpack kc) (HKT.Unpack vc) = HKT.pack(Map.toSeq >> Seq.map (fun (k,v) -> kc k, vc v) >> Map.ofSeq)

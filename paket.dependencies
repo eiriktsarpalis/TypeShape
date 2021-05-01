@@ -1,9 +1,10 @@
 source https://api.nuget.org/v3/index.json
-framework: netstandard2.0
+framework: netstandard2.0, netcoreapp3.1
 storage: none
 
 nuget FSharp.Core >= 4.3.2 lowest_matching: true
 nuget Microsoft.SourceLink.GitHub ~> 1.0.0 copy_local:true
+nuget System.Reflection.Emit.Lightweight >= 4.7.0 framework:netstandard2.0
 
 group Test
   source https://api.nuget.org/v3/index.json
@@ -14,12 +15,14 @@ group Test
   nuget xunit ~> 2.4.0
   nuget xunit.runner.visualstudio ~> 2.4.0 version_in_path: true
   nuget Unquote ~> 4.0
-  nuget FsCheck ~> 3.0 prerelease
-  nuget FsCheck.XUnit ~> 3.0 prerelease
+  nuget FsCheck 3.0.0-alpha4
+  nuget FsCheck.XUnit 3.0.0-alpha4
   nuget BenchmarkDotNet ~> 0.12.0
   nuget CommandLineParser ~> 2.4.0 # fix BDN binding redirect issue
   nuget Newtonsoft.Json
+  nuget FsPickler.Json
   nuget FSharp.Data ~> 3.0
+  nuget DotNext ~> 3.0
   
   nuget FParsec
   nuget FSharp.Quotations.Evaluator

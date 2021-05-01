@@ -118,6 +118,9 @@ type IKeyValuePairBuilder<'F> =
 type IFSharpOptionBuilder<'F> =
     abstract Option : App<'F, 't> -> App<'F, 't option>
 
+type IFSharpRefBuilder<'F> =
+    abstract Ref : App<'F, 't> -> App<'F, 't ref>
+
 type ITuple2Builder<'F> =
     abstract Tuple2 : App<'F, 't> -> App<'F, 's> -> App<'F, 't * 's>
 
@@ -203,6 +206,7 @@ type IFSharpTypeBuilder<'F, 'G> =
     inherit IArrayBuilder<'F>
 
     inherit IFSharpOptionBuilder<'F>
+    inherit IFSharpRefBuilder<'F>
     inherit IFSharpListBuilder<'F>
     inherit IFSharpMapBuilder<'F>
     inherit IFSharpSetBuilder<'F>

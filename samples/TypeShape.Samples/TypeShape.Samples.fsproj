@@ -12,7 +12,6 @@
     <Compile Include="expr.fs" />
     <Compile Include="hashcode-staged.fs" />
     <Compile Include="iso.fs" />
-    <Compile Include="json-serializer.fs" />
     <Compile Include="mock.fs" />
     <Compile Include="parser.fs" />
     <Compile Include="printer.fs" />
@@ -23,6 +22,7 @@
     <Compile Include="HKT\Empty.fs" />
     <Compile Include="HKT\Clone.fs" />
     <Compile Include="HKT\Pickler.fs" />
+    <Compile Include="HKT\JsonSerializer.fs" />
     <Compile Include="HKT\Typeclassopedia.fs" />
     <None Include="test.fsx" />
     <None Include="paket.references" />

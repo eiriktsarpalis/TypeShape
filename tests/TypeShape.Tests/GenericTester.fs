@@ -193,14 +193,15 @@ module Implementation =
 
 
     // FsCheck Generators
-    type NoNaNFloats private () =
+
+    type NoNaNFloats =
         static member Single =
             Arb.Default.Float32()
-            |> Arb.filter (not << Single.IsNaN)
+            |> Arb.filter Single.IsFinite
 
         static member Double =
             Arb.Default.Float()
-            |> Arb.filter (not << Double.IsNaN)
+            |> Arb.filter Double.IsFinite
 
 
     type Config with
@@ -209,11 +210,13 @@ module Implementation =
                 MaxTest = maxTypes ; 
                 EndSize = defaultArg maxSize 20 }
 
-        static member CreateValueConfig(useNaN : bool, maxTests : int) =
+        static member CreateValueConfig(useNaN : bool, maxTests : int, ?arbitrary : Type) =
             { Config.QuickThrowOnFailure with 
                 QuietOnSuccess = true ;
                 MaxTest = maxTests ; 
-                Arbitrary = if useNaN then [] else [typeof<NoNaNFloats>] }
+                Arbitrary = 
+                    [ if not useNaN then typeof<NoNaNFloats> 
+                      match arbitrary with Some a -> a | None -> () ] }
 
     module PrettyPrint =
 
@@ -380,13 +383,14 @@ type Check with
     ///     Runs a property test given provided generic predicate.
     /// </summary>
     /// <param name="verbose">Print tested type information to console.</param>
+    /// <param name="arbitrary">Additional arbitrary source for value generation.</param>
     /// <param name="useNaN">Generate NaNs when the random information contains floats.</param>
     /// <param name="maxTypes">Maximum number of randomly generated types.</param>
     /// <param name="maxTestsPerType">Maximum number of randomly generated values per type.</param>
     /// <param name="predicate">Predicate to check.</param>
-    static member GenericPredicate verbose useNaN maxTypes maxTestsPerType (predicate : Predicate) =
+    static member GenericPredicate verbose arbitrary useNaN maxTypes maxTestsPerType (predicate : Predicate) =
         let tconf = Config.CreateTypeConfig(maxTypes)
-        let vconf = Config.CreateValueConfig(useNaN, maxTestsPerType)
+        let vconf = Config.CreateValueConfig(useNaN, maxTestsPerType, ?arbitrary = arbitrary)
 
         let checker =
             { new Checker with

@@ -271,6 +271,18 @@ module Fold =
             }
     
         | _ -> None
+
+    let (|FSharpRef|_|) (builder : IFSharpRefBuilder<'F>) (self : IGenericProgram<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.FSharpRef s ->
+            s.Element.Accept {
+                new ITypeVisitor<App<'F, 't> option> with
+                    member _.Visit<'e> () =
+                        let rt = self.Resolve<'e> ()
+                        builder.Ref rt |> unwrap |> Some
+            }
+    
+        | _ -> None
     
     let (|FSharpList|_|) (builder : IFSharpListBuilder<'F>) (self : IGenericProgram<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
         match shape with
@@ -418,6 +430,7 @@ module Fold =
         | Array builder self s -> Some s
 
         | FSharpOption builder self s -> Some s
+        | FSharpRef builder self s -> Some s
         | FSharpList builder self s -> Some s
         | FSharpSet builder self s -> Some s
         | FSharpMap builder self s -> Some s

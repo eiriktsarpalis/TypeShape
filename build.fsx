@@ -29,10 +29,7 @@ let gitHome = "https://github.com/" + gitOwner
 let gitName = "TypeShape"
 
 let configuration = Environment.environVarOrDefault "configuration" "Release"
-let testFramework = 
-    match Environment.environVarOrDefault "testFramework" "" with
-    | x when String.IsNullOrWhiteSpace x -> None
-    | x -> Some x
+let noEmitConfiguration = "Release-NoEmit"
 
 // --------------------------------------------------------------------------------------
 // END TODO: The rest of the file includes standard build steps
@@ -45,17 +42,13 @@ let release = ReleaseNotes.load "RELEASE_NOTES.md"
 // Clean build results
 
 Target.create "Clean" (fun _ ->
-    Shell.cleanDirs [ "bin" ; artifactsDir ; "temp" ]
-)
-
-Target.create "CleanDocs" (fun _ ->
-    Shell.cleanDirs ["docs/output"]
+    Shell.cleanDirs [ "bin" ; artifactsDir ; "temp" ; "docs/output" ]
 )
 
 // --------------------------------------------------------------------------------------
 // Build library & test project
 
-Target.create "Build" (fun _ ->
+let Build configuration =
     DotNet.build(fun c ->
         { c with
             Configuration = DotNet.BuildConfiguration.fromString configuration
@@ -65,28 +58,29 @@ Target.create "Build" (fun _ ->
                     Properties = [("Version", release.NugetVersion)] }
 
         }) __SOURCE_DIRECTORY__
-)
+
+
+Target.create "Build" (fun _ -> Build configuration)
+Target.create "Build.NoEmit" (fun _ -> Build noEmitConfiguration)
 
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner & kill test runner when complete
 
-Target.create "RunTests" (fun _ ->
+let Test configuration =
     DotNet.test (fun c ->
         { c with
             Configuration = DotNet.BuildConfiguration.fromString configuration
             NoBuild = true
             Blame = true
-            Framework = testFramework
 
             MSBuildParams =
                 { c.MSBuildParams with
                     Properties = [("ParallelizeAssemblies", "true"); ("ParallelizeTestCollections", "true")] }
 
-            RunSettingsArguments = 
-                if Environment.isWindows then None
-                else Some " -- RunConfiguration.DisableAppDomain=true" // https://github.com/xunit/xunit/issues/1357
         }) __SOURCE_DIRECTORY__
-)
+
+Target.create "RunTests" (fun _ -> Test configuration)
+Target.create "RunTests.NoEmit" (fun _ -> Test configuration)
 
 // --------------------------------------------------------------------------------------
 // Build a NuGet package
@@ -169,6 +163,8 @@ Target.create "Release" ignore
 "Clean"
   ==> "Build"
   ==> "RunTests"
+  ==> "Build.NoEmit"
+  ==> "RunTests.NoEmit"
   ==> "Default"
 
 "Default"

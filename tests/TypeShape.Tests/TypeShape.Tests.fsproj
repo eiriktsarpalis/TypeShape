@@ -5,6 +5,7 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\samples\TypeShape.Samples\TypeShape.Samples.fsproj" />
     <ProjectReference Include="..\..\src\TypeShape.CSharp\TypeShape.CSharp.csproj" />
     <ProjectReference Include="..\..\src\TypeShape\TypeShape.fsproj" />
     <ProjectReference Include="..\TypeShape.CSharp.Tests\TypeShape.CSharp.Tests.csproj" />

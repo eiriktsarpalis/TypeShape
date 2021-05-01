@@ -43,6 +43,7 @@ type PrettyPrinterBuilder() =
         member _.Array _ = HKT.pack(fun () -> [||])
 
         member _.Option _ = HKT.pack(fun () -> None)
+        member _.Ref (HKT.Unpack e) = HKT.pack(fun () -> ref (e ()))
         member _.List _ = HKT.pack(fun () -> [])
         member _.Set _ = HKT.pack(fun () -> Set.empty)
         member _.Map _ _ = HKT.pack(fun () -> Map.empty)

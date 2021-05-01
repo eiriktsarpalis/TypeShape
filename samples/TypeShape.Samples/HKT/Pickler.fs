@@ -202,6 +202,12 @@ type PickerBuilder() =
                     | t -> invalidTok t
             }
 
+        member _.Ref (HKT.Unpack ep) =
+            HKT.pack {
+                pickle = fun k r -> ep.pickle k r.Value
+                unpickle = fun r -> ep.unpickle r |> ref
+            }
+
         member _.Option (HKT.Unpack ep) =
             HKT.pack {
                 pickle = fun k xs -> match xs with None -> k Null | Some x -> ep.pickle k x

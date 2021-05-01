@@ -11,10 +11,12 @@
     <Compile Include="UnionContract.fs" />
     <Compile Include="Clone.fs" />
     <Compile Include="PrettyPrinter.fs" />
+    <Compile Include="JsonSerializer.fs" />
     <Compile Include="Main.fs" />
     <None Include="paket.references" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\samples\TypeShape.Samples\TypeShape.Samples.fsproj" />
     <ProjectReference Include="..\..\src\TypeShape\TypeShape.fsproj" />
     <ProjectReference Include="..\TypeShape.Tests\TypeShape.Tests.fsproj" />
   </ItemGroup>
