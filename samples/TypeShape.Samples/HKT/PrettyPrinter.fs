@@ -54,6 +54,7 @@ module Impl =
             member _.Array (HKT.Unpack ep) = HKT.pack(PP(fun s xs -> append s "[|" ; appendSeq s xs ep ; append s "|]"))
 
             member _.Option (HKT.Unpack ep) = HKT.pack(PP(fun s x -> match x with None -> append s "None" | Some x -> append s "Some(" ; ep.Invoke(s, x) ; append s ")"))
+            member _.Ref (HKT.Unpack ep) = HKT.pack(PP(fun s x -> append s "{ contents = "; ep.Invoke(s, x.Value) ; append s " } "))
             member _.List (HKT.Unpack ep) = HKT.pack(PP(fun s xs -> append s "[" ; appendSeq s xs ep ; append s "]"))
             member _.Set (HKT.Unpack ep) = HKT.pack(PP(fun s xs -> append s "set [" ; appendSeq s xs ep ; append s "]"))
             member _.Map (HKT.Unpack kp) (HKT.Unpack vp) = 

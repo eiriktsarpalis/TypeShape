@@ -770,7 +770,7 @@ module GenericClone =
     let ``Generic Clone should produde equal values`` () =
         { new Predicate with 
             member _.Invoke (t : 'T) = t = clone(t) }
-        |> Check.GenericPredicate false false 100 10
+        |> Check.GenericPredicate false None false 100 10
 
 module GenericCloneStaged =
 
@@ -780,7 +780,7 @@ module GenericCloneStaged =
             member _.Invoke (t : 'T) = 
                 let c = mkStagedCloner<'T>()
                 c(t) = t }
-        |> Check.GenericPredicate false false 100 1
+        |> Check.GenericPredicate false None false 100 1
 
 module GenericCloneHKT =
 
@@ -790,7 +790,38 @@ module GenericCloneHKT =
             member _.Invoke (t : 'T) =
                 let c = HktClone.mkCloner<'T>()
                 if c(t) <> t then failwithf "%A != %A" (c t) t else true}
-        |> Check.GenericPredicate false false 100 10
+        |> Check.GenericPredicate false None false 100 10
+
+module GenericJsonSerializerHKT =
+
+    type JsonArbitrary =
+        static member NonEmptyStringMaps() =
+            Arb.Default.Map() |> Arb.filter (fun m -> m |> Seq.forall (fun kv -> kv.Key <> null))
+
+        static member IsoNormalizedDateTime() =
+            Arb.Default.DateTime() |> Arb.filter (fun d -> DateTime.Parse(d.ToString("o")) = d)
+
+        static member IsoNormalizedDateTimeOffset() =
+            Arb.Default.DateTimeOffset() |> Arb.filter (fun d -> DateTimeOffset.Parse(d.ToString("o")) = d)
+
+        // 'Some null' representations collapse to null in JSON serialization, exclude in roundtrip testing
+        static member NoSomeOfRefOfNull() =
+            Arb.Default.Option<'T ref>() |> Arb.filter (function Some x -> not <| obj.ReferenceEquals(x.Value, null) | _ -> true)
+
+        static member NoSomeOfNull() =
+            Arb.Default.Option() |> Arb.filter (function Some x -> not <| obj.ReferenceEquals(x, null) | _ -> true)
+
+    let generator = new JsonSerializer.ConverterGeneratorExtensions()
+
+    [<Fact>]
+    let ``JsonSerializer roundtrip should produce equal values`` () =
+        { new Predicate with
+            member _.Invoke (t : 'T) =
+                let conv = generator.GenerateConverter<'T>()
+                let json = JsonSerializer.serialize conv t
+                let t0 = JsonSerializer.deserialize conv json
+                if t <> t0 then failwithf "%A != %A" t t0 else true}
+        |> Check.GenericPredicate false (Some typeof<JsonArbitrary>) false 100 10
 
 module GenericEmpty =
 
@@ -799,7 +830,7 @@ module GenericEmpty =
         { new Predicate with 
             member _.Invoke (t : 'T) = 
                 empty<'T> = empty<'T> }
-        |> Check.GenericPredicate false false 100 10
+        |> Check.GenericPredicate false None false 100 10
 
 module ``Generic SizeOf`` =
 
@@ -809,7 +840,7 @@ module ``Generic SizeOf`` =
     let ``Sizeof should terminate for all inputs`` () =
         { new Predicate with 
             member _.Invoke (t : 'T) = gsizeof t >= 0L }
-        |> Check.GenericPredicate false false 100 10
+        |> Check.GenericPredicate false None false 100 10
 
     [<Fact>]
     let ``Sizeof should support cyclic objects`` () =
@@ -829,7 +860,7 @@ module ``Generic Combinators`` =
         { new Predicate with 
             member _.Invoke (t : 'T) = 
                 let _ = Generic.map ((+) 1) t in true }
-        |> Check.GenericPredicate false false 100 10
+        |> Check.GenericPredicate false None false 100 10
 
     [<Fact>]
     let ``Generic summation`` () =
@@ -843,7 +874,7 @@ module ``Generic Combinators`` =
         { new Predicate with 
             member _.Invoke (t : 'T) = 
                 Generic.fold (fun c _ -> c + 1) 0 t >= 0 }
-        |> Check.GenericPredicate false false 100 10
+        |> Check.GenericPredicate false None false 100 10
 
     [<Fact>]
     let ``Generic fold should support generic cyclic objects`` () =

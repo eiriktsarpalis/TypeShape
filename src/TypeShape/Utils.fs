@@ -7,6 +7,8 @@ module TypeShape.Core.Utils
 module internal TypeShape_Utils
 #endif
 
+#nowarn "42"
+
 open System
 open System.Threading
 open System.Collections.Generic
@@ -288,23 +290,19 @@ type BinSearch(inputs : seq<string>) =
     /// Returns an integer indicating the position of the
     /// given value in the source array, or -1 if not found.
     member _.TryFindIndex(value : string) : int =
-        match sortedInputs.Length with
-        | 0 -> -1
-        | 1 -> if sortedInputs.[0] = value then 0 else -1
-        | n ->
-            let mutable found = false
-            let mutable lb, ub = 0, n - 1
-            let mutable i = 0
+        let inline ret (x : int) = (# "ret" x : unit #)
+        let sortedInputs = sortedInputs
+        let mutable lb, ub = 0, sortedInputs.Length - 1
+        let mutable i = 0
 
-            while not found && ub - lb >= 0 do
-                i <- (lb + ub) / 2
-                match compare value sortedInputs.[i] with
-                | 0 -> found <- true
-                | c when c < 0 -> ub <- i - 1
-                | _ -> lb <- i + 1
+        while lb <= ub do
+            i <- lb + ((ub - lb) >>> 1)
+            let cmp = String.CompareOrdinal(value, sortedInputs.[i])
+            if cmp = 0 then ret indices.[i]
+            elif cmp < 0 then ub <- i - 1
+            else lb <- i + 1
 
-            if found then indices.[i] else -1
-
+        -1
 
 //--------------------------------------------------------------
 

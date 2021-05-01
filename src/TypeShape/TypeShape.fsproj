@@ -1,12 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;netcoreapp3.1</TargetFrameworks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <DefineConstants>$(DefineConstants);TYPESHAPE_EXPOSE;TYPESHAPE_EXPR</DefineConstants>
     <IsPackable>true</IsPackable>
     <!-- workaround for inlining p2p references in nuget; include custom target from Directory.Build.props -->
     <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
+    <Configurations>Debug;Release;Debug-NoEmit;Release-NoEmit</Configurations>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Debug' Or '$(Configuration)'=='Release'">
+    <DefineConstants>$(DefineConstants);TYPESHAPE_EMIT</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup>
