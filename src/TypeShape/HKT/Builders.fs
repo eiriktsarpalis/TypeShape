@@ -81,6 +81,9 @@ type IDateTimeBuilder<'F> =
 type IDateTimeOffsetBuilder<'F> =
     abstract DateTimeOffset : unit -> App<'F, DateTimeOffset>
 
+type IByteArrayBuilder<'F> =
+    abstract ByteArray : unit -> App<'F, byte[]>
+
 //-------------------------------------------
 // .NET Generic types
 
@@ -107,7 +110,7 @@ type IArray4DBuilder<'F> =
     abstract Array4D : App<'F, 't> -> App<'F, 't[,,,]>
 
 type IDictionaryBuilder<'F> =
-    abstract Dictionary : App<'F, 'k> -> App<'F, 'v> -> App<'F, Dictionary<'k, 'v>>
+    abstract Dictionary : App<'F, 'k> -> App<'F, 'v> -> App<'F, Dictionary<'k, 'v>> when 'k : equality
 
 type IKeyValuePairBuilder<'F> =
     abstract KeyValuePair : App<'F, 'k> -> App<'F, 'v> -> App<'F, KeyValuePair<'k, 'v>>
@@ -128,10 +131,10 @@ type IFSharpListBuilder<'F> =
     abstract List : App<'F, 't> -> App<'F, 't list>
 
 type IFSharpSetBuilder<'F> =
-    abstract Set : App<'F, 't> -> App<'F, Set<'t>>
+    abstract Set : App<'F, 't> -> App<'F, Set<'t>> when 't : comparison
 
 type IFSharpMapBuilder<'F> =
-    abstract Map : App<'F, 'k> -> App<'F, 'v> -> App<'F, Map<'k, 'v>>
+    abstract Map : App<'F, 'k> -> App<'F, 'v> -> App<'F, Map<'k, 'v>> when 'k : comparison
 
 type IFSharpFuncBuilder<'F> =
     abstract Func : App<'F, 'a> -> App<'F, 'b> -> App<'F, 'a -> 'b>

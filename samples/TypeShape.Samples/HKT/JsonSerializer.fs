@@ -62,79 +62,79 @@ type JsonConverterBuilder() =
         member _.Bool() =
             { new JsonConverter<bool> with
                 member _.Serialize writer value = writer.WriteBooleanValue value
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetBoolean() }
+                member _.Deserialize reader = reader.GetBoolean() }
             |> HKT.pack
 
         member _.Byte() =
             { new JsonConverter<byte> with
                 member _.Serialize writer value = writer.WriteNumberValue(uint value)
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetByte() } 
+                member _.Deserialize reader = reader.GetByte() } 
             |> HKT.pack
 
         member _.SByte() =
             { new JsonConverter<sbyte> with
                 member _.Serialize writer value = writer.WriteNumberValue(int value)
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetSByte() } 
+                member _.Deserialize reader = reader.GetSByte() } 
             |> HKT.pack
 
         member _.Char() =
             { new JsonConverter<char> with
                 member _.Serialize writer value = writer.WriteStringValue(string value)
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetString().[0] } 
+                member _.Deserialize reader = reader.GetString().[0] } 
             |> HKT.pack
 
         member _.Int16() =
             { new JsonConverter<int16> with
                 member _.Serialize writer value = writer.WriteNumberValue(int value)
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetInt16() } 
+                member _.Deserialize reader = reader.GetInt16() } 
             |> HKT.pack
 
         member _.Int32() =
             { new JsonConverter<int32> with
                 member _.Serialize writer value = writer.WriteNumberValue(value)
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetInt32() } 
+                member _.Deserialize reader = reader.GetInt32() } 
             |> HKT.pack
 
         member _.Int64() =
             { new JsonConverter<int64> with
                 member _.Serialize writer value = writer.WriteNumberValue(value)
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetInt64() } 
+                member _.Deserialize reader = reader.GetInt64() } 
             |> HKT.pack
 
         member _.UInt16() =
             { new JsonConverter<uint16> with
                 member _.Serialize writer value = writer.WriteNumberValue(int value)
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetUInt16() } 
+                member _.Deserialize reader = reader.GetUInt16() } 
             |> HKT.pack
 
         member _.UInt32() =
             { new JsonConverter<uint32> with
                 member _.Serialize writer value = writer.WriteNumberValue(value)
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetUInt32() } 
+                member _.Deserialize reader = reader.GetUInt32() } 
             |> HKT.pack
 
         member _.UInt64() =
             { new JsonConverter<uint64> with
                 member _.Serialize writer value = writer.WriteNumberValue(value)
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetUInt64() } 
+                member _.Deserialize reader = reader.GetUInt64() } 
             |> HKT.pack
 
         member _.Single() =
             { new JsonConverter<single> with
                 member _.Serialize writer value = writer.WriteNumberValue(value)
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetSingle() } 
+                member _.Deserialize reader = reader.GetSingle() } 
             |> HKT.pack
 
         member _.Double() =
             { new JsonConverter<double> with
                 member _.Serialize writer value = writer.WriteNumberValue(value)
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetDouble() } 
+                member _.Deserialize reader = reader.GetDouble() } 
             |> HKT.pack
 
         member _.Decimal() =
             { new JsonConverter<decimal> with
                 member _.Serialize writer value = writer.WriteNumberValue(value);
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetDecimal() } 
+                member _.Deserialize reader = reader.GetDecimal() } 
             |> HKT.pack
 
         member _.BigInt() = raise <| NotSupportedException(nameof(bigint))
@@ -146,44 +146,44 @@ type JsonConverterBuilder() =
                     // Unit is just the 0-ary tuple, so since tuples are serialized as JSON arrays
                     // we serialize unit as the empty array
                     member _.Serialize writer _ = writer.WriteStartArray(); writer.WriteEndArray()
-                    member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.Skip() ; Unchecked.defaultof<'a> } 
+                    member _.Deserialize reader = reader.Skip() ; Unchecked.defaultof<'a> } 
 
             mkUnitConverter () |> HKT.pack
 
         member _.String() =
             { new JsonConverter<string> with
                 member _.Serialize writer value = writer.WriteStringValue value
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetString() }
+                member _.Deserialize reader = reader.GetString() }
             |> HKT.pack
 
         member _.Guid() =
             { new JsonConverter<Guid> with
                 member _.Serialize writer value = writer.WriteStringValue(value.ToString("D"))
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetString() |> Guid }
+                member _.Deserialize reader = reader.GetString() |> Guid }
             |> HKT.pack
 
         member _.TimeSpan() =
             { new JsonConverter<TimeSpan> with
                 member _.Serialize writer value = writer.WriteStringValue(value.ToString("c"))
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetString() |> TimeSpan.Parse }
+                member _.Deserialize reader = reader.GetString() |> TimeSpan.Parse }
             |> HKT.pack
 
         member _.DateTime() =
             { new JsonConverter<DateTime> with
                 member _.Serialize writer value = writer.WriteStringValue(value.ToString("o"))
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetString() |> DateTime.Parse }
+                member _.Deserialize reader = reader.GetString() |> DateTime.Parse }
             |> HKT.pack
 
         member _.DateTimeOffset() =
             { new JsonConverter<DateTimeOffset> with
                 member _.Serialize writer value = writer.WriteStringValue(value.ToString("o"))
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetString() |> DateTimeOffset.Parse }
+                member _.Deserialize reader = reader.GetString() |> DateTimeOffset.Parse }
             |> HKT.pack
 
         member _.Enum (HKT.Unpack underlyingConverter) =
             { new JsonConverter<'Enum> with 
                 member _.Serialize writer value = underlyingConverter.Serialize writer (LanguagePrimitives.EnumToValue value)
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = underlyingConverter.Deserialize &reader |> LanguagePrimitives.EnumOfValue
+                member _.Deserialize reader = underlyingConverter.Deserialize &reader |> LanguagePrimitives.EnumOfValue
             } |> HKT.pack
 
         member _.Nullable (HKT.Unpack elementConverter) =
@@ -191,7 +191,7 @@ type JsonConverterBuilder() =
                 member _.Serialize writer value = 
                     if value.HasValue then elementConverter.Serialize writer value.Value 
                     else writer.WriteNullValue()
-                member _.Deserialize (reader : byref<Utf8JsonReader>) =
+                member _.Deserialize reader =
                     match reader.TokenType with
                     | JsonTokenType.Null -> Nullable()
                     | _ -> Nullable(elementConverter.Deserialize &reader)
@@ -360,7 +360,7 @@ type JsonConverterBuilder() =
                         let caseName = reader.GetString()
                         let tag = caseNameSearch.TryFindIndex caseName
                         if tag < 0 then JsonHelpers.throwUnrecognizedFSharpUnionCaseName typeof<'T> caseName
-                        let _,caseInfo, _ = unionCases.[tag]
+                        let _,caseInfo,_ = unionCases.[tag]
                         caseInfo.CreateUninitialized()
                     | JsonTokenType.StartObject ->
                         ensureRead &reader
@@ -420,7 +420,7 @@ type JsonConverterBuilder() =
                     let field = shape.Get value
                     fieldConverter.Serialize writer field
 
-                member _.DeserializeField (reader:byref<Utf8JsonReader>, value : 'DeclaringType) =
+                member _.DeserializeField (reader, value) =
                     let field = fieldConverter.Deserialize &reader
                     shape.Set value field }
             |> HKT.pack
@@ -448,7 +448,7 @@ type ConverterGenerator<'JsonConverterBuilder
             let c = lazy(HKT.unpack converterRef.Value)
             { new JsonConverter<'T> with
                 member _.Serialize writer value = c.Value.Serialize writer value
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = c.Value.Deserialize &reader }
+                member _.Deserialize reader = c.Value.Deserialize &reader }
             |> HKT.pack
 
 //-----------------------------------
@@ -511,7 +511,7 @@ type BinTree<'T> = Leaf | Node of value:'T * left:BinTree<'T> * right:BinTree<'T
 
 let p4 = generateConverter<BinTree<int>> ()
 
-//  "{"$case":"Node","value":3,"left":{"$case":"Node","value":1,"left":"Leaf","right":{"$case":"Node","value":2,"left":"Leaf","right":"Leaf"}},"right":"Leaf"}"
+// "{"$case":"Node","value":3,"left":{"$case":"Node","value":1,"left":"Leaf","right":{"$case":"Node","value":2,"left":"Leaf","right":"Leaf"}},"right":"Leaf"}"
 serialize p4 (Node(3, Node(1, Leaf, Node(2, Leaf,Leaf)), Leaf))
 |> deserialize p4
 
@@ -527,7 +527,7 @@ type ConverterBuilderExtensions() =
         member _.BigInt() =
             { new JsonConverter<bigint> with
                 member _.Serialize writer value = writer.WriteStringValue(value.ToString());
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetString() |> bigint.Parse } 
+                member _.Deserialize reader = reader.GetString() |> bigint.Parse } 
             |> HKT.pack
 
     // add support for dictionary converters
@@ -543,7 +543,7 @@ type ConverterBuilderExtensions() =
                         valueConverter.Serialize writer kv.Value
                     writer.WriteEndObject()
 
-                member _.Deserialize (reader : byref<Utf8JsonReader>) =
+                member _.Deserialize reader =
                     ensureToken JsonTokenType.StartObject &reader
                     let dict = new Dictionary<string, 'value>()
                     while reader.Read() && reader.TokenType <> JsonTokenType.EndObject do

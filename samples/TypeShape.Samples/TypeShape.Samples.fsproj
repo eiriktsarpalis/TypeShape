@@ -23,6 +23,7 @@
     <Compile Include="HKT\Clone.fs" />
     <Compile Include="HKT\Pickler.fs" />
     <Compile Include="HKT\JsonSerializer.fs" />
+    <Compile Include="HKT\CborSerializer.fs" />
     <Compile Include="HKT\Typeclassopedia.fs" />
     <None Include="test.fsx" />
     <None Include="paket.references" />

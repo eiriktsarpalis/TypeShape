@@ -6,3 +6,4 @@
   FSharp.Quotations.Evaluator
   FSharp.Data
   DotNext
+  System.Formats.Cbor

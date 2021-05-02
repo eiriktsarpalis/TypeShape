@@ -163,6 +163,11 @@ module Fold =
         match shape with
         | Shape.DateTimeOffset -> builder.DateTimeOffset () |> unwrap |> Some
         | _ -> None
+
+    let (|ByteArray|_|) (builder : IByteArrayBuilder<'F>) (shape : TypeShape<'t>) : App<'F, 't> option =
+        match shape with
+        | Shape.ByteArray -> builder.ByteArray () |> unwrap |> Some
+        | _ -> None
     
     //------------------------------------
     // Generic .NET Types

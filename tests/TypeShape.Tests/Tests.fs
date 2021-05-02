@@ -804,6 +804,9 @@ module GenericJsonSerializerHKT =
         static member IsoNormalizedDateTimeOffset() =
             Arb.Default.DateTimeOffset() |> Arb.filter (fun d -> DateTimeOffset.Parse(d.ToString("o")) = d)
 
+        static member SecondsNormalizedTimeSpan() =
+            Arb.Default.TimeSpan() |> Arb.filter (fun t -> TimeSpan.FromSeconds(t.TotalSeconds) = t)
+
         // 'Some null' representations collapse to null in JSON serialization, exclude in roundtrip testing
         static member NoSomeOfRefOfNull() =
             Arb.Default.Option<'T ref>() |> Arb.filter (function Some x -> not <| obj.ReferenceEquals(x.Value, null) | _ -> true)
@@ -822,6 +825,20 @@ module GenericJsonSerializerHKT =
                 let t0 = JsonSerializer.deserialize conv json
                 if t <> t0 then failwithf "%A != %A" t t0 else true}
         |> Check.GenericPredicate false (Some typeof<JsonArbitrary>) false 100 10
+
+module GenericCborSerializerHKT =
+
+    let generator = new CborSerializer.ConverterGeneratorExtensions()
+
+    [<Fact>]
+    let ``CborSerializer roundtrip should produce equal values`` () =
+        { new Predicate with
+            member _.Invoke (t : 'T) =
+                let conv = generator.GenerateConverter<'T>()
+                let json = CborSerializer.encode conv t
+                let t0 = CborSerializer.decode conv json
+                if t <> t0 then failwithf "%A != %A" t t0 else true}
+        |> Check.GenericPredicate false (Some typeof<GenericJsonSerializerHKT.JsonArbitrary>) false 100 10
 
 module GenericEmpty =
 
