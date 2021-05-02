@@ -695,7 +695,7 @@ module private MemberUtils =
             dynamicMethod.CreateDelegate typeof<'Delegate>
 
         let wrapper = compileCache.GetOrAdd((typeof<'Delegate>, id), fun _ -> lazy(compile ()))
-        wrapper.Value :?> 'Delegate
+        lazy(wrapper.Value :?> 'Delegate)
 
     /// Emits a dynamic method that projects supplied member path
     let emitGetter<'DeclaringType, 'Property> (path : MemberInfo []) =
@@ -878,7 +878,7 @@ and ReadOnlyMember<'DeclaringType, 'MemberType> internal (label : string, member
     /// Gets the current value from the given declaring type instance
     member _.Get (instance : 'DeclaringType) : 'MemberType =
 #if TYPESHAPE_EMIT
-        projectFunc.Invoke instance
+        projectFunc.Value.Invoke instance
 #else
         project path instance
 #endif
@@ -927,7 +927,7 @@ and [<Sealed>] ShapeMember<'DeclaringType, 'MemberType> private (label : string,
     /// Assigns value to the provided instance. NB this is a mutating operation
     member _.Set (instance : 'DeclaringType) (field : 'MemberType) : 'DeclaringType =
 #if TYPESHAPE_EMIT
-        injectFunc.Invoke(instance, field)
+        injectFunc.Value.Invoke(instance, field)
 #else
         inject isStructMember path instance field
 #endif
@@ -1205,7 +1205,7 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
     member _.CreateUninitialized() : 'Record =
         if isStructRecord then Unchecked.defaultof<'Record> else
 #if TYPESHAPE_EMIT
-        ctorf.Invoke()
+        ctorf.Value.Invoke()
 #else
         ctorInfo.Invoke ctorParams :?> 'Record
 #endif
@@ -1269,7 +1269,7 @@ type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
     /// Creates an uninitialized instance for specific union case
     member _.CreateUninitialized() : 'Union =
 #if TYPESHAPE_EMIT
-        ctorf.Invoke()
+        ctorf.Value.Invoke()
 #else
         ctorInfo.Invoke(null, ctorParams) :?> 'Union
 #endif
@@ -1318,7 +1318,7 @@ and [<Sealed>] ShapeFSharpUnion<'U> private () =
     /// Gets the underlying tag id for given union instance
     member _.GetTag (union : 'U) : int =
 #if TYPESHAPE_EMIT
-        tagReader.Invoke union
+        tagReader.Value.Invoke union
 #else
         tagReader union
 #endif
@@ -1383,7 +1383,7 @@ and [<Sealed>] ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) 
     /// Creates an uninitialized instance for given C# record
     member _.CreateUninitialized() : 'Record =
 #if TYPESHAPE_EMIT
-        ctor.Invoke()
+        ctor.Value.Invoke()
 #else
         defaultCtor.Invoke [||] :?> 'Record
 #endif
@@ -1506,7 +1506,7 @@ and ShapeISerializable<'T when 'T :> ISerializable> private () =
     member _.CtorInfo = ctorInfo
     member _.Create(serializationInfo : SerializationInfo, streamingContext : StreamingContext) : 'T =
 #if TYPESHAPE_EMIT
-        ctor.Invoke(serializationInfo, streamingContext)
+        ctor.Value.Invoke(serializationInfo, streamingContext)
 #else
         getCtorInfo().Invoke [| serializationInfo ; streamingContext |] :?> 'T
 #endif
