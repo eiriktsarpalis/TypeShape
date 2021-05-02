@@ -1,8 +1,6 @@
 ﻿module TypeShape.Benchmarks.JsonSerializer
 
 open System
-open Newtonsoft.Json
-open MBrace.FsPickler.Json
 open BenchmarkDotNet.Attributes
 
 type Enum =
@@ -35,32 +33,16 @@ let testValue : TestType =
 [<MemoryDiagnoser>]
 type JsonSerializerBenchmarks() =
     let converter = JsonSerializer.generateConverter<TestType>()
-    let fspickler = FsPickler.CreateJsonSerializer()
-    let stjJson = testValue |> System.Text.Json.JsonSerializer.Serialize
-    let newtonsoftJson = testValue |> JsonConvert.SerializeObject
-    let fspicklerJson = testValue |> fspickler.PickleToString
-    let tsJson = testValue |> JsonSerializer.serialize converter
+    let json = testValue |> System.Text.Json.JsonSerializer.Serialize
 
     [<Benchmark>]
     member _.Serialize_SystemTextJson() = testValue |> System.Text.Json.JsonSerializer.Serialize
-
-    [<Benchmark>]
-    member _.Serialize_Newtonsoft() = testValue |> JsonConvert.SerializeObject
-
-    [<Benchmark>]
-    member _.Serialize_FsPickler() = testValue |> fspickler.PickleToString
         
     [<Benchmark>]
     member _.Serialize_TypeShape() = testValue |> JsonSerializer.serialize converter
 
     [<Benchmark>]
-    member _.Deserialize_SystemTExtJson() = stjJson |> System.Text.Json.JsonSerializer.Deserialize<TestType>
-
-    [<Benchmark>]
-    member _.Deserialize_Newtonsoft() = newtonsoftJson |> JsonConvert.DeserializeObject<TestType>
-
-    [<Benchmark>]
-    member _.Deserialize_FsPickler() = fspicklerJson |> fspickler.UnPickleOfString<TestType>
+    member _.Deserialize_SystemTextJson() = json |> System.Text.Json.JsonSerializer.Deserialize<TestType>
         
     [<Benchmark>]
-    member _.Deserialize_TypeShape() = tsJson |> JsonSerializer.deserialize converter
+    member _.Deserialize_TypeShape() = json |> JsonSerializer.deserialize converter

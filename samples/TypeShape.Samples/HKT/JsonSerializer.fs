@@ -180,10 +180,10 @@ type JsonConverterBuilder() =
                 member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetString() |> DateTimeOffset.Parse }
             |> HKT.pack
 
-        member _.Enum _ =
+        member _.Enum (HKT.Unpack underlyingConverter) =
             { new JsonConverter<'Enum> with 
-                member _.Serialize writer value = writer.WriteStringValue(value.ToString())
-                member _.Deserialize (reader : byref<Utf8JsonReader>) = reader.GetString() |> Enum.Parse<'Enum>
+                member _.Serialize writer value = underlyingConverter.Serialize writer (LanguagePrimitives.EnumToValue value)
+                member _.Deserialize (reader : byref<Utf8JsonReader>) = underlyingConverter.Deserialize &reader |> LanguagePrimitives.EnumOfValue
             } |> HKT.pack
 
         member _.Nullable (HKT.Unpack elementConverter) =

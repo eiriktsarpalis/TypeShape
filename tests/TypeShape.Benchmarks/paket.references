@@ -2,4 +2,3 @@
   FSharp.Core
   BenchmarkDotNet
   CommandLineParser
-  FsPickler.Json

@@ -20,7 +20,6 @@ group Test
   nuget BenchmarkDotNet ~> 0.12.0
   nuget CommandLineParser ~> 2.4.0 # fix BDN binding redirect issue
   nuget Newtonsoft.Json
-  nuget FsPickler.Json
   nuget FSharp.Data ~> 3.0
   nuget DotNext ~> 3.0
   
