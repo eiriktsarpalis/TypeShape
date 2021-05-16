@@ -29,7 +29,7 @@ let gitHome = "https://github.com/" + gitOwner
 let gitName = "TypeShape"
 
 let configuration = Environment.environVarOrDefault "configuration" "Release"
-let noEmitConfiguration = "Release-NoEmit"
+let noEmitConfiguration = "Release-Emit"
 
 // --------------------------------------------------------------------------------------
 // END TODO: The rest of the file includes standard build steps
@@ -61,7 +61,7 @@ let Build configuration =
 
 
 Target.create "Build" (fun _ -> Build configuration)
-Target.create "Build.NoEmit" (fun _ -> Build noEmitConfiguration)
+Target.create "Build.Emit" (fun _ -> Build noEmitConfiguration)
 
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner & kill test runner when complete
@@ -80,7 +80,7 @@ let Test configuration =
         }) __SOURCE_DIRECTORY__
 
 Target.create "RunTests" (fun _ -> Test configuration)
-Target.create "RunTests.NoEmit" (fun _ -> Test configuration)
+Target.create "RunTests.Emit" (fun _ -> Test configuration)
 
 // --------------------------------------------------------------------------------------
 // Build a NuGet package
@@ -163,8 +163,8 @@ Target.create "Release" ignore
 "Clean"
   ==> "Build"
   ==> "RunTests"
-  ==> "Build.NoEmit"
-  ==> "RunTests.NoEmit"
+  ==> "Build.Emit"
+  ==> "RunTests.Emit"
   ==> "Default"
 
 "Default"
