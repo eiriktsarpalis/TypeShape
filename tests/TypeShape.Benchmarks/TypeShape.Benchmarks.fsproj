@@ -7,6 +7,7 @@
   <ItemGroup>
     <Compile Include="..\..\samples\TypeShape.Samples\HKT\Common.fs" Link="Implementations\Common.fs" />
     <Compile Include="..\..\samples\TypeShape.Samples\HKT\PrettyPrinter.fs" Link="Implementations\PrettyPrinter.fs" />
+    <Compile Include="MemberAccessors.fs" />
     <Compile Include="Empty.fs" />
     <Compile Include="UnionContract.fs" />
     <Compile Include="Clone.fs" />
