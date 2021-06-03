@@ -310,14 +310,14 @@ GROUP Test
 RESTRICTION: == net50
 NUGET
   remote: https://api.nuget.org/v3/index.json
-    BenchmarkDotNet (0.12.1)
-      BenchmarkDotNet.Annotations (>= 0.12.1)
+    BenchmarkDotNet (0.13)
+      BenchmarkDotNet.Annotations (>= 0.13)
       CommandLineParser (>= 2.4.3)
-      Iced (>= 1.4)
+      Iced (>= 1.8)
       Microsoft.CodeAnalysis.CSharp (>= 2.10)
       Microsoft.Diagnostics.NETCore.Client (>= 0.2.61701)
-      Microsoft.Diagnostics.Runtime (>= 1.1.57604)
-      Microsoft.Diagnostics.Tracing.TraceEvent (>= 2.0.49)
+      Microsoft.Diagnostics.Runtime (>= 1.1.126102)
+      Microsoft.Diagnostics.Tracing.TraceEvent (>= 2.0.61)
       Microsoft.DotNet.PlatformAbstractions (>= 2.1)
       Microsoft.Win32.Registry (>= 4.5)
       Perfolizer (>= 0.2.1)
@@ -326,7 +326,7 @@ NUGET
       System.Reflection.Emit.Lightweight (>= 4.3)
       System.Threading.Tasks.Extensions (>= 4.5.2)
       System.ValueTuple (>= 4.5)
-    BenchmarkDotNet.Annotations (0.12.1)
+    BenchmarkDotNet.Annotations (0.13)
     CommandLineParser (2.4.3)
     DotNext (3.1.1)
       System.Runtime.CompilerServices.Unsafe (>= 5.0)

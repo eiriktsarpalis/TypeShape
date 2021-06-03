@@ -16,8 +16,7 @@ group Test
   nuget Unquote ~> 4.0
   nuget FsCheck 3.0.0-alpha4
   nuget FsCheck.XUnit 3.0.0-alpha4
-  nuget BenchmarkDotNet ~> 0.12.0
-  nuget CommandLineParser ~> 2.4.0 # fix BDN binding redirect issue
+  nuget BenchmarkDotNet ~> 0.13.0
   nuget Newtonsoft.Json
   nuget System.Formats.Cbor
   nuget FSharp.Data ~> 3.0
