@@ -2,8 +2,20 @@
 // FAKE build script
 // --------------------------------------------------------------------------------------
 
-#r "paket: groupref build //"
-#load "./.fake/build.fsx/intellisense.fsx"
+#r "nuget: System.Reactive        ,5.0.0"
+#r "nuget: Fake.Core.UserInput    ,5.20.4"
+#r "nuget: Fake.Core.ReleaseNotes ,5.20.4"
+#r "nuget: Fake.Core.Target       ,5.20.4"
+#r "nuget: Fake.IO.FileSystem     ,5.20.4"
+#r "nuget: Fake.DotNet.Cli        ,5.20.4"
+#r "nuget: Fake.Tools.Git         ,5.20.4"
+#r "nuget: Fake.Api.Github        ,5.20.4"
+
+#if !FAKE
+Fake.Core.Context.FakeExecutionContext.Create false __SOURCE_FILE__ []
+|> Fake.Core.Context.RuntimeContext.Fake
+|> Fake.Core.Context.setExecutionContext
+#endif
 
 open Fake.Core
 open Fake.Core.TargetOperators
@@ -55,7 +67,8 @@ let Build configuration =
 
             MSBuildParams =
                 { c.MSBuildParams with
-                    Properties = [("Version", release.NugetVersion)] }
+                    Properties = [("Version", release.NugetVersion)]
+                    DisableInternalBinLog = true }
 
         }) __SOURCE_DIRECTORY__
 
@@ -75,7 +88,8 @@ let Test configuration =
 
             MSBuildParams =
                 { c.MSBuildParams with
-                    Properties = [("ParallelizeAssemblies", "true"); ("ParallelizeTestCollections", "true")] }
+                    Properties = [("ParallelizeAssemblies", "true"); ("ParallelizeTestCollections", "true")]
+                    DisableInternalBinLog = true }
 
         }) __SOURCE_DIRECTORY__
 
@@ -95,7 +109,8 @@ Target.create "NuGet.Bundle" (fun _ ->
                 { pack.MSBuildParams with
                     Properties = 
                         [("Version", release.NugetVersion)
-                         ("PackageReleaseNotes", releaseNotes)] }
+                         ("PackageReleaseNotes", releaseNotes)]
+                    DisableInternalBinLog = true }
         }) __SOURCE_DIRECTORY__
 )
 
