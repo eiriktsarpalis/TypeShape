@@ -4,6 +4,13 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)'=='Debug-NoEmit'">
+    <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug' Or '$(Configuration)'=='Release'">
+    <DefineConstants>$(DefineConstants);TYPESHAPE_EMIT</DefineConstants>
+  </PropertyGroup>
+
   <!-- NuGet Metadata -->
   <PropertyGroup>
     <Description>Practical Generic Programming for F#</Description>

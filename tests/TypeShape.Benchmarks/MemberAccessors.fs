@@ -28,7 +28,7 @@ let stringMemberShape = recordShape.Fields.[0] :?> ShapeMember<Record, string>
 let intMemberShape = recordShape.Fields.[1] :?> ShapeMember<Record, int>
 let boolMemberShape = recordShape.Fields.[2] :?> ShapeMember<Record, bool>
 
-[<MemoryDiagnoser>]
+[<MemoryDiagnoser; DisassemblyDiagnoser(maxDepth = 3)>]
 type MemberAccessorBenchmark() =
 
     let value = { A = "string" ; B = 42; C = false }
