@@ -3,6 +3,7 @@ framework: netstandard2.0, netcoreapp3.1
 storage: none
 
 nuget FSharp.Core >= 4.3.2 lowest_matching: true
+nuget System.Reflection.Emit.LightWeight >= 4.7.0 lowest_matching: true, framework: netstandard2.0
 nuget Microsoft.SourceLink.GitHub ~> 1.0.0 copy_local:true
 
 group Test
@@ -17,6 +18,7 @@ group Test
   nuget FsCheck 3.0.0-alpha4
   nuget FsCheck.XUnit 3.0.0-alpha4
   nuget BenchmarkDotNet ~> 0.13.0
+  nuget BenchmarkDotNet.Diagnostics.Windows ~> 0.13.0
   nuget Newtonsoft.Json
   nuget System.Formats.Cbor
   nuget FSharp.Data ~> 3.0
