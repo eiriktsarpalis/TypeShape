@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Configurations>Debug;Release;Debug-NoEmit;Release-NoEmit</Configurations>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\samples\TypeShape.Samples\TypeShape.Samples.fsproj" />
