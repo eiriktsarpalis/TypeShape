@@ -9,7 +9,9 @@ type Cloner =
     static member Assign(_ : App<Cloner, 'a>, _ : 'a -> 'a) = ()
 
 type FieldCloner =
-    static member Assign(_ : App<FieldCloner, 'a>, _ : 'a -> 'a -> 'a) = ()
+    static member Assign(_ : App<FieldCloner, 'a>, _ : FieldCloner<'a>) = ()
+
+and FieldCloner<'a> = delegate of source:inref<'a> * target:byref<'a> -> unit
 
 type IClonerBuilder =
     inherit IFSharpTypeBuilder<Cloner, FieldCloner>
@@ -70,38 +72,38 @@ type ClonerBuilder () =
         member _.Map (HKT.Unpack kc) (HKT.Unpack vc) = HKT.pack(Map.toSeq >> Seq.map (fun (k,v) -> kc k, vc v) >> Map.ofSeq)
 
         member _.Field shape (HKT.Unpack fc) = 
-            HKT.pack(fun src tgt -> shape.Set tgt (fc (shape.Get src)))
+            HKT.pack(FieldCloner<_>(fun src tgt -> shape.SetByRef (&tgt, (fc (shape.GetByRef &src)))))
 
         member _.Tuple shape (HKT.Unpacks fields) =
             HKT.pack(fun t ->
                 let mutable t' = shape.CreateUninitialized()
-                for f in fields do t' <- f t t'
+                for f in fields do f.Invoke(&t, &t')
                 t')
 
         member _.Record shape (HKT.Unpacks fields) =
             HKT.pack(fun t ->
                 let mutable t' = shape.CreateUninitialized()
-                for f in fields do t' <- f t t'
+                for f in fields do f.Invoke(&t, &t')
                 t')
 
         member _.Union shape (HKT.Unpackss fieldss) =
             HKT.pack(fun t ->
-                let tag = shape.GetTag t
+                let tag = shape.GetTagByRef &t
                 let case = shape.UnionCases.[tag]
                 let mutable t' = case.CreateUninitialized()
-                for f in fieldss.[tag] do t' <- f t t'
+                for f in fieldss.[tag] do f.Invoke(&t, &t')
                 t')
 
         member _.CliMutable shape (HKT.Unpacks fields) =
             HKT.pack(fun t ->
                 let mutable t' = shape.CreateUninitialized()
-                for f in fields do t' <- f t t'
+                for f in fields do f.Invoke(&t, &t')
                 t')
 
         member _.Poco shape (HKT.Unpacks fields) =
             HKT.pack(fun t ->
                 let mutable t' = shape.CreateUninitialized()
-                for f in fields do t' <- f t t'
+                for f in fields do f.Invoke(&t, &t')
                 t')
 
         member _.Delay cell = HKT.pack(fun t -> let f = HKT.unpack cell.Value in f t)

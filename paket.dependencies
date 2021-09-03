@@ -2,7 +2,7 @@ source https://api.nuget.org/v3/index.json
 framework: netstandard2.0, netcoreapp3.1
 storage: none
 
-nuget FSharp.Core >= 4.3.2 lowest_matching: true
+nuget FSharp.Core >= 4.5.4 lowest_matching: true
 nuget System.Reflection.Emit.LightWeight >= 4.7.0 lowest_matching: true, framework: netstandard2.0
 nuget Microsoft.SourceLink.GitHub ~> 1.0.0 copy_local:true
 
