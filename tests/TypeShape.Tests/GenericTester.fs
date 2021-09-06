@@ -3,6 +3,7 @@
 open System
 open FSharp.Reflection
 open FsCheck
+open FsCheck.FSharp
 open TypeShape.Core
 
 // Type algebra defining the universe of testable types
@@ -195,28 +196,27 @@ module Implementation =
     // FsCheck Generators
 
     type NoNaNFloats =
-        static member Single =
-            Arb.Default.Float32()
-            |> Arb.filter Single.IsFinite
+        static member Single() =
+            ArbMap.defaults.ArbFor<single>()
+            |> Arb.filter (fun x -> Single.IsFinite x)
 
-        static member Double =
-            Arb.Default.Float()
-            |> Arb.filter Double.IsFinite
-
+        static member Double() =
+            ArbMap.defaults.ArbFor<double>()
+            |> Arb.filter (fun x -> Double.IsFinite x)
 
     type Config with
         static member CreateTypeConfig(maxTypes : int, ?maxSize : int) =
-            { Config.QuickThrowOnFailure with 
-                MaxTest = maxTypes ; 
-                EndSize = defaultArg maxSize 20 }
+            Config.QuickThrowOnFailure
+                .WithMaxTest(maxTypes)
+                .WithEndSize(defaultArg maxSize 20)
 
         static member CreateValueConfig(useNaN : bool, maxTests : int, ?arbitrary : Type) =
-            { Config.QuickThrowOnFailure with 
-                QuietOnSuccess = true ;
-                MaxTest = maxTests ; 
-                Arbitrary = 
+            Config.QuickThrowOnFailure
+                .WithQuietOnSuccess(false)
+                .WithMaxTest(maxTests)
+                .WithArbitrary
                     [ if not useNaN then typeof<NoNaNFloats> 
-                      match arbitrary with Some a -> a | None -> () ] }
+                      match arbitrary with Some a -> a | None -> () ]
 
     module PrettyPrint =
 

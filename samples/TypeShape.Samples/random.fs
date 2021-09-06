@@ -3,9 +3,12 @@ module Random
 open System
 open TypeShape.Core
 open FsCheck
+open FsCheck.FSharp
 
 // Generic random value generator for FsCheck
 // Supports C# records and POCOs
+
+let defaultGen<'a> : Gen<'a> = ArbMap.generate<'a> ArbMap.defaults
 
 let rec mkGenerator<'T> () : Gen<'T> =
     let wrap (t : Gen<'a>) = unbox<Gen<'T>> t
@@ -16,11 +19,11 @@ let rec mkGenerator<'T> () : Gen<'T> =
                 gen { let! f = rf in return fun dt -> shape.Set dt f } }
 
     match shapeof<'T> with
-    | Shape.Primitive -> wrap Arb.generate<'T>
-    | Shape.Unit -> wrap Arb.generate<unit>
-    | Shape.String -> wrap Arb.generate<string>
-    | Shape.Guid -> wrap Arb.generate<Guid>
-    | Shape.DateTime -> wrap Arb.generate<DateTime>
+    | Shape.Primitive -> wrap defaultGen<'T>
+    | Shape.Unit -> wrap defaultGen<unit>
+    | Shape.String -> wrap defaultGen<string>
+    | Shape.Guid -> wrap defaultGen<Guid>
+    | Shape.DateTime -> wrap defaultGen<DateTime>
     | Shape.FSharpOption s ->
         s.Element.Accept { new ITypeVisitor<Gen<'T>> with
             member _.Visit<'t> () =
@@ -131,7 +134,7 @@ let rec mkGenerator<'T> () : Gen<'T> =
                 }
         }
 
-    | _ -> Arb.generate<'T> // fall back to FsCheck mechanism
+    | _ -> defaultGen<'T> // fall back to FsCheck mechanism
 
 
 //--------------------------------------

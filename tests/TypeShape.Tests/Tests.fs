@@ -11,6 +11,7 @@ open FSharp.Reflection
 open Xunit
 open Swensen.Unquote.Assertions
 open FsCheck
+open FsCheck.FSharp
 
 open TypeShape
 open TypeShape.Core
@@ -796,23 +797,23 @@ module GenericJsonSerializerHKT =
 
     type JsonArbitrary =
         static member NonEmptyStringMaps() =
-            Arb.Default.Map() |> Arb.filter (fun m -> m |> Seq.forall (fun kv -> kv.Key <> null))
+            ArbMap.defaults.ArbFor<Map<'Key,'Value>>() |> Arb.filter (fun m -> m |> Seq.forall (fun kv -> kv.Key <> null))
 
         static member IsoNormalizedDateTime() =
-            Arb.Default.DateTime() |> Arb.filter (fun d -> DateTime.Parse(d.ToString("o")) = d)
+            ArbMap.defaults.ArbFor<DateTime>() |> Arb.filter (fun d -> DateTime.Parse(d.ToString("o")) = d)
 
         static member IsoNormalizedDateTimeOffset() =
-            Arb.Default.DateTimeOffset() |> Arb.filter (fun d -> DateTimeOffset.Parse(d.ToString("o")) = d)
+            ArbMap.defaults.ArbFor<DateTimeOffset>() |> Arb.filter (fun d -> DateTimeOffset.Parse(d.ToString("o")) = d)
 
         static member SecondsNormalizedTimeSpan() =
-            Arb.Default.TimeSpan() |> Arb.filter (fun t -> TimeSpan.FromSeconds(t.TotalSeconds) = t)
+            ArbMap.defaults.ArbFor<TimeSpan>() |> Arb.filter (fun t -> TimeSpan.FromSeconds(t.TotalSeconds) = t)
 
         // 'Some null' representations collapse to null in JSON serialization, exclude in roundtrip testing
         static member NoSomeOfRefOfNull() =
-            Arb.Default.Option<'T ref>() |> Arb.filter (function Some x -> not <| obj.ReferenceEquals(x.Value, null) | _ -> true)
+            ArbMap.defaults.ArbFor<'T ref option>() |> Arb.filter (function Some x -> not <| obj.ReferenceEquals(x.Value, null) | _ -> true)
 
         static member NoSomeOfNull() =
-            Arb.Default.Option() |> Arb.filter (function Some x -> not <| obj.ReferenceEquals(x, null) | _ -> true)
+            ArbMap.defaults.ArbFor<'T option>() |> Arb.filter (function Some x -> not <| obj.ReferenceEquals(x, null) | _ -> true)
 
     let generator = new JsonSerializer.ConverterGeneratorExtensions()
 
