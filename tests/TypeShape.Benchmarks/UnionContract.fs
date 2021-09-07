@@ -102,15 +102,15 @@ type UnionContractBenchmark() =
     do if testValues.Length <> TestValueCount then invalidOp $"please update the value of {nameof(TestValueCount)} to be {testValues.Length}."
     
     [<Benchmark(OperationsPerInvoke = TestValueCount)>]
-    member _.Serialize_Baseline() = for v in testValues do baselineEncoder.Encode v |> ignore
+    member _.Encode_Baseline() = for v in testValues do baselineEncoder.Encode v |> ignore
     [<Benchmark(OperationsPerInvoke = TestValueCount)>]
-    member _.Serialize_Reflection() = for v in testValues do reflectionEncoder.Encode v |> ignore
+    member _.Encode_Reflection() = for v in testValues do reflectionEncoder.Encode v |> ignore
     [<Benchmark(OperationsPerInvoke = TestValueCount)>]
-    member _.Serialize_TypeShape() = for v in testValues do typeShapeEncoder.Encode v |> ignore
+    member _.Encode_TypeShape() = for v in testValues do typeShapeEncoder.Encode v |> ignore
 
     [<Benchmark(OperationsPerInvoke = TestValueCount)>]
-    member _.Deserialize_Baseline() = for e in encodedValues do baselineEncoder.Decode e |> ignore
+    member _.Decode_Baseline() = for e in encodedValues do baselineEncoder.Decode e |> ignore
     [<Benchmark(OperationsPerInvoke = TestValueCount)>]
-    member _.Deserialize_Reflection() = for e in encodedValues do reflectionEncoder.Decode e |> ignore
+    member _.Decode_Reflection() = for e in encodedValues do reflectionEncoder.Decode e |> ignore
     [<Benchmark(OperationsPerInvoke = TestValueCount)>]
-    member _.Deserialize_TypeShape() = for e in encodedValues do typeShapeEncoder.Decode e |> ignore
+    member _.Decode_TypeShape() = for e in encodedValues do typeShapeEncoder.Decode e |> ignore
