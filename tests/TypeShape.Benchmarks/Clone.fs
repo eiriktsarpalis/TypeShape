@@ -2,7 +2,7 @@
 
 open BenchmarkDotNet.Attributes
 
-open TypeShape.Clone
+open TypeShape.Tests.HktClone
 open TypeShape.Tests.StagedClone
 
 type Record =
@@ -24,11 +24,8 @@ type CloneBenchmarks() =
             let v3' = v3 |> Array.map id
             struct(v1',v2',v3')
 
-    let typeShapeCloner : TestType -> TestType =
-        clone<TestType>
-
-    let compiledStagedCloner : TestType -> TestType =
-        mkCompiledCloner<TestType>()
+    let typeShapeCloner : TestType -> TestType = mkCloner()
+    let compiledStagedCloner : TestType -> TestType = mkCompiledCloner()
 
     let testValue : TestType =
         let rs = [ for i in 1 .. 100 -> { A = sprintf "lorem ipsum %d" i ; B = i ; C = i % 2 = 0 } ]
