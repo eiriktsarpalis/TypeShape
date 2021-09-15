@@ -140,22 +140,11 @@ module private TypeShapeImpl =
     
     let private genInstanceGetter = typeof<ReflectionHelper>.GetMethod("GetInstance", BindingFlags.NonPublic ||| BindingFlags.Static)
     let private canon = Type.GetType "System.__Canon"
-#if NETSTANDARD2_0
-    let private isByRefLike : Type -> bool = 
-        match typeof<Type>.GetProperty("IsByRefLike") with
-        | null -> fun _ -> false
-        | p ->
-            let method = p.GetGetMethod()
-            let dele = Delegate.CreateDelegate(typeof<Func<Type, bool>>, method) :?> Func<Type, bool>
-            dele.Invoke
-#endif
 
     let inline internal isUnsupported (typ: Type) =
         typ.IsPointer ||
         typ.IsByRef ||
-#if NETSTANDARD2_0
-        isByRefLike typ
-#else
+#if NETCOREAPP
         typ.IsByRefLike
 #endif
 
