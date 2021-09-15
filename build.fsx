@@ -11,12 +11,6 @@
 #r "nuget: Fake.Tools.Git         ,5.20.4"
 #r "nuget: Fake.Api.Github        ,5.20.4"
 
-#if !FAKE
-Fake.Core.Context.FakeExecutionContext.Create false __SOURCE_FILE__ []
-|> Fake.Core.Context.RuntimeContext.Fake
-|> Fake.Core.Context.setExecutionContext
-#endif
-
 open Fake.Core
 open Fake.Core.TargetOperators
 open Fake.DotNet
@@ -26,6 +20,15 @@ open Fake.IO.Globbing.Operators
 open Fake.Tools
 open Fake.Api
 open System
+
+#if !FAKE
+Environment.GetCommandLineArgs()
+|> Array.skip 2
+|> Array.toList
+|> Fake.Core.Context.FakeExecutionContext.Create false __SOURCE_FILE__
+|> Fake.Core.Context.RuntimeContext.Fake
+|> Fake.Core.Context.setExecutionContext
+#endif
 
 // --------------------------------------------------------------------------------------
 // START TODO: Provide project-specific details below
