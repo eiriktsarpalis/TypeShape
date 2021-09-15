@@ -21,12 +21,10 @@ and Token =
     | EndArray
 
 // Pickler for a field of type 'T which has been existentially packed
-and FieldPickler<'T> = 
-    { 
-        label : string
-        fpickle : (Token -> unit) -> 'T -> unit
-        funpickle : (bool -> Token) -> 'T -> 'T
-    }
+and IFieldPickler<'T> =  
+    abstract Label : string
+    abstract Pickle : (Token -> unit) * inref<'T> -> unit
+    abstract UnPickle : (bool -> Token) * byref<'T> -> unit
 
 //--------------------------------------------------
 
@@ -36,7 +34,7 @@ type Pickler =
 
 // HKT encoding for field pickler
 type FieldPickler =
-    static member Assign(_ : App<FieldPickler, 'a>, _ : FieldPickler<'a>) = ()
+    static member Assign(_ : App<FieldPickler, 'a>, _ : IFieldPickler<'a>) = ()
 
 //--------------------------------------------------
 
@@ -272,54 +270,55 @@ type PickerBuilder() =
             | _ -> failwith "unsupported map type"
 
         member _.Field shape (HKT.Unpack fc) = 
-            HKT.pack {
-                label = shape.Label
-                fpickle = fun k t -> fc.pickle k (shape.Get t)
-                funpickle = fun r t -> shape.Set t (fc.unpickle r)
+            HKT.pack { new IFieldPickler<_> with
+                member _.Label = shape.Label
+                member _.Pickle (k, t) = fc.pickle k (shape.GetByRef &t)
+                member _.UnPickle (r, t) = shape.SetByRef(&t, (fc.unpickle r))
             }
 
         member _.Tuple shape (HKT.Unpacks fields) =
             HKT.pack {
-                pickle = fun k t -> k StartArray; for f in fields do f.fpickle k t; k EndArray
+                pickle = fun k t -> k StartArray; for f in fields do f.Pickle(k, &t); k EndArray
                 unpickle = fun r ->
                     match r true with
                     | StartArray ->
                         let mutable t = shape.CreateUninitialized()
-                        for f in fields do t <- f.funpickle r t
+                        for f in fields do f.UnPickle(r, &t)
                         t
                     | t -> invalidTok t
             }
 
         member _.Record shape (HKT.Unpacks fields) =
-            let fieldDict = fields |> Seq.map (fun f -> f.label, f) |> dict
+            let fieldDict = fields |> Seq.map (fun f -> f.Label, f) |> dict
             HKT.pack {
-                pickle = fun k record -> k StartObject; (for f in fields do k (Label f.label) ; f.fpickle k record); k EndObject
+                pickle = fun k record -> k StartObject; (for f in fields do k (Label f.Label) ; f.Pickle(k, &record)); k EndObject
                 unpickle = fun r ->
                     match r true with
                     | StartObject ->
-                        let rec aux record =
+                        let mutable record = shape.CreateUninitialized()
+                        let mutable hasPendingReads = true
+                        while hasPendingReads do
                             match r true with
                             | Label l ->
                                 let ok,p = fieldDict.TryGetValue l
-                                if ok then p.funpickle r record
-                                else aux record
-                            | EndObject -> record
+                                if ok then p.UnPickle(r, &record)
+                            | EndObject -> hasPendingReads <- false
                             | t -> invalidTok t
 
-                        aux (shape.CreateUninitialized())
+                        record
 
                     | t -> invalidTok t
             }
 
         member _.Union shape (HKT.Unpackss fieldss) =
-            let fieldDicts = fieldss |> Seq.map (Seq.map (fun f -> f.label, f) >> dict) |> Seq.toArray
+            let fieldDicts = fieldss |> Seq.map (Seq.map (fun f -> f.Label, f) >> dict) |> Seq.toArray
             HKT.pack {
                 pickle = fun k union -> 
                     k StartObject; 
                     let tag = shape.GetTag union
                     let case = shape.UnionCases.[tag]
                     k (Label "_case") ; k (String case.CaseInfo.Name)
-                    for f in fieldss.[tag] do f.fpickle k union
+                    for f in fieldss.[tag] do f.Pickle(k, &union)
                     k EndObject
 
                 unpickle = fun r ->
@@ -328,37 +327,39 @@ type PickerBuilder() =
                         let tag = shape.GetTag caseName
                         let case = shape.UnionCases.[tag]
                         let fieldDict = fieldDicts.[tag]
-                        let rec aux union =
+                        let mutable union = case.CreateUninitialized()
+                        let mutable hasPendingReads = true
+                        while hasPendingReads do
                             match r true with
                             | Label l ->
                                 let ok,p = fieldDict.TryGetValue l
-                                if ok then p.funpickle r union
-                                else aux union
-                            | EndObject -> union
+                                if ok then p.UnPickle(r, &union)
+                            | EndObject -> hasPendingReads <- false
                             | t -> invalidTok t
 
-                        aux (case.CreateUninitialized())
+                        union
 
                     | t -> invalidTok t
             }
 
         member _.CliMutable shape (HKT.Unpacks fields) =
-            let fieldDict = fields |> Seq.map (fun f -> f.label, f) |> dict
+            let fieldDict = fields |> Seq.map (fun f -> f.Label, f) |> dict
             HKT.pack {
-                pickle = fun k record -> k StartObject; (for f in fields do k (Label f.label) ; f.fpickle k record); k EndObject
+                pickle = fun k record -> k StartObject; (for f in fields do k (Label f.Label) ; f.Pickle(k, &record)); k EndObject
                 unpickle = fun r ->
                     match r true with
                     | StartObject ->
-                        let rec aux record =
+                        let mutable record = shape.CreateUninitialized()
+                        let mutable hasPendingReads = true
+                        while hasPendingReads do
                             match r true with
                             | Label l ->
                                 let ok,p = fieldDict.TryGetValue l
-                                if ok then p.funpickle r record
-                                else aux record
-                            | EndObject -> record
+                                if ok then p.UnPickle(r, &record)
+                            | EndObject -> hasPendingReads <- false
                             | t -> invalidTok t
 
-                        aux (shape.CreateUninitialized())
+                        record
 
                     | t -> invalidTok t
             }

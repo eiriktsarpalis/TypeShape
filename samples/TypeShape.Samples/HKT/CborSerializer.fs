@@ -20,8 +20,8 @@ type CborConverter<'T> =
 /// Serializes and deserializes the existentially packed field of a given type
 type CborFieldConverter<'DeclaringType> =
     abstract PropertyName : string
-    abstract SerializeField : CborWriter -> 'DeclaringType -> unit
-    abstract DeserializeField : CborReader -> 'DeclaringType -> 'DeclaringType
+    abstract SerializeField : CborWriter * inref<'DeclaringType> -> unit
+    abstract DeserializeField : CborReader * byref<'DeclaringType> -> unit
 
 [<AutoOpen>]
 module private CborHelpers =
@@ -377,14 +377,13 @@ type CborConverterBuilder() =
             { new CborConverter<'T> with
                 member _.Serialize writer value =
                     writer.WriteStartArray shape.Elements.Length
-                    for fieldConverter in fieldConverters do fieldConverter.SerializeField writer value
+                    for fieldConverter in fieldConverters do fieldConverter.SerializeField(writer, &value)
                     writer.WriteEndArray()
 
                 member _.Deserialize reader =
                     let _ = reader.ReadStartArray()
                     let mutable result = shape.CreateUninitialized()
-                    for fieldConverter in fieldConverters do
-                        result <- fieldConverter.DeserializeField reader result
+                    for fieldConverter in fieldConverters do fieldConverter.DeserializeField(reader, &result)
                     reader.ReadEndArray()
                     result }
             |> HKT.pack
@@ -396,7 +395,7 @@ type CborConverterBuilder() =
                     writer.WriteStartMap shape.Fields.Length
                     for fieldConverter in fieldConverters do 
                         writer.WriteTextString fieldConverter.PropertyName
-                        fieldConverter.SerializeField writer value
+                        fieldConverter.SerializeField(writer, &value)
                     writer.WriteEndMap()
 
                 member _.Deserialize reader =
@@ -407,7 +406,7 @@ type CborConverterBuilder() =
                         let fieldIndex = labelSearch.TryFindIndex key
                         if fieldIndex < 0 then reader.SkipValue() else
                         let fp = fieldConverters.[fieldIndex]
-                        result <- fp.DeserializeField reader result
+                        fp.DeserializeField(reader, &result)
                     reader.ReadEndMap()
                     result }
             |> HKT.pack
@@ -432,7 +431,7 @@ type CborConverterBuilder() =
                         writer.WriteTextString caseInfo.CaseInfo.Name
                         for fieldConverter in fieldConverters do
                             writer.WriteTextString fieldConverter.PropertyName
-                            fieldConverter.SerializeField writer value
+                            fieldConverter.SerializeField(writer, &value)
                         writer.WriteEndMap()
 
                 member _.Deserialize reader =
@@ -459,7 +458,7 @@ type CborConverterBuilder() =
                             let fieldIndex = labelSearch.TryFindIndex key
                             if fieldIndex < 0 then reader.SkipValue() else
                             let fieldConverter = fieldConverters.[fieldIndex]
-                            result <- fieldConverter.DeserializeField reader result
+                            fieldConverter.DeserializeField(reader, &result)
                         reader.ReadEndMap()
                         result
                     | token -> CborHelpers.throwInvalidToken token }
@@ -473,7 +472,7 @@ type CborConverterBuilder() =
                     writer.WriteStartMap shape.Properties.Length
                     for fieldConverter in fieldConverters do 
                         writer.WriteTextString fieldConverter.PropertyName
-                        fieldConverter.SerializeField writer value
+                        fieldConverter.SerializeField(writer, &value)
                     writer.WriteEndMap()
 
                 member _.Deserialize reader =
@@ -484,7 +483,7 @@ type CborConverterBuilder() =
                         let fieldIndex = labelSearch.TryFindIndex key
                         if fieldIndex < 0 then reader.SkipValue() else
                         let fp = fieldConverters.[fieldIndex]
-                        result <- fp.DeserializeField reader result
+                        fp.DeserializeField(reader, &result)
                     reader.ReadEndMap()
                     result }
             |> HKT.pack
@@ -493,13 +492,13 @@ type CborConverterBuilder() =
         member _.Field shape (HKT.Unpack fieldConverter) = 
             { new CborFieldConverter<'DeclaringType> with
                 member _.PropertyName = shape.Label
-                member _.SerializeField writer value =
-                    let field = shape.Get value
+                member _.SerializeField (writer, value) =
+                    let field = shape.GetByRef &value
                     fieldConverter.Serialize writer field
 
-                member _.DeserializeField reader value =
+                member _.DeserializeField (reader, value) =
                     let field = fieldConverter.Deserialize reader
-                    shape.Set value field }
+                    shape.SetByRef(&value, field) }
             |> HKT.pack
 
 /// Tagless-final converter folding logic
