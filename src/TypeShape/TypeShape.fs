@@ -683,10 +683,8 @@ module private MemberUtils =
 
 #if TYPESHAPE_EMIT
     open System.Reflection.Emit
-    open System.Collections.Concurrent
 
     type private Marker = class end
-    let private compileCache = new ConcurrentDictionary<Type * string, Lazy<Delegate>>()
 
     type Getter<'DeclaringType, 'MemberType> = delegate of inref<'DeclaringType> -> 'MemberType 
     type Setter<'DeclaringType, 'MemberType> = delegate of byref<'DeclaringType> * 'MemberType -> unit
@@ -696,15 +694,11 @@ module private MemberUtils =
                 (argTypes : Type []) (returnType : Type)
                 (ilBuilder : ILGenerator -> unit) =
 
-        let compile () =
-            let name = sprintf "%O-%s" typeof<'Delegate> id
-            let dynamicMethod = new DynamicMethod(name, returnType, argTypes, typeof<Marker>, skipVisibility = true)
-            let ilGen = dynamicMethod.GetILGenerator()
-            do ilBuilder ilGen
-            dynamicMethod.CreateDelegate typeof<'Delegate>
-
-        let wrapper = compileCache.GetOrAdd((typeof<'Delegate>, id), fun _ -> lazy(compile ()))
-        wrapper.Value :?> 'Delegate
+        let name = sprintf "%O-%s" typeof<'Delegate> id
+        let dynamicMethod = new DynamicMethod(name, returnType, argTypes, typeof<Marker>, skipVisibility = true)
+        let ilGen = dynamicMethod.GetILGenerator()
+        do ilBuilder ilGen
+        dynamicMethod.CreateDelegate typeof<'Delegate> :?> 'Delegate
 
     /// Emits a dynamic method that projects supplied member path
     let emitGetter<'DeclaringType, 'Property> (path : MemberInfo []) =
@@ -1160,57 +1154,52 @@ and ITupleVisitor<'R> =
 and [<Sealed>] ShapeTuple<'Tuple> private () =
     let tupleInfo = mkTupleInfo typeof<'Tuple>
 
-    let tupleElems =
+    let tupleElems = lazy(
         gatherTupleMembers tupleInfo
         |> Seq.mapi (fun i (pI, path) -> 
             let label = sprintf "Item%d" (i+1)
             mkWriteMemberUntyped<'Tuple> label pI path)
-        |> Seq.toArray
+        |> Seq.toArray)
 
-    let fieldStack = gatherNestedFields tupleInfo
-
-#if TYPESHAPE_EMIT
     let ctorf = 
-        if typeof<'Tuple>.IsValueType || fieldStack.Length > 0 then Unchecked.defaultof<_>
-        else 
+        let fieldStack = gatherNestedFields tupleInfo
+        if typeof<'Tuple>.IsValueType then null
+#if TYPESHAPE_EMIT
+        elif fieldStack.Length = 0 then
             let ctor = typeof<'Tuple>.GetConstructors().[0]
             emitUninitializedCtor<'Tuple> ctor
 #endif
-
-    member _.IsStructTuple = typeof<'Tuple>.IsValueType
-    /// Tuple element shape definitions
-    member _.Elements = tupleElems
-    /// Creates an uninitialized tuple instance of given type
-    [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
-    member _.CreateUninitialized() : 'Tuple =
-        if typeof<'Tuple>.IsValueType then Unchecked.defaultof<'Tuple>
-#if TYPESHAPE_EMIT
-        elif fieldStack.Length = 0 then ctorf.Invoke()
-#endif
         else
             // slow path: allocate nested tuple values as needed
-            let initializeTupleWithNestedTuples() =
+            Func<_>(fun () ->
                 let tuple = FormatterServices.GetUninitializedObject typeof<'Tuple>
                 let mutable currentTuple = tuple
                 for f in fieldStack do
                     let nestedTuple = FormatterServices.GetUninitializedObject f.FieldType
                     f.SetValue(currentTuple, nestedTuple)
                     currentTuple <- nestedTuple
-                tuple :?> 'Tuple
+                tuple :?> 'Tuple)
 
-            initializeTupleWithNestedTuples()
+    member _.IsStructTuple = typeof<'Tuple>.IsValueType
+    /// Tuple element shape definitions
+    member _.Elements = tupleElems.Value
+    /// Creates an uninitialized tuple instance of given type
+    [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
+    member _.CreateUninitialized() : 'Tuple =
+        if typeof<'Tuple>.IsValueType then Unchecked.defaultof<'Tuple>
+        else ctorf.Invoke()
 
 #if TYPESHAPE_EXPR
     member _.CreateUninitializedExpr() : Expr<'Tuple> =
         if typeof<'Tuple>.IsValueType then
             Expr.Cast<'Tuple>(Expr.DefaultValue typeof<'Tuple>)
         else
-            let values = tupleElems |> Seq.map (fun e -> getDefaultValueExpr e.Member.Type) |> Seq.toList
+            let values = tupleElems.Value |> Seq.map (fun e -> getDefaultValueExpr e.Member.Type) |> Seq.toList
             Expr.Cast<'Tuple>(Expr.NewTuple(values))
 #endif
 
     interface IShapeTuple with
-        member _.Elements = tupleElems |> Array.map (fun e -> e :> _)
+        member _.Elements = tupleElems.Value |> Array.map (fun e -> e :> _)
         member s.Accept v = v.Visit s
 
 //---------------------
@@ -1237,12 +1226,12 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
         mkWriteMemberUntyped<'Record> prop.Name prop [|backingField :> MemberInfo|]
 
 #if TYPESHAPE_EMIT
-    let ctorf = if typeof<'Record>.IsValueType then Unchecked.defaultof<_> else emitUninitializedCtor<'Record> ctorInfo
+    let ctorf = if typeof<'Record>.IsValueType then null else emitUninitializedCtor<'Record> ctorInfo
 #else
     let ctorParams = props |> Array.map (fun p -> defaultOfUntyped p.PropertyType)
 #endif
 
-    let recordFields = Array.map mkRecordField props
+    let recordFields = lazy (Array.map mkRecordField props)
 
     /// True if an F# struct record
     member _.IsStructRecord = typeof<'Record>.IsValueType
@@ -1251,7 +1240,7 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
     member _.IsAnonymousRecord = isAnonymousRecord
 
     /// F# record field shapes
-    member _.Fields = recordFields
+    member _.Fields = recordFields.Value
 
     /// Creates an uninitialized instance for given record
     [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
@@ -1274,7 +1263,7 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
         member _.IsStructRecord = typeof<'Record>.IsValueType
         member _.IsAnonymousRecord = isAnonymousRecord
 
-        member _.Fields = recordFields |> Array.map unbox
+        member _.Fields = recordFields.Value |> Array.map unbox
         member s.Accept v = v.Visit s
 
 and IFSharpRecordVisitor<'R> =
@@ -1300,7 +1289,7 @@ type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
     let ctorParams = properties |> Array.map (fun p -> defaultOfUntyped p.PropertyType)
 #endif
 
-    let caseFields =
+    let caseFields = lazy (
         match properties with
         | [||] -> [||]
         | _ ->
@@ -1310,14 +1299,14 @@ type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
                 let fieldInfo = allFields |> Array.find (fun f -> f.Name = "_" + p.Name || f.Name.ToLower() = p.Name.ToLower())
                 mkWriteMemberUntyped<'Union> p.Name p [|fieldInfo|]
 
-            Array.map mkUnionField properties
+            Array.map mkUnionField properties)
 
     /// Underlying FSharp.Reflection.UnionCaseInfo description
     member _.CaseInfo = uci
     /// Number of fields in the particular union case
     member _.Arity = properties.Length
     /// Field shapes for union case
-    member _.Fields = caseFields
+    member _.Fields = caseFields.Value
 
     /// Creates an uninitialized instance for specific union case
     [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
@@ -1336,7 +1325,7 @@ type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
 
     interface IShapeFSharpUnionCase with
         member _.CaseInfo = uci
-        member _.Fields = caseFields |> Array.map (fun f -> f :> _)
+        member _.Fields = caseFields.Value |> Array.map (fun f -> f :> _)
 
 /// Denotes an F# Union shape
 type IShapeFSharpUnion =
@@ -1346,11 +1335,11 @@ type IShapeFSharpUnion =
 
 /// Denotes an F# Union shape
 and [<Sealed>] ShapeFSharpUnion<'Union> private () =
-    let ucis = 
+    let ucis = lazy(
         FSharpType.GetUnionCases(typeof<'Union>, AllMembers)
         |> Array.map (fun uci -> 
             Activator.CreateInstanceGeneric<ShapeFSharpUnionCase<'Union>>([||],[|uci|]) 
-            :?> ShapeFSharpUnionCase<'Union>)
+            :?> ShapeFSharpUnionCase<'Union>))
 
 #if TYPESHAPE_EMIT || TYPESHAPE_EXPR
     let tagReaderInfo = FSharpValue.PreComputeUnionTagMemberInfo(typeof<'Union>, AllMembers)
@@ -1362,12 +1351,12 @@ and [<Sealed>] ShapeFSharpUnion<'Union> private () =
     let tagReader = FSharpValue.PreComputeUnionTagReader(typeof<'Union>, AllMembers)
 #endif
 
-    let caseNames = ucis |> Array.map (fun u -> u.CaseInfo.Name)
+    let caseNames = lazy(ucis.Value |> Array.map (fun u -> u.CaseInfo.Name))
 
     member _.IsStructUnion = typeof<'Union>.IsValueType
 
     /// Case shapes for given union type
-    member _.UnionCases = ucis
+    member _.UnionCases = ucis.Value
     /// Gets the underlying tag id for given union instance
     [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
     member _.GetTag (union : 'Union) : int =
@@ -1392,7 +1381,7 @@ and [<Sealed>] ShapeFSharpUnion<'Union> private () =
 
     /// Looks the underlying tag id for given union case name using linear search.
     member _.GetTag (caseName : string) : int =
-        let caseNames = caseNames
+        let caseNames = caseNames.Value
         let n = caseNames.Length
         let mutable i = 0
         let mutable notFound = true
@@ -1417,7 +1406,7 @@ and [<Sealed>] ShapeFSharpUnion<'Union> private () =
 #endif
 
     interface IShapeFSharpUnion with
-        member _.UnionCases = ucis |> Array.map (fun u -> u :> _)
+        member _.UnionCases = ucis.Value |> Array.map (fun u -> u :> _)
         member s.Accept v = v.Visit s
 
 and IFSharpUnionVisitor<'R> =
@@ -1436,11 +1425,11 @@ type IShapeCliMutable =
 /// Denotes a type that behaves like a C# record:
 /// Carries a parameterless constructor and settable properties
 and [<Sealed>] ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) =
-    let properties =
+    let properties = lazy(
         typeof<'Record>.GetProperties(AllInstanceMembers)
         |> Seq.filter (fun p -> p.CanRead && p.CanWrite && p.GetIndexParameters().Length = 0)
         |> Seq.map (fun p -> mkWriteMemberUntyped<'Record> p.Name p [|p|])
-        |> Seq.toArray
+        |> Seq.toArray)
 
 #if TYPESHAPE_EMIT
     let ctor = emitUninitializedCtor<'Record> defaultCtor
@@ -1462,12 +1451,12 @@ and [<Sealed>] ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) 
 #endif
 
     /// Property shapes for C# record
-    member _.Properties = properties
+    member _.Properties = properties.Value
     /// Gets the default constructor info defined in the type
     member _.DefaultCtorInfo = defaultCtor
 
     interface IShapeCliMutable with
-        member _.Properties = properties |> Array.map (fun p -> p :> _)
+        member _.Properties = properties.Value |> Array.map (fun p -> p :> _)
         member s.Accept v = v.Visit s
 
 and ICliMutableVisitor<'R> =
@@ -1492,38 +1481,38 @@ type IShapePoco =
 
 /// Denotes any .NET type that is either a class or a struct
 and [<Sealed>] ShapePoco<'Poco> private () =
-    let fields = 
+    let fields = lazy(
         gatherMembers (fun t -> t.GetFields(AllInstanceMembers ||| BindingFlags.FlattenHierarchy)) typeof<'Poco>
-        |> Array.map (fun f -> mkWriteMemberUntyped<'Poco> f.Name f [|f|])
+        |> Array.map (fun f -> mkWriteMemberUntyped<'Poco> f.Name f [|f|]))
 
     let isCSharpRecord =
         typeof<IEquatable<'Poco>>.IsAssignableFrom(typeof<'Poco>) &&
         let cloner = typeof<'Poco>.GetMethod("<Clone>$", BindingFlags.Instance ||| BindingFlags.Public, null, types = [||], modifiers = null) in
         not (isNull cloner) && cloner.IsVirtual
 
-    let ctors =
+    let ctors = lazy(
         typeof<'Poco>.GetConstructors(AllInstanceMembers)
         // filter any ctors that accept byrefs or pointers
         |> Seq.filter (fun c -> c.GetParameters() |> Array.forall(fun p -> not <| isUnsupported p.ParameterType))
         |> Seq.map (fun c -> mkCtorUntyped<'Poco> c)
-        |> Seq.toArray
+        |> Seq.toArray)
 
-    let properties =
+    let properties = lazy(
         typeof<'Poco>.GetProperties(AllInstanceMembers)
         |> Seq.filter (fun p -> p.CanRead)
         |> Seq.map (fun p -> mkMemberUntyped<'Poco> p.Name p [|p|])
-        |> Seq.toArray
+        |> Seq.toArray)
 
     /// True iff POCO is a struct
     member _.IsStruct = typeof<'Poco>.IsValueType
     /// True iff POCO is a C# 9 record
     member _.IsCSharpRecord = isCSharpRecord
     /// Constructor shapes for the type
-    member _.Constructors = ctors
+    member _.Constructors = ctors.Value
     /// Field shapes for the type
-    member _.Fields = fields
+    member _.Fields = fields.Value
     /// Property shapes for the type
-    member _.Properties = properties
+    member _.Properties = properties.Value
 
     /// Creates an uninitialized instance for POCO
     [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
@@ -1538,9 +1527,9 @@ and [<Sealed>] ShapePoco<'Poco> private () =
 #endif
 
     interface IShapePoco with
-        member _.Constructors = ctors |> Array.map (fun c -> c :> _)
-        member _.Fields = fields |> Array.map (fun f -> f :> _)
-        member _.Properties = properties |> Array.map (fun p -> p :> _)
+        member _.Constructors = ctors.Value |> Array.map (fun c -> c :> _)
+        member _.Fields = fields.Value |> Array.map (fun f -> f :> _)
+        member _.Properties = properties.Value |> Array.map (fun p -> p :> _)
         member _.IsStruct = typeof<'Poco>.IsValueType
         member _.IsCSharpRecord = isCSharpRecord
         member s.Accept v = v.Visit s
