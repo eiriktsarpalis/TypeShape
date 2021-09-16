@@ -143,9 +143,9 @@ module private TypeShapeImpl =
 
     let inline internal isUnsupported (typ: Type) =
         typ.IsPointer ||
-        typ.IsByRef ||
+        typ.IsByRef
 #if NETCOREAPP
-        typ.IsByRefLike
+        || typ.IsByRefLike
 #endif
 
     let resolveTypeShape(typ : Type) =
