@@ -12,6 +12,7 @@
     <Compile Include="expr.fs" />
     <Compile Include="hashcode-staged.fs" />
     <Compile Include="iso.fs" />
+    <Compile Include="jsonconverter.fs" />
     <Compile Include="mock.fs" />
     <Compile Include="parser.fs" />
     <Compile Include="printer.fs" />
