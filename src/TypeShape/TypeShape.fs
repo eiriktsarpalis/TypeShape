@@ -784,29 +784,30 @@ module private MemberUtils =
         emitDynamicMethod<Setter<'DeclaringType, 'Property>>
             injectionId [|typeof<'DeclaringType>.MakeByRefType(); typeof<'Property>|] typeof<System.Void> builder
 
+    let ldDefaultValue (gen : ILGenerator) (t : Type) =
+        if not t.IsValueType then gen.Emit OpCodes.Ldnull
+        elif t = typeof<bool> || t = typeof<byte> || t = typeof<sbyte> ||
+            t = typeof<char> || t = typeof<uint16> || t = typeof<int16> ||
+            t = typeof<int32> || t = typeof<uint32> then
+            gen.Emit OpCodes.Ldc_I4_0
+        elif t = typeof<int64> || t = typeof<uint64> then
+            gen.Emit OpCodes.Ldc_I4_0 ; gen.Emit OpCodes.Conv_I8
+        elif t = typeof<single> then gen.Emit(OpCodes.Ldc_R4, 0.0f)
+        elif t = typeof<double> then gen.Emit(OpCodes.Ldc_R8, 0.0)
+        elif t = typeof<IntPtr> then gen.Emit OpCodes.Ldc_I4_0; gen.Emit OpCodes.Conv_I
+        elif t = typeof<UIntPtr> then gen.Emit OpCodes.Ldc_I4_0; gen.Emit OpCodes.Conv_U
+        else
+            assert(not t.IsPrimitive)
+            let lvar = gen.DeclareLocal t
+            gen.Emit(OpCodes.Ldloca_S, lvar.LocalIndex)
+            gen.Emit(OpCodes.Initobj, t)
+            gen.Emit(OpCodes.Ldloc, lvar.LocalIndex)
+        
+
     /// Emits a dynamic method that injects uninitialized values to supplied static method or ctor
     let emitUninitializedCtor<'DeclaringType> (ctor : MethodBase) =
         let builder (gen : ILGenerator) =
-            for p in ctor.GetParameters() do
-                let pt = p.ParameterType
-                if not pt.IsValueType then
-                    gen.Emit OpCodes.Ldnull
-                elif pt = typeof<bool> || pt = typeof<byte> || pt = typeof<sbyte> ||
-                    pt = typeof<char> || pt = typeof<uint16> || pt = typeof<int16> ||
-                    pt = typeof<int32> || pt = typeof<uint32> then
-                    gen.Emit OpCodes.Ldc_I4_0
-                elif pt = typeof<int64> || pt = typeof<uint64> then
-                    gen.Emit OpCodes.Ldc_I4_0 ; gen.Emit OpCodes.Conv_I8
-                elif pt = typeof<single> then gen.Emit(OpCodes.Ldc_R4, 0.0f)
-                elif pt = typeof<double> then gen.Emit(OpCodes.Ldc_R8, 0.0)
-                elif pt = typeof<IntPtr> then gen.Emit OpCodes.Ldc_I4_0; gen.Emit OpCodes.Conv_I
-                elif pt = typeof<UIntPtr> then gen.Emit OpCodes.Ldc_I4_0; gen.Emit OpCodes.Conv_U
-                else
-                    assert(not pt.IsPrimitive)
-                    let lvar = gen.DeclareLocal pt
-                    gen.Emit(OpCodes.Ldloca_S, lvar.LocalIndex)
-                    gen.Emit(OpCodes.Initobj, pt)
-                    gen.Emit(OpCodes.Ldloc, lvar.LocalIndex)
+            for p in ctor.GetParameters() do ldDefaultValue gen p.ParameterType
 
             match ctor with
             | :? ConstructorInfo as c -> gen.Emit(OpCodes.Newobj, c)
@@ -850,6 +851,117 @@ module private MemberUtils =
 
         emitDynamicMethod<Func<SerializationInfo, StreamingContext, 'T>> "serializableCtor" 
             [|typeof<SerializationInfo>; typeof<StreamingContext>|] typeof<'T> builder
+#endif
+
+[<AutoOpen>]
+module private ShapeTupleImpl =
+
+    [<NoEquality; NoComparison>]
+    type TupleInfo =
+        { 
+            Current : Type
+            Fields : (MemberInfo * FieldInfo) []
+            Nested : (FieldInfo * TupleInfo) option
+        }
+
+    let rec mkTupleInfo (t : Type) =
+        if t.IsValueType then
+            let fields = t.GetFields()
+            let getField (f : FieldInfo) = f :> MemberInfo, f
+            let fs, nested =
+                if fields.Length = 8 then
+                    let nestedField = fields.[7]
+                    let nestedInfo = mkTupleInfo nestedField.FieldType
+                    Array.map getField fields.[..6], Some(nestedField, nestedInfo)
+                else
+                    Array.map getField fields, None
+
+            { Current = t ; Fields = fs ; Nested = nested }
+        else
+            let props = t.GetProperties()
+            let fields = t.GetFields(BindingFlags.NonPublic ||| BindingFlags.Instance)
+            let getField (p : PropertyInfo) =
+                let field = fields |> Array.find(fun f -> f.Name = "m_" + p.Name)
+                p :> MemberInfo, field
+
+            let fs, nested =
+                if props.Length = 8 then
+                    let nestedField = fields.[7]
+                    let nestedInfo = mkTupleInfo nestedField.FieldType
+                    Array.map getField props.[..6], Some(nestedField, nestedInfo)
+                else
+                    Array.map getField props, None
+
+            { Current = t ; Fields = fs ; Nested = nested }
+
+    let gatherTupleMembers (tI : TupleInfo) =
+        let rec aux (ctx : MemberInfo list) (tI : TupleInfo) = seq {
+            for p,f in tI.Fields do
+                yield p, f :> MemberInfo :: ctx |> List.rev |> List.toArray
+
+            match tI.Nested with
+            | Some (fI,n) -> yield! aux (fI :> MemberInfo :: ctx) n
+            | None -> ()
+        }
+
+        aux [] tI
+
+    let gatherNestedFields (tI : TupleInfo) =
+        let rec aux fs (tI : TupleInfo) =
+            match tI.Nested with
+            | Some (fI,n) -> aux (fI :: fs) n
+            | _ -> List.rev fs
+
+        aux [] tI
+        |> List.toArray
+
+#if TYPESHAPE_EMIT
+    open System.Reflection.Emit
+
+    let emitCreateUninitializedTuple<'Tuple> (tupleInfo : TupleInfo) =
+        let builder (gen : ILGenerator) =
+            let rec emitCtor (tI : TupleInfo) =
+                for (_,field) in tI.Fields do
+                    ldDefaultValue gen field.FieldType
+
+                match tI.Nested with
+                | None -> ()
+                | Some (_,nestedTupleInfo) -> emitCtor nestedTupleInfo
+
+                let ctorInfo = tI.Current.GetConstructors().[0]
+                gen.Emit(OpCodes.Newobj, ctorInfo)
+
+            emitCtor tupleInfo
+            gen.Emit OpCodes.Ret
+
+        emitDynamicMethod<Func<'Tuple>> "tupleCtor" [||] typeof<'Tuple> builder
+
+    let emitConstructorFunc<'Args, 'T> (arity : int) (ctorInfo : ConstructorInfo) =
+        let builder (gen : ILGenerator) =
+            match arity with
+            | 0 -> ()
+            | 1 -> gen.Emit OpCodes.Ldarg_0
+            | _ ->
+                let argsTupleInfo = mkTupleInfo typeof<'Args>
+                let parentFields = new ResizeArray<FieldInfo>()
+                let rec ldTupleElems (tI : TupleInfo) =
+                    for (_,field) in tI.Fields do
+                        gen.Emit OpCodes.Ldarg_0
+                        for parentFld in parentFields do gen.Emit(OpCodes.Ldfld, parentFld)
+                        gen.Emit(OpCodes.Ldfld, field)
+
+                    match tI.Nested with
+                    | None -> ()
+                    | Some (field, nested) ->
+                        parentFields.Add field
+                        ldTupleElems nested
+
+                ldTupleElems argsTupleInfo
+
+            gen.Emit(OpCodes.Newobj, ctorInfo)
+            gen.Emit OpCodes.Ret
+                
+        emitDynamicMethod<Func<'Args, 'T>> "constructorFunc" [|typeof<'Args>|] typeof<'T> builder
 #endif
 
 //-------------------------
@@ -1003,16 +1115,25 @@ and IShapeConstructor<'DeclaringType> =
 
 /// Identifies a constructor implementation shape
 and [<Sealed>] ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : ConstructorInfo, arity : int) =
+#if TYPESHAPE_EMIT
+    let ctorf = emitConstructorFunc<'CtorArgs, 'DeclaringType> arity ctorInfo
+#else
     let valueReader = 
         match arity with
         | 0 -> fun _ -> [||]
         | 1 -> fun x -> [|x|]
         |_ -> FSharpValue.PreComputeTupleReader typeof<'CtorArgs>
+#endif
 
     /// Creates an instance of declaring type with supplied constructor args
     member _.Invoke(args : 'CtorArgs) =
+#if TYPESHAPE_EMIT
+        ctorf.Invoke args
+#else
         let args = valueReader args
         ctorInfo.Invoke args :?> 'DeclaringType
+#endif
+
 
 #if TYPESHAPE_EXPR
     /// Creates an instance of declaring type with supplied constructor args
@@ -1068,78 +1189,13 @@ module private MemberUtils2 =
             match arity with
             | 0 -> typeof<unit>
             | 1 -> argTypes.[0]
-            | _ -> FSharpType.MakeTupleType argTypes
+            | _ -> FSharpType.MakeStructTupleType(typeof<int>.Assembly, argTypes)
 
         Activator.CreateInstanceGeneric<ShapeConstructor<_,_>>([|typeof<'Record>; argumentType|], [|box ctorInfo; box arity|])
         :?> IShapeConstructor<'Record>
 
 //--------------------
 // Generic Tuple Shape
-
-[<AutoOpen>]
-module private ShapeTupleImpl =
-
-    [<NoEquality; NoComparison>]
-    type TupleInfo =
-        { 
-            Current : Type
-            Fields : (MemberInfo * FieldInfo) []
-            Nested : (FieldInfo * TupleInfo) option
-        }
-
-    let rec mkTupleInfo (t : Type) =
-        if t.IsValueType then
-            let fields = t.GetFields()
-            let getField (f : FieldInfo) = f :> MemberInfo, f
-            let fs, nested =
-                if fields.Length = 8 then
-                    let nestedField = fields.[7]
-                    let nestedInfo = mkTupleInfo nestedField.FieldType
-                    Array.map getField fields.[..6], Some(nestedField, nestedInfo)
-                else
-                    Array.map getField fields, None
-
-            { Current = t ; Fields = fs ; Nested = nested }
-        else
-            let props = t.GetProperties()
-            let fields = t.GetFields(BindingFlags.NonPublic ||| BindingFlags.Instance)
-            let getField (p : PropertyInfo) =
-                let field = fields |> Array.find(fun f -> f.Name = "m_" + p.Name)
-                p :> MemberInfo, field
-
-            let fs, nested =
-                if props.Length = 8 then
-                    let nestedField = fields.[7]
-                    let nestedInfo = mkTupleInfo nestedField.FieldType
-                    Array.map getField props.[..6], Some(nestedField, nestedInfo)
-                else
-                    Array.map getField props, None
-
-            { Current = t ; Fields = fs ; Nested = nested }
-
-    let gatherTupleMembers (tI : TupleInfo) =
-        let rec aux (ctx : MemberInfo list) (tI : TupleInfo) = seq {
-            for p,f in tI.Fields do
-                yield p, f :> MemberInfo :: ctx |> List.rev |> List.toArray
-
-            match tI.Nested with
-            | Some (fI,n) -> yield! aux (fI :> MemberInfo :: ctx) n
-            | None -> ()
-        }
-
-        aux [] tI
-
-    let gatherNestedFields (tI : TupleInfo) =
-        let rec aux fs (tI : TupleInfo) =
-            match tI.Nested with
-            | Some (fI,n) -> aux (fI :: fs) n
-            | _ -> List.rev fs
-
-        aux [] tI
-        |> List.toArray
-
-//---------------------------
-// Shape Tuple Implementation
 
 /// Denotes a specific System.Tuple shape
 type IShapeTuple =
@@ -1162,15 +1218,12 @@ and [<Sealed>] ShapeTuple<'Tuple> private () =
         |> Seq.toArray)
 
     let ctorf = 
-        let fieldStack = gatherNestedFields tupleInfo
         if typeof<'Tuple>.IsValueType then null
+        else 
 #if TYPESHAPE_EMIT
-        elif fieldStack.Length = 0 then
-            let ctor = typeof<'Tuple>.GetConstructors().[0]
-            emitUninitializedCtor<'Tuple> ctor
-#endif
-        else
-            // slow path: allocate nested tuple values as needed
+            emitCreateUninitializedTuple<'Tuple> tupleInfo
+#else
+            let fieldStack = gatherNestedFields tupleInfo
             Func<_>(fun () ->
                 let tuple = FormatterServices.GetUninitializedObject typeof<'Tuple>
                 let mutable currentTuple = tuple
@@ -1179,6 +1232,7 @@ and [<Sealed>] ShapeTuple<'Tuple> private () =
                     f.SetValue(currentTuple, nestedTuple)
                     currentTuple <- nestedTuple
                 tuple :?> 'Tuple)
+#endif
 
     member _.IsStructTuple = typeof<'Tuple>.IsValueType
     /// Tuple element shape definitions
