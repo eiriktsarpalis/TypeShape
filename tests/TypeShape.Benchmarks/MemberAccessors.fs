@@ -28,7 +28,8 @@ with
         | B _ -> 1
         | C _ -> 2
 
-type TupleType = (struct(int * int * int * int * int * int * int * int * int * int))
+type TupleType = int * int * int * int * int * int * int * int * int * int
+type StructTupleType = (struct(int * int * int * int * int * int * int * int * int * int))
 
 type Getter<'DeclaringType, 'Field> = delegate of inref<'DeclaringType> -> 'Field
 type Setter<'DeclaringType, 'Field> = delegate of byref<'DeclaringType> * 'Field -> unit
@@ -38,11 +39,13 @@ type Lens<'DeclaringType,'Field> = { get : Getter<'DeclaringType, 'Field> ; set 
 type MemberAccessorBenchmark() =
 
     // Handwritten member accessors
+    let defaultTupleConstructor : Func<TupleType> = Func<_>(fun () -> (0,0,0,0,0,0,0,0,0,0))
+    let defaultStructTupleConstructor : Func<StructTupleType> = Func<_>(fun () -> struct(0,0,0,0,0,0,0,0,0,0))
     let defaultConstructor : Func<Record> = Func<_>(fun () -> { A = defautl ; B = defautl ; C = defautl })
+
     let stringLens = { get = Getter<Record,_>(fun r -> r.A) ; set = Setter<_,_>(fun r v -> r.A <- v) }
     let intLens = { get = Getter<Record,_>(fun r -> r.B) ; set = Setter<_,_>(fun r v -> r.B <- v) }
-    let boolLens = { get = Getter<Record,_>(fun r -> r.C) ; set = Setter<_,_>(fun r v -> r.C <- v) }
-    let tupleLens = { get = Getter<TupleType,_>(fun s -> let struct(_,_,_,_,_,_,_,_,_,x) = s in x) ; set = Setter<_,_>(fun s y -> let struct(x1,x2,x3,x4,x5,x6,x7,x8,x9,_) = s in s <- (x1,x2,x3,x4,x5,x6,x7,x8,x9,y)) }
+    let tupleLens = { get = Getter<StructTupleType,_>(fun s -> let struct(_,_,_,_,_,_,_,_,_,x) = s in x) ; set = Setter<_,_>(fun s y -> let struct(x1,x2,x3,x4,x5,x6,x7,x8,x9,_) = s in s <- (x1,x2,x3,x4,x5,x6,x7,x8,x9,y)) }
     let unionTagReader = Getter<Union,_>(fun u -> u.GetTag_NoInlining())
 
     // TypeShape member accessors
@@ -53,7 +56,6 @@ type MemberAccessorBenchmark() =
 
     let stringMemberShape = recordShape.Fields.[0] :?> ShapeMember<Record, string>
     let intMemberShape = recordShape.Fields.[1] :?> ShapeMember<Record, int>
-    let boolMemberShape = recordShape.Fields.[2] :?> ShapeMember<Record, bool>
 
     let unionShape =
         match shapeof<Union> with
@@ -65,10 +67,15 @@ type MemberAccessorBenchmark() =
         | Shape.Tuple (:? ShapeTuple<TupleType> as shape) -> shape
         | _ -> failwith "should not fail"
 
-    let tupleElemShape = tupleShape.Elements.[0] :?> ShapeMember<TupleType, int>
+    let structTupleShape =
+        match shapeof<StructTupleType> with
+        | Shape.Tuple (:? ShapeTuple<StructTupleType> as shape) -> shape
+        | _ -> failwith "should not fail"
+
+    let tupleElemShape = structTupleShape.Elements.[0] :?> ShapeMember<StructTupleType, int>
 
     let mutable value = { A = "string" ; B = 42; C = false }
-    let mutable tuple : TupleType = struct(1,1,1,1,1,1,1,1,1,1)
+    let mutable tuple : StructTupleType = struct(1,1,1,1,1,1,1,1,1,1)
     
     let union1 = A 42
     let union2 = B("str", false)
@@ -80,6 +87,20 @@ type MemberAccessorBenchmark() =
     member _.CreateRecord_CustomLens() = defaultConstructor.Invoke()
     [<Benchmark>]
     member _.CreateRecord_TypeShape() = recordShape.CreateUninitialized()
+
+    [<Benchmark>]
+    member _.CreateTuple_BaseLine() : TupleType = (0,0,0,0,0,0,0,0,0,0)
+    [<Benchmark>]
+    member _.CreateTuple_CustomLens() = defaultTupleConstructor.Invoke()
+    [<Benchmark>]
+    member _.CreateTuple_TypeShape() = tupleShape.CreateUninitialized()
+
+    [<Benchmark>]
+    member _.CreateStructTuple_BaseLine() : StructTupleType = struct(0,0,0,0,0,0,0,0,0,0)
+    [<Benchmark>]
+    member _.CreateStructTuple_CustomLens() = defaultStructTupleConstructor.Invoke()
+    [<Benchmark>]
+    member _.CreateStructTuple_TypeShape() = structTupleShape.CreateUninitialized()
 
     [<Benchmark>]
     member _.GetString_BaseLine() = value.A

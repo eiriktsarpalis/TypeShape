@@ -1218,11 +1218,11 @@ and [<Sealed>] ShapeTuple<'Tuple> private () =
         |> Seq.toArray)
 
     let ctorf = 
-        if typeof<'Tuple>.IsValueType then null
-        else 
 #if TYPESHAPE_EMIT
-            emitCreateUninitializedTuple<'Tuple> tupleInfo
+        emitCreateUninitializedTuple<'Tuple> tupleInfo
 #else
+        if typeof<'Tuple>.IsValueType then Func<_>(fun () -> Unchecked.defaultof<'Tuple>)
+        else
             let fieldStack = gatherNestedFields tupleInfo
             Func<_>(fun () ->
                 let tuple = FormatterServices.GetUninitializedObject typeof<'Tuple>
@@ -1239,9 +1239,7 @@ and [<Sealed>] ShapeTuple<'Tuple> private () =
     member _.Elements = tupleElems.Value
     /// Creates an uninitialized tuple instance of given type
     [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
-    member _.CreateUninitialized() : 'Tuple =
-        if typeof<'Tuple>.IsValueType then Unchecked.defaultof<'Tuple>
-        else ctorf.Invoke()
+    member _.CreateUninitialized() : 'Tuple = ctorf.Invoke()
 
 #if TYPESHAPE_EXPR
     member _.CreateUninitializedExpr() : Expr<'Tuple> =
@@ -1280,7 +1278,7 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
         mkWriteMemberUntyped<'Record> prop.Name prop [|backingField :> MemberInfo|]
 
 #if TYPESHAPE_EMIT
-    let ctorf = if typeof<'Record>.IsValueType then null else emitUninitializedCtor<'Record> ctorInfo
+    let ctorf = emitUninitializedCtor<'Record> ctorInfo
 #else
     let ctorParams = props |> Array.map (fun p -> defaultOfUntyped p.PropertyType)
 #endif
@@ -1299,7 +1297,6 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
     /// Creates an uninitialized instance for given record
     [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
     member _.CreateUninitialized() : 'Record =
-        if typeof<'Record>.IsValueType then Unchecked.defaultof<'Record> else
 #if TYPESHAPE_EMIT
         ctorf.Invoke()
 #else
@@ -1569,8 +1566,7 @@ and [<Sealed>] ShapePoco<'Poco> private () =
     member _.Properties = properties.Value
 
     /// Creates an uninitialized instance for POCO
-    [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
-    member inline _.CreateUninitialized() : 'Poco =
+    member _.CreateUninitialized() : 'Poco =
         if typeof<'Poco>.IsValueType then Unchecked.defaultof<'Poco>
         else FormatterServices.GetUninitializedObject(typeof<'Poco>) :?> 'Poco
 
