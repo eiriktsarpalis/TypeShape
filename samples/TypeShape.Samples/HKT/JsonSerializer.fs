@@ -19,8 +19,8 @@ type JsonConverter<'T> =
 /// Serializes and deserializes the existentially packed field of a given type
 type JsonFieldConverter<'DeclaringType> =
     abstract PropertyName : string
-    abstract SerializeField : Utf8JsonWriter -> 'DeclaringType -> unit
-    abstract DeserializeField : byref<Utf8JsonReader> * 'DeclaringType -> 'DeclaringType
+    abstract SerializeField : Utf8JsonWriter * inref<'DeclaringType> -> unit
+    abstract DeserializeField : byref<Utf8JsonReader> * byref<'DeclaringType> -> unit
 
 [<AutoOpen>]
 module private JsonHelpers =
@@ -293,7 +293,7 @@ type JsonConverterBuilder() =
             { new JsonConverter<'T> with
                 member _.Serialize writer value =
                     writer.WriteStartArray()
-                    for fieldConverter in fieldConverters do fieldConverter.SerializeField writer value
+                    for fieldConverter in fieldConverters do fieldConverter.SerializeField (writer, &value)
                     writer.WriteEndArray()
 
                 member _.Deserialize reader =
@@ -301,7 +301,7 @@ type JsonConverterBuilder() =
                     let mutable result = shape.CreateUninitialized()
                     for fieldConverter in fieldConverters do
                         ensureRead &reader
-                        result <- fieldConverter.DeserializeField(&reader, result)
+                        fieldConverter.DeserializeField(&reader, &result)
                     ensureRead &reader
                     ensureToken JsonTokenType.EndArray &reader
                     result }
@@ -314,7 +314,7 @@ type JsonConverterBuilder() =
                     writer.WriteStartObject()
                     for fieldConverter in fieldConverters do 
                         writer.WritePropertyName fieldConverter.PropertyName
-                        fieldConverter.SerializeField writer value
+                        fieldConverter.SerializeField (writer, &value)
                     writer.WriteEndObject()
 
                 member _.Deserialize reader =
@@ -326,7 +326,7 @@ type JsonConverterBuilder() =
                         ensureRead &reader
                         if fieldIndex < 0 then reader.Skip() else
                         let fp = fieldConverters.[fieldIndex]
-                        result <- fp.DeserializeField(&reader, result)
+                        fp.DeserializeField(&reader, &result)
 
                     result }
             |> HKT.pack
@@ -341,7 +341,7 @@ type JsonConverterBuilder() =
 
             { new JsonConverter<'T> with
                 member _.Serialize writer value =
-                    let tag = shape.GetTag value
+                    let tag = shape.GetTagByRef &value
                     let _, caseInfo, fieldConverters = unionCases.[tag]
                     if fieldConverters.Length = 0 then
                         writer.WriteStringValue caseInfo.CaseInfo.Name
@@ -351,7 +351,7 @@ type JsonConverterBuilder() =
                         writer.WriteStringValue caseInfo.CaseInfo.Name
                         for fieldConverter in fieldConverters do 
                             writer.WritePropertyName fieldConverter.PropertyName
-                            fieldConverter.SerializeField writer value
+                            fieldConverter.SerializeField (writer, &value)
                         writer.WriteEndObject()
 
                 member _.Deserialize reader =
@@ -382,7 +382,7 @@ type JsonConverterBuilder() =
                             ensureRead &reader
                             if fieldIndex < 0 then reader.Skip() else
                             let fieldConverter = fieldConverters.[fieldIndex]
-                            result <- fieldConverter.DeserializeField(&reader, result)
+                            fieldConverter.DeserializeField(&reader, &result)
                         result
                     | token -> JsonHelpers.throwInvalidToken token }
             |> HKT.pack
@@ -395,7 +395,7 @@ type JsonConverterBuilder() =
                     writer.WriteStartObject()
                     for fp in fieldConverters do 
                         writer.WritePropertyName fp.PropertyName
-                        fp.SerializeField writer value
+                        fp.SerializeField(writer, &value)
                     writer.WriteEndObject()
 
                 member _.Deserialize reader =
@@ -407,7 +407,7 @@ type JsonConverterBuilder() =
                         ensureRead &reader
                         if fieldIndex < 0 then reader.Skip() else
                         let fp = fieldConverters.[fieldIndex]
-                        result <- fp.DeserializeField(&reader, result)
+                        fp.DeserializeField(&reader, &result)
 
                     result }
             |> HKT.pack
@@ -416,13 +416,13 @@ type JsonConverterBuilder() =
         member _.Field shape (HKT.Unpack fieldConverter) = 
             { new JsonFieldConverter<'DeclaringType> with
                 member _.PropertyName = shape.Label
-                member _.SerializeField writer value =
-                    let field = shape.Get value
+                member _.SerializeField (writer, value) =
+                    let field = shape.GetByRef &value
                     fieldConverter.Serialize writer field
 
                 member _.DeserializeField (reader, value) =
                     let field = fieldConverter.Deserialize &reader
-                    shape.Set value field }
+                    shape.SetByRef(&value, field) }
             |> HKT.pack
 
 /// Tagless-final converter folding logic

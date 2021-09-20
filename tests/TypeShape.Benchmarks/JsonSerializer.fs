@@ -21,18 +21,17 @@ type Record =
 
 type TestType = Record [][]
 
-// Value to be tested
-let testValue : TestType = 
-    [|  
-        [| { FieldA = "A" ; FieldB = 42 ; FieldC = true ; FieldD = DateTimeOffset.MaxValue ; FieldE = [|Nullable Enum.A; Nullable Enum.C; Nullable Enum.B |] ; FieldZ = [||] } |]
-        [| |]
-        [| { FieldA = "B" ; FieldB = 0 ; FieldC = false ; FieldD = DateTimeOffset.MinValue ; FieldE = [|Nullable() ; Nullable Enum.B |] ; FieldZ = [||] } ;
-           { FieldA = "C" ; FieldB = -1 ; FieldC = false ; FieldD = DateTimeOffset.MinValue ; FieldE = [||] ; FieldZ = [|"A";"B";"C"|] } |]
-    |]
-
 [<MemoryDiagnoser>]
 type JsonSerializerBenchmarks() =
     let converter = JsonSerializer.generateConverter<TestType>()
+    // Value to be tested
+    let testValue : TestType = 
+        [|  
+            [| { FieldA = "A" ; FieldB = 42 ; FieldC = true ; FieldD = DateTimeOffset.MaxValue ; FieldE = [|Nullable Enum.A; Nullable Enum.C; Nullable Enum.B |] ; FieldZ = [||] } |]
+            [| |]
+            [| { FieldA = "B" ; FieldB = 0 ; FieldC = false ; FieldD = DateTimeOffset.MinValue ; FieldE = [|Nullable() ; Nullable Enum.B |] ; FieldZ = [||] } ;
+               { FieldA = "C" ; FieldB = -1 ; FieldC = false ; FieldD = DateTimeOffset.MinValue ; FieldE = [||] ; FieldZ = [|"A";"B";"C"|] } |]
+        |]
     let json = testValue |> System.Text.Json.JsonSerializer.Serialize
 
     [<Benchmark>]

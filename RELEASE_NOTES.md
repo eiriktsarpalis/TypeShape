@@ -1,3 +1,8 @@
+### 10.0.0-alpha1
+* Revert to using Reflection.Emit when generating member accessors.
+* Add ShapeMember.GetByRef and SetByRef methods for updating objects by reference.
+* Apply performance optimizations to all bundled generic programs.
+
 ### 9.0.0
 * Only target netstandard2.0.
 * Remove TYPESHAPE_EMIT build conditional.

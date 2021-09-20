@@ -7,12 +7,7 @@
     <IsPackable>true</IsPackable>
     <!-- workaround for inlining p2p references in nuget; include custom target from Directory.Build.props -->
     <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
-    <Configurations>Debug;Release;Debug-Emit;Release-Emit</Configurations>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)'=='Debug-Emit' Or '$(Configuration)'=='Release-Emit'">
-    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
-    <DefineConstants>$(DefineConstants);TYPESHAPE_EMIT</DefineConstants>
+    <Configurations>Debug;Release;Debug-NoEmit;Release-NoEmit</Configurations>
   </PropertyGroup>
 
   <PropertyGroup>

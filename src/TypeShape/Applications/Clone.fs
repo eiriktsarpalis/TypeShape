@@ -7,7 +7,17 @@ open TypeShape.Core.Utils
 
 module private Impl =
 
-    type Cloner<'T> = ObjectStack -> ObjectCache -> 'T -> 'T
+    [<AbstractClass>]
+    type Cloner () =
+        abstract CloneUntyped : ObjectStack -> ObjectCache -> obj -> obj
+
+    [<AbstractClass>]
+    type Cloner<'T> () =
+        inherit Cloner()
+        abstract Clone : ObjectStack -> ObjectCache -> 'T -> 'T
+        override this.CloneUntyped s c o = this.Clone s c (o :?> 'T) :> obj
+
+    type FieldCloner<'T> = delegate of ObjectStack * ObjectCache * source:inref<'T> * target:byref<'T> -> unit
 
     let rec mkCloner<'T> () : Cloner<'T> =
         let mutable f = Unchecked.defaultof<Cloner<'T>>
@@ -16,10 +26,16 @@ module private Impl =
         mkClonerCached<'T> ctx
 
     and cloneUntyped s c (o:obj) : obj =
-        if obj.ReferenceEquals(o,null) then null else
-        let shape = o.GetType() |> TypeShape.Create
-        shape.Accept { new ITypeVisitor<obj> with
-            member _.Visit<'T>() = mkCloner () s c (o :?> 'T) :> obj }
+        let t = o.GetType()
+        let mutable res = Unchecked.defaultof<obj>
+        let cloner =
+            if cache.TryGetValue(t, &res) then res :?> Cloner
+            else
+                let shape = TypeShape.Create t
+                shape.Accept { new ITypeVisitor<Cloner> with
+                    member _.Visit<'T>() = mkCloner<'T>() :> Cloner }
+
+        cloner.CloneUntyped s c o
 
     and mkRefEqCloner<'T> (cloner : Cloner<'T>) : Cloner<'T> =
         match shapeof<'T> with
@@ -39,27 +55,28 @@ module private Impl =
             | Shape.FSharpUnion _ -> false
             | _ -> not typeof<'T>.IsSealed
 
-        fun stack cache t ->
-            if obj.ReferenceEquals(t,null) then t 
-            elif isOpen && t.GetType() <> typeof<'T> then
-                cloneUntyped stack cache t :?> 'T
-            else
-                do stack.Push t
-                let id = stack.ObjectId
-                let t' =
-                    let mutable t' = Unchecked.defaultof<_>
-                    if cache.TryGetValue(id, &t') then t'
-                    elif stack.IsCycle then
-                        cache.CreateUninitializedInstance<'T>(id, t.GetType())
-                    else
-                        let t' = cloner stack cache t
-                        cache.AddValue(id, t')
+        { new Cloner<'T>() with
+            member _.Clone stack cache t =
+                if obj.ReferenceEquals(t, null) then t 
+                elif isOpen && t.GetType() <> typeof<'T> then
+                    cloneUntyped stack cache t :?> 'T
+                else
+                    do stack.Push t
+                    let id = stack.ObjectId
+                    let t' =
+                        let mutable t' = Unchecked.defaultof<_>
+                        if cache.TryGetValue(id, &t') then t'
+                        elif stack.IsCycle then
+                            cache.CreateUninitializedInstance<'T>(id, t.GetType())
+                        else
+                            let t' = cloner.Clone stack cache t
+                            cache.AddValue(id, t')
 
-                do stack.Pop()
-                t'
+                    do stack.Pop()
+                    t' }
 
     and mkClonerCached<'T> (ctx : TypeGenerationContext) : Cloner<'T> =
-        match ctx.InitOrGetCachedValue<Cloner<'T>> (fun c s t -> c.Value s t) with
+        match ctx.InitOrGetCachedValue<Cloner<'T>> (fun cell -> { new Cloner<'T>() with member _.Clone s c t = cell.Value.Clone s c t }) with
         | Cached(value = v) -> v
         | NotCached t ->
             let c = mkClonerMain<'T> ctx |> mkRefEqCloner
@@ -70,13 +87,13 @@ module private Impl =
 
         let mkMemberCloner (fieldShape : IShapeMember<'DeclaringType>) =
             fieldShape.Accept {
-                new IMemberVisitor<'DeclaringType, ObjectStack -> ObjectCache -> 'DeclaringType -> 'DeclaringType -> 'DeclaringType> with
+                new IMemberVisitor<'DeclaringType, FieldCloner<'DeclaringType>> with
                     member _.Visit (shape : ShapeMember<'DeclaringType, 'Field>) =
                         let fieldCloner = mkClonerCached<'FieldType> ctx
-                        fun s c src tgt ->
-                            let field = shape.Get src
-                            let field' = fieldCloner s c field
-                            shape.Set tgt field'
+                        FieldCloner (fun s c src tgt ->
+                            let field = shape.GetByRef &src
+                            let field' = fieldCloner.Clone s c field
+                            shape.SetByRef(&tgt, field'))
             }
 
         match shapeof<'T> with
@@ -87,23 +104,24 @@ module private Impl =
         | Shape.BigInt
         | Shape.Unit
         | Shape.Decimal
-        | Shape.Enum _ -> fun _ _ x -> x
-        | Shape.String -> fun _ _ x -> x
+        | Shape.Enum _
+        | Shape.String -> { new Cloner<'T>() with member _.Clone _ _ t = t }
         | Shape.Array s when s.Rank = 1 ->
             s.Element.Accept {
                 new ITypeVisitor<Cloner<'T>> with
                     member _.Visit<'t> () =
                         if typeof<'t>.IsPrimitive then
-                            EQ(fun _ _ (ts:'t[]) -> ts.Clone() :?> 't[])
+                            EQ { new Cloner<'t[]>() with member _.Clone _ _ (ts:'t[]) = ts.Clone() :?> 't[] }
                         else
                             let ec = mkClonerCached<'t> ctx
-                            EQ(fun s c (ts:'t[]) ->
-                                // pre-register the uninitialized array
-                                // to account for cylic arrays
-                                let ts' = Array.zeroCreate<'t> ts.Length
-                                let _ = c.AddValue(s.ObjectId, ts')
-                                for i = 0 to ts.Length - 1 do ts'.[i] <- ec s c ts.[i]
-                                ts') }
+                            EQ { new Cloner<'t[]>() with 
+                                member _.Clone s c (ts:'t[]) =
+                                    // pre-register the uninitialized array
+                                    // to account for cylic arrays
+                                    let ts' = Array.zeroCreate<'t> ts.Length
+                                    let _ = c.AddValue(s.ObjectId, ts')
+                                    for i = 0 to ts.Length - 1 do ts'.[i] <- ec.Clone s c ts.[i]
+                                    ts' } }
 
         | Shape.Nullable s ->
             s.Accept { new INullableVisitor<Cloner<'T>> with
@@ -112,23 +130,24 @@ module private Impl =
                                     and 't : struct> () =
 
                     let ec = mkClonerCached<'t> ctx
-                    EQ(fun s c (t:Nullable<'t>) -> 
-                        if t.HasValue then Nullable(ec s c t.Value)
-                        else t) }
+                    EQ { new Cloner<Nullable<'t>>() with
+                        member _.Clone s c (t:Nullable<'t>) =
+                            if t.HasValue then Nullable(ec.Clone s c t.Value)
+                            else t } }
 
         | Shape.FSharpList s ->
             s.Element.Accept {
                 new ITypeVisitor<Cloner<'T>> with
                     member _.Visit<'t> () =
                         let ec = mkClonerCached<'t> ctx
-                        EQ(fun s c ts -> List.map (ec s c) ts) }
+                        EQ { new Cloner<'t list>() with member _.Clone s c ts = List.map (ec.Clone s c) ts } }
 
         | Shape.FSharpSet s ->
             s.Accept {
                 new IFSharpSetVisitor<Cloner<'T>> with
                     member _.Visit<'t when 't : comparison> () =
                         let tc = mkClonerCached<'t> ctx
-                        EQ(fun s c ts -> Set.map (tc s c) ts) }
+                        EQ { new Cloner<Set<'t>>() with member _.Clone s c ts = Set.map (tc.Clone s c) ts } }
 
         | Shape.FSharpMap s ->
             s.Accept {
@@ -136,68 +155,71 @@ module private Impl =
                     member _.Visit<'k, 'v when 'k : comparison> () =
                         let kc = mkClonerCached<'k> ctx
                         let vc = mkClonerCached<'v> ctx
-                        EQ(fun s c (ts:Map<'k,'v>) -> ts |> Seq.map (fun kv -> kc s c kv.Key, vc s c kv.Value) |> Map.ofSeq) }
+                        EQ { new Cloner<Map<'k,'v>>() with member _.Clone s c (ts:Map<'k,'v>) = ts |> Seq.map (fun kv -> kc.Clone s c kv.Key, vc.Clone s c kv.Value) |> Map.ofSeq } }
 
         | Shape.Tuple (:? ShapeTuple<'T> as shape) ->
             let memberCloners = shape.Elements |> Array.map mkMemberCloner
-            fun s c source ->
-                let mutable target = shape.CreateUninitialized()
-                for mc in memberCloners do
-                    target <- mc s c source target
-                target
+            { new Cloner<'T>() with 
+                member _.Clone s c source =
+                    let mutable target = shape.CreateUninitialized()
+                    for mc in memberCloners do mc.Invoke(s, c, &source, &target)
+                    target }
 
         | Shape.FSharpRecord (:? ShapeFSharpRecord<'T> as shape) ->
             let memberCloners = shape.Fields |> Array.map mkMemberCloner
-            fun s c source ->
-                let mutable target = shape.CreateUninitialized()
-                for mc in memberCloners do
-                    target <- mc s c source target
-                target
+            { new Cloner<'T>() with 
+                member _.Clone s c source =
+                    let mutable target = shape.CreateUninitialized()
+                    for mc in memberCloners do mc.Invoke(s, c, &source, &target)
+                    target }
 
         | Shape.FSharpUnion (:? ShapeFSharpUnion<'T> as shape) ->
             let caseMemberCloners = 
                 shape.UnionCases 
                 |> Array.map (fun c -> c.Fields |> Array.map mkMemberCloner)
 
-            fun s c source ->
-                let tag = shape.GetTag source
-                let case = shape.UnionCases.[tag]
-                let memberCloners = caseMemberCloners.[tag]
-                let mutable target = case.CreateUninitialized()
-                for mc in memberCloners do
-                    target <- mc s c source target
-                target
+            { new Cloner<'T>() with 
+                member _.Clone s c source =
+                    let tag = shape.GetTagByRef &source
+                    let case = shape.UnionCases.[tag]
+                    let memberCloners = caseMemberCloners.[tag]
+                    let mutable target = case.CreateUninitialized()
+                    for mc in memberCloners do mc.Invoke(s, c, &source, &target)
+                    target }
 
         | Shape.ISerializable s ->
             s.Accept { new ISerializableVisitor<Cloner<'T>> with
                 member _.Visit (shape : ShapeISerializable<'S>) =
-                    fun s c (source : 'S) ->
-                        let sc = new StreamingContext()
-                        let si = new SerializationInfo(typeof<'S>, FormatterConverter())
-                        let si' = new SerializationInfo(typeof<'S>, FormatterConverter())
+                    { new Cloner<'S>() with
+                        member _.Clone s c source =
+                            let sc = new StreamingContext()
+                            let si = new SerializationInfo(typeof<'S>, FormatterConverter())
+                            let si' = new SerializationInfo(typeof<'S>, FormatterConverter())
 
-                        source.GetObjectData(si, sc)
-                        let e = si.GetEnumerator()
-                        while e.MoveNext() do si'.AddValue(e.Name, cloneUntyped s c e.Value)
+                            source.GetObjectData(si, sc)
+                            let e = si.GetEnumerator()
+                            while e.MoveNext() do 
+                                let obj = e.Value
+                                let clonedObj = if isNull obj then null else cloneUntyped s c e.Value
+                                si'.AddValue(e.Name, clonedObj)
 
-                        shape.Create(si, sc)
-                    |> EQ }
+                            shape.Create(si, sc) } |> EQ }
 
         | Shape.CliMutable (:? ShapeCliMutable<'T> as shape) ->
             let memberCloners = shape.Properties |> Array.map mkMemberCloner
-            fun s c source ->
-                let mutable target = shape.CreateUninitialized()
-                for mc in memberCloners do
-                    target <- mc s c source target
-                target
+            { new Cloner<'T>() with 
+                member _.Clone s c source =
+                    let mutable target = shape.CreateUninitialized()
+                    for mc in memberCloners do mc.Invoke(s, c, &source, &target)
+                    target }
 
         | Shape.Poco (:? ShapePoco<'T> as shape) ->
             let fieldCloners = shape.Fields |> Array.map mkMemberCloner
-            fun s c source ->
-                let mutable target = shape.CreateUninitialized()
-                for fc in fieldCloners do
-                    target <- fc s c source target
-                target
+            { new Cloner<'T>() with 
+                member _.Clone s c source =
+                    let mutable target = shape.CreateUninitialized()
+                    for fc in fieldCloners do fc.Invoke(s, c, &source, &target)
+                    target }
 
         | _ -> failwithf "Unsupported type %O" typeof<'T>
 
@@ -206,4 +228,4 @@ module private Impl =
 
 /// Creates a deep clone for the provided value.
 /// Accounts for reference equality and object cycles.
-let clone<'T> (t : 'T) : 'T = Impl.mkCloner<'T>() (ObjectStack()) (ObjectCache()) t
+let clone<'T> (t : 'T) : 'T = Impl.mkCloner<'T>().Clone (ObjectStack()) (ObjectCache()) t

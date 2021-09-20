@@ -71,7 +71,7 @@ module Impl =
                         append s ")"
                     append s "]"))
 
-            member _.Field shape (HKT.Unpack fp) = HKT.pack(PP(fun s t -> fp.Invoke(s, shape.Get t)))
+            member _.Field shape (HKT.Unpack fp) = HKT.pack(PP(fun s t -> fp.Invoke(s, shape.GetByRef &t)))
 
             member _.Tuple shape (HKT.Unpacks fields) =
                 let isStruct = shape.IsStructTuple
@@ -109,7 +109,7 @@ module Impl =
 
             member _.Union shape (HKT.Unpackss fieldss) =
                 HKT.pack(PP(fun s union ->
-                    let tag = shape.GetTag union
+                    let tag = shape.GetTagByRef &union
                     let case = shape.UnionCases.[tag]
                     append s case.CaseInfo.Name
                     if case.Fields.Length > 0 then

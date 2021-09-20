@@ -14,14 +14,6 @@ and Union =
     | B
     | C of string * int
 
-// Value to be tested
-let testValue : TestType = 
-    struct(
-        [  [{ A = "value" ; B = 42 ; C = false }]; []; [{ A = "A'" ; B = 0 ; C = true }] ],
-        [| [] ; ["A";"B"] |], 
-        [| A 42; B; B ; C("value", 0) |])
-
-
 // efficient, handwritten pretty-printer for the test type
 let baselinePrinter ((rss, sss, us) : TestType) =
     let sb = new StringBuilder()
@@ -84,15 +76,22 @@ let baselinePrinter ((rss, sss, us) : TestType) =
 
     sb.ToString()
 
-// FSharp.Core pretty-printer
-let fsharpCorePrinter (value : TestType) =
-    sprintf "%A" value
-
-// TypeShape pretty-printer
-let typeShapePrinter = TypeShape.HKT.PrettyPrinter.mkPrinter<TestType>()
-
 [<MemoryDiagnoser>]
 type PrettyPrinterBenchmarks() =
+    // FSharp.Core pretty-printer
+    let fsharpCorePrinter (value : TestType) =
+        sprintf "%A" value
+
+    // TypeShape pretty-printer
+    let typeShapePrinter = TypeShape.HKT.PrettyPrinter.mkPrinter<TestType>()
+
+    // Value to be tested
+    let testValue : TestType = 
+        struct(
+            [  [{ A = "value" ; B = 42 ; C = false }]; []; [{ A = "A'" ; B = 0 ; C = true }] ],
+            [| [] ; ["A";"B"] |], 
+            [| A 42; B; B ; C("value", 0) |])
+
     [<Benchmark(Description = "Baseline PrettyPrinter", Baseline = true)>]
     member _.Baseline() = baselinePrinter testValue |> ignore
     [<Benchmark(Description = "FSharp.Core PrettyPrinter")>]

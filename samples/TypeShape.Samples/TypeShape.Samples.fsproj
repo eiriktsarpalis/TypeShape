@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <NoWarn>FS0020</NoWarn>
   </PropertyGroup>
 
@@ -12,7 +12,7 @@
     <Compile Include="expr.fs" />
     <Compile Include="hashcode-staged.fs" />
     <Compile Include="iso.fs" />
-    <Compile Include="mock.fs" />
+    <Compile Include="jsonconverter.fs" />
     <Compile Include="parser.fs" />
     <Compile Include="printer.fs" />
     <Compile Include="random.fs" />

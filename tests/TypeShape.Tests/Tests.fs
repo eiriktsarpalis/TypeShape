@@ -698,7 +698,7 @@ let ``Shape-Poco should not match interfaces`` () =
             | _ -> true
         @>
 
-#if !NET5_0
+#if !NET5_0_OR_GREATER
 [<Fact>]
 let ``Shape-Poco should handle write-only properties`` () =
     // https://github.com/eiriktsarpalis/TypeShape/issues/23
@@ -747,7 +747,7 @@ let ``Shape-Poco should not handle ctor with ByRefLike args`` () =
     | _ -> ()
 #endif
 
-#if NET5_0
+#if NET5_0_OR_GREATER
 [<Fact>]
 let ``Should support C# records`` () =
     let testRecord (value : 'Record) =

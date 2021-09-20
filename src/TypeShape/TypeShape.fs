@@ -13,6 +13,7 @@ module internal TypeShape
 open System
 open System.Collections.Generic
 open System.ComponentModel
+open System.Runtime.CompilerServices
 open System.Runtime.Serialization
 open System.Reflection
 
@@ -139,23 +140,12 @@ module private TypeShapeImpl =
     
     let private genInstanceGetter = typeof<ReflectionHelper>.GetMethod("GetInstance", BindingFlags.NonPublic ||| BindingFlags.Static)
     let private canon = Type.GetType "System.__Canon"
-#if NETSTANDARD2_0
-    let private isByRefLike : Type -> bool = 
-        match typeof<Type>.GetProperty("IsByRefLike") with
-        | null -> fun _ -> false
-        | p ->
-            let method = p.GetGetMethod()
-            let dele = Delegate.CreateDelegate(typeof<Func<Type, bool>>, method) :?> Func<Type, bool>
-            dele.Invoke
-#endif
 
     let inline internal isUnsupported (typ: Type) =
         typ.IsPointer ||
-        typ.IsByRef ||
-#if NETSTANDARD2_0
-        isByRefLike typ
-#else
-        typ.IsByRefLike
+        typ.IsByRef
+#if NETCOREAPP
+        || typ.IsByRefLike
 #endif
 
     let resolveTypeShape(typ : Type) =
@@ -538,7 +528,7 @@ module private MemberUtils =
     let defaultOfUntyped (ty : Type) =
         TypeShape.Create(ty).Accept untypedVisitor
 
-    let inline invalidMember (memberInfo : MemberInfo) =
+    let invalidMember (memberInfo : MemberInfo) =
         sprintf "TypeShape internal error: invalid MemberInfo '%O'" memberInfo
         |> invalidOp
 
@@ -573,37 +563,53 @@ module private MemberUtils =
 
     let inline project<'Type, 'Member> (path : MemberInfo[]) (value:'Type) =
         let mutable obj = box value
-        for i = 0 to path.Length - 1 do
-            obj <- getValue obj path.[i]
+        for m in path do
+            obj <- getValue obj m
         obj :?> 'Member
 
     let inline inject<'Type, 'Member> (isStructMember : bool) (path : MemberInfo[]) 
                                         (instance : 'Type) (value : 'Member) =
         let n = path.Length
-        if isStructMember then
-            // we are trying to update a nested struct (e.g. a struct tuple of large arity)
-            // in order to ensure that the change gets propagated to the original copy
-            // we must box and update every intermediate value
-            let rec update (i : int) (instance : obj) =
-                if i < n - 1 then
-                    let nested = getValue instance path.[i]
-                    let updated = update (i + 1) nested
-                    setValue instance path.[i] updated
-                    instance
-                else
-                    setValue instance path.[i] value
-                    instance
 
-            update 0 instance :?> 'Type
+        // slow path; keep in a separate non-inlined function to keep the outer function small
+        let handleNestedMembers () =
+            assert(n > 1)
+            if isStructMember then
+                // we are trying to update a nested struct (e.g. a struct tuple of large arity)
+                // in order to ensure that the change gets propagated to the original copy
+                // we must box and update every intermediate value
+                let rec update (i : int) (instance : obj) =
+                    if i < n - 1 then
+                        let nested = getValue instance path.[i]
+                        let updated = update (i + 1) nested
+                        setValue instance path.[i] updated
+                        instance
+                    else
+                        setValue instance path.[i] value
+                        instance
+
+                update 0 instance :?> 'Type
+            else
+                // all nested instances are heap allocated,
+                // just traverse to the leaf object and update it.
+                let mutable obj = box instance
+                for i = 0 to n - 2 do
+                    obj <- getValue obj path.[i]
+
+                setValue obj path.[n - 1] value
+                instance
+
+        if n = 1 then
+            // Most common scenario, updating a member that is one layer deep
+            if typeof<'Type>.IsValueType then
+                let boxedInstance = box instance
+                setValue boxedInstance path.[0] value
+                boxedInstance :?> 'Type
+            else
+                setValue instance path.[0] value
+                instance
         else
-            // all nested instances are heap allocated,
-            // just traverse to the leaf object and update it.
-            let mutable obj = box instance
-            for i = 0 to n - 2 do
-                obj <- getValue obj path.[i]
-
-            setValue obj path.[n - 1] value
-            instance
+            handleNestedMembers()
 
 #if TYPESHAPE_EXPR
 
@@ -677,40 +683,45 @@ module private MemberUtils =
 
 #if TYPESHAPE_EMIT
     open System.Reflection.Emit
-    open System.Collections.Concurrent
 
     type private Marker = class end
-    let private compileCache = new ConcurrentDictionary<Type * string, Lazy<Delegate>>()
+
+    type Getter<'DeclaringType, 'MemberType> = delegate of inref<'DeclaringType> -> 'MemberType 
+    type Setter<'DeclaringType, 'MemberType> = delegate of byref<'DeclaringType> * 'MemberType -> unit
 
     /// Lazily emits a dynamic method using supplied parameters
     let emitDynamicMethod<'Delegate when 'Delegate :> Delegate> (id : string) 
                 (argTypes : Type []) (returnType : Type)
                 (ilBuilder : ILGenerator -> unit) =
 
-        let compile () =
-            let name = sprintf "%O-%s" typeof<'Delegate> id
-            let dynamicMethod = new DynamicMethod(name, returnType, argTypes, typeof<Marker>, skipVisibility = true)
-            let ilGen = dynamicMethod.GetILGenerator()
-            do ilBuilder ilGen
-            dynamicMethod.CreateDelegate typeof<'Delegate>
-
-        let wrapper = compileCache.GetOrAdd((typeof<'Delegate>, id), fun _ -> lazy(compile ()))
-        lazy(wrapper.Value :?> 'Delegate)
+        let name = sprintf "%O-%s" typeof<'Delegate> id
+        let dynamicMethod = new DynamicMethod(name, returnType, argTypes, typeof<Marker>, skipVisibility = true)
+        let ilGen = dynamicMethod.GetILGenerator()
+        do ilBuilder ilGen
+        dynamicMethod.CreateDelegate typeof<'Delegate> :?> 'Delegate
 
     /// Emits a dynamic method that projects supplied member path
     let emitGetter<'DeclaringType, 'Property> (path : MemberInfo []) =
         let builder (gen : ILGenerator) =
             gen.Emit OpCodes.Ldarg_0
-            for m in path do
-                match m with
-                | :? FieldInfo as f -> gen.Emit(OpCodes.Ldfld, f)
+            if not typeof<'DeclaringType>.IsValueType then
+                gen.Emit OpCodes.Ldind_Ref
+
+            for i = 0 to path.Length - 1 do
+                match path.[i] with
+                | :? FieldInfo as f -> 
+                    if f.FieldType.IsValueType && i < path.Length - 1 then
+                        gen.Emit(OpCodes.Ldflda, f)
+                    else
+                        gen.Emit(OpCodes.Ldfld, f)
+
                 | :? PropertyInfo as p -> 
                     let m = p.GetGetMethod(true)
-                    if m.IsVirtual then
-                        gen.EmitCall(OpCodes.Callvirt, m, null)
-                    else
+                    if typeof<'DeclaringType>.IsValueType then
                         gen.EmitCall(OpCodes.Call, m, null)
-                | _ -> invalidMember m
+                    else
+                        gen.EmitCall(OpCodes.Callvirt, m, null)
+                | _ -> invalidMember path.[i]
 
             gen.Emit OpCodes.Ret
 
@@ -720,26 +731,20 @@ module private MemberUtils =
             |> String.concat "->"
             |> sprintf "proj-%s"
 
-        emitDynamicMethod<Func<'DeclaringType, 'Property>>
-            projectionId [|typeof<'DeclaringType>|] typeof<'Property> builder
+        emitDynamicMethod<Getter<'DeclaringType, 'Property>>
+            projectionId [|typeof<'DeclaringType>.MakeByRefType()|] typeof<'Property> builder
 
     // Emits a dynamic method that injects a value to supplied member path
     let emitSetter<'DeclaringType, 'Property> (path : MemberInfo []) =
         let builder (gen : ILGenerator) =
             gen.Emit OpCodes.Ldarg_0
-            let local =
-                if typeof<'DeclaringType>.IsValueType then 
-                    let local = gen.DeclareLocal typeof<'DeclaringType>
-                    gen.Emit(OpCodes.Stloc, local)
-                    gen.Emit(OpCodes.Ldloca, local)
-                    Some local
-                else
-                    None
+            if not typeof<'DeclaringType>.IsValueType then
+                gen.Emit OpCodes.Ldind_Ref
 
             for i = 0 to path.Length - 2 do
                 match path.[i] with
                 | :? FieldInfo as f -> 
-                    if f.DeclaringType.IsValueType then
+                    if typeof<'DeclaringType>.IsValueType then
                         gen.Emit(OpCodes.Ldflda, f)
                     else
                         gen.Emit(OpCodes.Ldfld, f)
@@ -749,10 +754,10 @@ module private MemberUtils =
                         invalidOp "internal error: nested struct properties not supported."
 
                     let m = p.GetGetMethod(true)
-                    if m.IsVirtual then
-                        gen.EmitCall(OpCodes.Callvirt, m, null)
-                    else
+                    if typeof<'DeclaringType>.IsValueType then
                         gen.EmitCall(OpCodes.Call, m, null)
+                    else
+                        gen.EmitCall(OpCodes.Callvirt, m, null)
                 | m -> invalidMember m
 
             gen.Emit OpCodes.Ldarg_1
@@ -761,16 +766,13 @@ module private MemberUtils =
             | :? FieldInfo as f -> gen.Emit(OpCodes.Stfld, f)
             | :? PropertyInfo as p ->
                 let m = p.GetSetMethod(true)
-                if m.IsVirtual then
-                    gen.EmitCall(OpCodes.Callvirt, m, null)
-                else
+                if typeof<'DeclaringType>.IsValueType then
                     gen.EmitCall(OpCodes.Call, m, null)
+                else
+                    gen.EmitCall(OpCodes.Callvirt, m, null)
 
             | m -> invalidMember m
 
-            match local with
-            | Some l -> gen.Emit(OpCodes.Ldloc, l)
-            | None -> gen.Emit OpCodes.Ldarg_0
             gen.Emit OpCodes.Ret
 
         let injectionId =
@@ -779,23 +781,37 @@ module private MemberUtils =
             |> String.concat "->"
             |> sprintf "inj-%s"
 
-        emitDynamicMethod<Func<'DeclaringType, 'Property, 'DeclaringType>>
-            injectionId [|typeof<'DeclaringType>; typeof<'Property>|] typeof<'DeclaringType> builder
+        emitDynamicMethod<Setter<'DeclaringType, 'Property>>
+            injectionId [|typeof<'DeclaringType>.MakeByRefType(); typeof<'Property>|] typeof<System.Void> builder
+
+    let ldDefaultValue (gen : ILGenerator) (t : Type) =
+        if not t.IsValueType then gen.Emit OpCodes.Ldnull
+        elif t = typeof<bool> || t = typeof<byte> || t = typeof<sbyte> ||
+            t = typeof<char> || t = typeof<uint16> || t = typeof<int16> ||
+            t = typeof<int32> || t = typeof<uint32> then
+            gen.Emit OpCodes.Ldc_I4_0
+        elif t = typeof<int64> || t = typeof<uint64> then
+            gen.Emit OpCodes.Ldc_I4_0 ; gen.Emit OpCodes.Conv_I8
+        elif t = typeof<single> then gen.Emit(OpCodes.Ldc_R4, 0.0f)
+        elif t = typeof<double> then gen.Emit(OpCodes.Ldc_R8, 0.0)
+        elif t = typeof<IntPtr> then gen.Emit OpCodes.Ldc_I4_0; gen.Emit OpCodes.Conv_I
+        elif t = typeof<UIntPtr> then gen.Emit OpCodes.Ldc_I4_0; gen.Emit OpCodes.Conv_U
+        else
+            assert(not t.IsPrimitive)
+            let lvar = gen.DeclareLocal t
+            gen.Emit(OpCodes.Ldloca_S, lvar.LocalIndex)
+            gen.Emit(OpCodes.Initobj, t)
+            gen.Emit(OpCodes.Ldloc, lvar.LocalIndex)
+        
 
     /// Emits a dynamic method that injects uninitialized values to supplied static method or ctor
     let emitUninitializedCtor<'DeclaringType> (ctor : MethodBase) =
         let builder (gen : ILGenerator) =
-            for p in ctor.GetParameters() do
-                let lvar = gen.DeclareLocal p.ParameterType
-                gen.Emit(OpCodes.Ldloca_S, lvar.LocalIndex)
-                gen.Emit(OpCodes.Initobj, p.ParameterType)
-                gen.Emit(OpCodes.Ldloc, lvar.LocalIndex)
+            for p in ctor.GetParameters() do ldDefaultValue gen p.ParameterType
 
             match ctor with
             | :? ConstructorInfo as c -> gen.Emit(OpCodes.Newobj, c)
-            | :? MethodInfo as m when m.IsStatic ->
-                if m.IsVirtual then gen.EmitCall(OpCodes.Callvirt, m, null)
-                else gen.EmitCall(OpCodes.Call, m, null)
+            | :? MethodInfo as m when m.IsStatic -> gen.EmitCall(OpCodes.Call, m, null)
             | _ -> invalidMember ctor
 
             gen.Emit OpCodes.Ret
@@ -805,12 +821,11 @@ module private MemberUtils =
         emitDynamicMethod<Func<'DeclaringType>> ctorId [||] typeof<'DeclaringType> builder
 
     /// Emits a dynamic method that gets the tag of supplied union case
-    let emitUnionTagReader<'U> (tagReader : MemberInfo) =
+    let emitUnionTagReader<'Union> (tagReader : MemberInfo) =
         let builder (gen : ILGenerator) =
-            if typeof<'U>.IsValueType then
-                gen.Emit (OpCodes.Ldarga, 0)
-            else
-                gen.Emit OpCodes.Ldarg_0
+            gen.Emit OpCodes.Ldarg_0
+            if not typeof<'Union>.IsValueType then
+                gen.Emit OpCodes.Ldind_Ref
 
             let m =
                 match tagReader with
@@ -818,11 +833,14 @@ module private MemberUtils =
                 | :? PropertyInfo as p -> p.GetGetMethod(true)
                 | _ -> invalidMember tagReader
 
-            if m.IsVirtual then gen.EmitCall(OpCodes.Callvirt, m, null)
-            else gen.EmitCall(OpCodes.Call, m, null)
+            if typeof<'Union>.IsValueType || m.IsStatic then 
+                gen.EmitCall(OpCodes.Call, m, null)
+            else 
+                gen.EmitCall(OpCodes.Callvirt, m, null)
+
             gen.Emit OpCodes.Ret
 
-        emitDynamicMethod<Func<'U, int>> "unionTagReader" [|typeof<'U>|] typeof<int> builder
+        emitDynamicMethod<Getter<'Union, int>> "unionTagReader" [|typeof<'Union>.MakeByRefType()|] typeof<int> builder
 
     let emitISerializableCtor<'T when 'T :> ISerializable> (ctorInfo : ConstructorInfo) =
         let builder (gen : ILGenerator) =
@@ -834,214 +852,6 @@ module private MemberUtils =
         emitDynamicMethod<Func<SerializationInfo, StreamingContext, 'T>> "serializableCtor" 
             [|typeof<SerializationInfo>; typeof<StreamingContext>|] typeof<'T> builder
 #endif
-
-//-------------------------
-// Member Shape Definitions
-
-/// Identifies an instance member that defines a read-only value
-/// in a class instance, typically a field or property
-type IShapeReadOnlyMember =
-    /// Human-readable member identifier
-    abstract Label : string
-    /// The actual System.Reflection.MemberInfo corresponding to member
-    abstract MemberInfo : MemberInfo
-    /// Type of value stored by member
-    abstract Member : TypeShape
-    /// True iff member is contained within a struct
-    abstract IsStructMember : bool
-    /// True iff member is public
-    abstract IsPublic : bool
-
-/// Identifies an instance member that defines a read-only value
-/// in a class instance, typically a field or property
-type IShapeReadOnlyMember<'DeclaringType> =
-    inherit IShapeReadOnlyMember
-    abstract Accept : IReadOnlyMemberVisitor<'DeclaringType, 'R> -> 'R
-
-/// Identifies an instance member that defines a read-only value
-/// in a class instance, typically a field or property
-and ReadOnlyMember<'DeclaringType, 'MemberType> internal (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
-    let isStructMember = isStructMember path
-    let isPublicMember = isPublicMember memberInfo
-#if TYPESHAPE_EMIT
-    let projectFunc = emitGetter<'DeclaringType, 'MemberType> path
-#endif
-
-    /// Human-readable member identifier
-    member _.Label = label
-    /// The actual System.Reflection.MemberInfo corresponding to member
-    member _.MemberInfo = memberInfo
-    /// True iff member is contained within a struct
-    member _.IsStructMember = isStructMember
-    /// True iff member is public
-    member _.IsPublic = isPublicMember
-    /// Gets the current value from the given declaring type instance
-    member _.Get (instance : 'DeclaringType) : 'MemberType =
-#if TYPESHAPE_EMIT
-        projectFunc.Value.Invoke instance
-#else
-        project path instance
-#endif
-
-    /// Gets the current value from the given declaring type instance
-    [<Obsolete("Deprecated, please use the 'Get' method instead")>]
-    member m.Project (instance : 'DeclaringType) : 'MemberType = m.Get instance
-       
-#if TYPESHAPE_EXPR
-    /// Projects an instance to member of given value
-    member _.GetExpr (instance : Expr<'DeclaringType>) =
-        projectExpr<'DeclaringType, 'MemberType> path instance
-#endif
-
-    interface IShapeReadOnlyMember<'DeclaringType> with
-        member s.Label = label
-        member s.Member = shapeof<'MemberType> :> _
-        member s.MemberInfo = memberInfo
-        member s.IsStructMember = isStructMember
-        member s.IsPublic = isPublicMember
-        member s.Accept v = v.Visit s
-
-and IReadOnlyMemberVisitor<'DeclaringType, 'R> =
-    abstract Visit<'MemberType> : ReadOnlyMember<'DeclaringType, 'MemberType> -> 'R
-
-//----------------------------
-// Writable Member Definitions
-
-/// Identifies an instance member that defines
-/// a mutable value in a class instance, typically a field or property
-type IShapeMember<'Record> =
-    inherit IShapeReadOnlyMember<'Record>
-    abstract Accept : IMemberVisitor<'Record,'R> -> 'R
-
-/// Identifies an instance member that defines
-/// a mutable value in a class instance, typically a field or property
-and [<Sealed>] ShapeMember<'DeclaringType, 'MemberType> private (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
-    inherit ReadOnlyMember<'DeclaringType, 'MemberType>(label, memberInfo, path)
-
-#if TYPESHAPE_EMIT
-    let injectFunc = emitSetter<'DeclaringType, 'MemberType> path
-#else
-    let isStructMember = isStructMember path
-#endif
-
-    /// Assigns value to the provided instance. NB this is a mutating operation
-    member _.Set (instance : 'DeclaringType) (field : 'MemberType) : 'DeclaringType =
-#if TYPESHAPE_EMIT
-        injectFunc.Value.Invoke(instance, field)
-#else
-        inject isStructMember path instance field
-#endif
-
-    /// Assigns value to the provided instance. NB this is a mutating operation
-    [<Obsolete("Deprecated, please use the 'Set' method instead")>]
-    member m.Inject (instance : 'DeclaringType) (field : 'MemberType) : 'DeclaringType =
-        m.Set instance field
-
-#if TYPESHAPE_EXPR
-    /// Injects a value to member of given instance
-    member _.SetExpr (instance : Expr<'DeclaringType>) (field : Expr<'MemberType>) =
-        injectExpr path instance field
-#endif
-
-    interface IShapeMember<'DeclaringType> with
-        member s.Accept (v : IMemberVisitor<'DeclaringType, 'R>) = v.Visit s
-
-and IMemberVisitor<'TRecord, 'R> =
-    abstract Visit<'Field> : ShapeMember<'TRecord, 'Field> -> 'R
-
-//-------------------------------
-// Constructor Shapes
-
-/// Identifies a constructor implementation shape
-type IShapeConstructor =
-    /// Denotes whether constructor is public
-    abstract IsPublic : bool
-    /// Denotes the arity of the constructor arguments
-    abstract Arity : int
-    /// ConstructorInfo instance
-    abstract ConstructorInfo : ConstructorInfo
-    // A tuple type encoding all arguments passed to the constuctor
-    abstract Arguments : TypeShape
-
-/// Identifies a constructor implementation shape
-and IShapeConstructor<'DeclaringType> =
-    inherit IShapeConstructor
-    abstract Accept : IConstructorVisitor<'DeclaringType, 'R> -> 'R
-
-/// Identifies a constructor implementation shape
-and [<Sealed>] ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : ConstructorInfo, arity : int) =
-    let valueReader = 
-        match arity with
-        | 0 -> fun _ -> [||]
-        | 1 -> fun x -> [|x|]
-        |_ -> FSharpValue.PreComputeTupleReader typeof<'CtorArgs>
-
-    /// Creates an instance of declaring type with supplied constructor args
-    member _.Invoke(args : 'CtorArgs) =
-        let args = valueReader args
-        ctorInfo.Invoke args :?> 'DeclaringType
-
-#if TYPESHAPE_EXPR
-    /// Creates an instance of declaring type with supplied constructor args
-    member _.InvokeExpr(args : Expr<'CtorArgs>) : Expr<'DeclaringType> =
-        let exprArgs = 
-            match arity with
-            | 1 -> [args :> Expr]
-            | _ -> [for i in 0 .. arity - 1 -> Expr.TupleGet(args, i)]
-
-        Expr.Cast<'DeclaringType>(Expr.NewObject(ctorInfo, exprArgs))
-#endif
-
-    interface IShapeConstructor<'DeclaringType> with
-        member _.IsPublic = ctorInfo.IsPublic
-        member _.Arity = arity
-        member _.ConstructorInfo = ctorInfo
-        member _.Arguments = shapeof<'CtorArgs> :> _
-        member c.Accept v = v.Visit c
-
-and IConstructorVisitor<'CtorType, 'R> =
-    abstract Visit<'CtorArgs> : ShapeConstructor<'CtorType, 'CtorArgs> -> 'R
-
-//---------------------------
-// Supplementary Member utils
-
-[<AutoOpen>]
-module private MemberUtils2 =
-    let mkMemberUntyped<'Record> (label : string) (memberInfo : MemberInfo) (path : MemberInfo[]) =
-        let memberType = 
-            match path.[path.Length - 1] with
-            | :? FieldInfo as fI -> fI.FieldType
-            | :? PropertyInfo as pI -> pI.PropertyType
-            | m -> invalidMember m
-
-        let tyArgs = [|typeof<'Record> ; memberType|]
-        let args = [|box label; box memberInfo; box path|]
-        if isWriteableMember path then
-            Activator.CreateInstanceGeneric<ShapeMember<_,_>>(tyArgs, args)
-            :?> IShapeReadOnlyMember<'Record>
-        else
-            Activator.CreateInstanceGeneric<ReadOnlyMember<_,_>>(tyArgs, args) 
-            :?> IShapeReadOnlyMember<'Record>
-        
-    let mkWriteMemberUntyped<'Record> (label : string) (memberInfo : MemberInfo) (path : MemberInfo[]) =
-        match mkMemberUntyped<'Record> label memberInfo path with
-        | :? IShapeMember<'Record> as wm -> wm
-        | _ -> invalidOp <| sprintf "TypeShape internal error: Member '%O' is not writable" memberInfo
-
-    let mkCtorUntyped<'Record> (ctorInfo : ConstructorInfo) =
-        let argTypes = ctorInfo.GetParameters() |> Array.map (fun p -> p.ParameterType)
-        let arity = argTypes.Length
-        let argumentType =
-            match arity with
-            | 0 -> typeof<unit>
-            | 1 -> argTypes.[0]
-            | _ -> FSharpType.MakeTupleType argTypes
-
-        Activator.CreateInstanceGeneric<ShapeConstructor<_,_>>([|typeof<'Record>; argumentType|], [|box ctorInfo; box arity|])
-        :?> IShapeConstructor<'Record>
-
-//--------------------
-// Generic Tuple Shape
 
 [<AutoOpen>]
 module private ShapeTupleImpl =
@@ -1105,8 +915,287 @@ module private ShapeTupleImpl =
         aux [] tI
         |> List.toArray
 
+#if TYPESHAPE_EMIT
+    open System.Reflection.Emit
+
+    let emitCreateUninitializedTuple<'Tuple> (tupleInfo : TupleInfo) =
+        let builder (gen : ILGenerator) =
+            let rec emitCtor (tI : TupleInfo) =
+                for (_,field) in tI.Fields do
+                    ldDefaultValue gen field.FieldType
+
+                match tI.Nested with
+                | None -> ()
+                | Some (_,nestedTupleInfo) -> emitCtor nestedTupleInfo
+
+                let ctorInfo = tI.Current.GetConstructors().[0]
+                gen.Emit(OpCodes.Newobj, ctorInfo)
+
+            emitCtor tupleInfo
+            gen.Emit OpCodes.Ret
+
+        emitDynamicMethod<Func<'Tuple>> "tupleCtor" [||] typeof<'Tuple> builder
+
+    let emitConstructorFunc<'Args, 'T> (arity : int) (ctorInfo : ConstructorInfo) =
+        let builder (gen : ILGenerator) =
+            match arity with
+            | 0 -> ()
+            | 1 -> gen.Emit OpCodes.Ldarg_0
+            | _ ->
+                let argsTupleInfo = mkTupleInfo typeof<'Args>
+                let parentFields = new ResizeArray<FieldInfo>()
+                let rec ldTupleElems (tI : TupleInfo) =
+                    for (_,field) in tI.Fields do
+                        gen.Emit OpCodes.Ldarg_0
+                        for parentFld in parentFields do gen.Emit(OpCodes.Ldfld, parentFld)
+                        gen.Emit(OpCodes.Ldfld, field)
+
+                    match tI.Nested with
+                    | None -> ()
+                    | Some (field, nested) ->
+                        parentFields.Add field
+                        ldTupleElems nested
+
+                ldTupleElems argsTupleInfo
+
+            gen.Emit(OpCodes.Newobj, ctorInfo)
+            gen.Emit OpCodes.Ret
+                
+        emitDynamicMethod<Func<'Args, 'T>> "constructorFunc" [|typeof<'Args>|] typeof<'T> builder
+#endif
+
+//-------------------------
+// Member Shape Definitions
+
+/// Identifies an instance member that defines a read-only value
+/// in a class instance, typically a field or property
+type IShapeReadOnlyMember =
+    /// Human-readable member identifier
+    abstract Label : string
+    /// The actual System.Reflection.MemberInfo corresponding to member
+    abstract MemberInfo : MemberInfo
+    /// Type of value stored by member
+    abstract Member : TypeShape
+    /// True iff member is contained within a struct
+    abstract IsStructMember : bool
+    /// True iff member is public
+    abstract IsPublic : bool
+
+/// Identifies an instance member that defines a read-only value
+/// in a class instance, typically a field or property
+type IShapeReadOnlyMember<'DeclaringType> =
+    inherit IShapeReadOnlyMember
+    abstract Accept : IReadOnlyMemberVisitor<'DeclaringType, 'R> -> 'R
+
+/// Identifies an instance member that defines a read-only value
+/// in a class instance, typically a field or property
+and ReadOnlyMember<'DeclaringType, 'MemberType> internal (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
+    let isStructMember = isStructMember path
+    let isPublicMember = isPublicMember memberInfo
+#if TYPESHAPE_EMIT
+    let projectFunc = emitGetter<'DeclaringType, 'MemberType> path
+#endif
+
+    /// Human-readable member identifier
+    member _.Label = label
+    /// The actual System.Reflection.MemberInfo corresponding to member
+    member _.MemberInfo = memberInfo
+    /// True iff member is contained within a struct
+    member _.IsStructMember = isStructMember
+    /// True iff member is public
+    member _.IsPublic = isPublicMember
+    /// Gets the current value from the given declaring type instance
+    [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
+    member _.Get (instance : 'DeclaringType) : 'MemberType =
+#if TYPESHAPE_EMIT
+        // temporary workaround until https://github.com/dotnet/fsharp/issues/12085 is resolved
+        let mutable _dummy = false
+        let result = projectFunc.Invoke &instance
+        _dummy <- true
+        result
+#else
+        project path instance
+#endif
+
+    /// Gets the current value from the given declaring type instance
+    [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
+    member _.GetByRef (instance : inref<'DeclaringType>) : 'MemberType =
+#if TYPESHAPE_EMIT
+        projectFunc.Invoke &instance
+#else
+        project path instance
+#endif
+       
+#if TYPESHAPE_EXPR
+    /// Projects an instance to member of given value
+    member _.GetExpr (instance : Expr<'DeclaringType>) =
+        projectExpr<'DeclaringType, 'MemberType> path instance
+#endif
+
+    interface IShapeReadOnlyMember<'DeclaringType> with
+        member s.Label = label
+        member s.Member = shapeof<'MemberType> :> _
+        member s.MemberInfo = memberInfo
+        member s.IsStructMember = isStructMember
+        member s.IsPublic = isPublicMember
+        member s.Accept v = v.Visit s
+
+and IReadOnlyMemberVisitor<'DeclaringType, 'R> =
+    abstract Visit<'MemberType> : ReadOnlyMember<'DeclaringType, 'MemberType> -> 'R
+
+//----------------------------
+// Writable Member Definitions
+
+/// Identifies an instance member that defines
+/// a mutable value in a class instance, typically a field or property
+type IShapeMember<'Record> =
+    inherit IShapeReadOnlyMember<'Record>
+    abstract Accept : IMemberVisitor<'Record,'R> -> 'R
+
+/// Identifies an instance member that defines
+/// a mutable value in a class instance, typically a field or property
+and [<Sealed>] ShapeMember<'DeclaringType, 'MemberType> private (label : string, memberInfo : MemberInfo, path : MemberInfo[]) =
+    inherit ReadOnlyMember<'DeclaringType, 'MemberType>(label, memberInfo, path)
+
+#if TYPESHAPE_EMIT
+    let injectFunc = emitSetter<'DeclaringType, 'MemberType> path
+#else
+    let isStructMember = isStructMember path
+#endif
+
+    /// Assigns value to the provided instance. NB this is a mutating operation
+    [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
+    member _.Set (instance : 'DeclaringType) (field : 'MemberType) : 'DeclaringType =
+#if TYPESHAPE_EMIT
+        let mutable instanceCpy = instance
+        injectFunc.Invoke(&instanceCpy, field); instanceCpy
+#else
+        inject isStructMember path instance field
+#endif
+
+    /// Assigns value to the provided instance. NB this is a mutating operation
+    [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
+    member _.SetByRef (instance : byref<'DeclaringType>, field : 'MemberType) =
+#if TYPESHAPE_EMIT
+        injectFunc.Invoke(&instance, field)
+#else
+        instance <- inject isStructMember path instance field
+#endif
+
+#if TYPESHAPE_EXPR
+    /// Injects a value to member of given instance
+    member _.SetExpr (instance : Expr<'DeclaringType>) (field : Expr<'MemberType>) =
+        injectExpr path instance field
+#endif
+
+    interface IShapeMember<'DeclaringType> with
+        member s.Accept (v : IMemberVisitor<'DeclaringType, 'R>) = v.Visit s
+
+and IMemberVisitor<'TRecord, 'R> =
+    abstract Visit<'Field> : ShapeMember<'TRecord, 'Field> -> 'R
+
+//-------------------------------
+// Constructor Shapes
+
+/// Identifies a constructor implementation shape
+type IShapeConstructor =
+    /// Denotes whether constructor is public
+    abstract IsPublic : bool
+    /// Denotes the arity of the constructor arguments
+    abstract Arity : int
+    /// ConstructorInfo instance
+    abstract ConstructorInfo : ConstructorInfo
+    // A tuple type encoding all arguments passed to the constuctor
+    abstract Arguments : TypeShape
+
+/// Identifies a constructor implementation shape
+and IShapeConstructor<'DeclaringType> =
+    inherit IShapeConstructor
+    abstract Accept : IConstructorVisitor<'DeclaringType, 'R> -> 'R
+
+/// Identifies a constructor implementation shape
+and [<Sealed>] ShapeConstructor<'DeclaringType, 'CtorArgs> private (ctorInfo : ConstructorInfo, arity : int) =
+#if TYPESHAPE_EMIT
+    let ctorf = emitConstructorFunc<'CtorArgs, 'DeclaringType> arity ctorInfo
+#else
+    let valueReader = 
+        match arity with
+        | 0 -> fun _ -> [||]
+        | 1 -> fun x -> [|x|]
+        |_ -> FSharpValue.PreComputeTupleReader typeof<'CtorArgs>
+#endif
+
+    /// Creates an instance of declaring type with supplied constructor args
+    member _.Invoke(args : 'CtorArgs) =
+#if TYPESHAPE_EMIT
+        ctorf.Invoke args
+#else
+        let args = valueReader args
+        ctorInfo.Invoke args :?> 'DeclaringType
+#endif
+
+
+#if TYPESHAPE_EXPR
+    /// Creates an instance of declaring type with supplied constructor args
+    member _.InvokeExpr(args : Expr<'CtorArgs>) : Expr<'DeclaringType> =
+        let exprArgs = 
+            match arity with
+            | 1 -> [args :> Expr]
+            | _ -> [for i in 0 .. arity - 1 -> Expr.TupleGet(args, i)]
+
+        Expr.Cast<'DeclaringType>(Expr.NewObject(ctorInfo, exprArgs))
+#endif
+
+    interface IShapeConstructor<'DeclaringType> with
+        member _.IsPublic = ctorInfo.IsPublic
+        member _.Arity = arity
+        member _.ConstructorInfo = ctorInfo
+        member _.Arguments = shapeof<'CtorArgs> :> _
+        member c.Accept v = v.Visit c
+
+and IConstructorVisitor<'CtorType, 'R> =
+    abstract Visit<'CtorArgs> : ShapeConstructor<'CtorType, 'CtorArgs> -> 'R
+
 //---------------------------
-// Shape Tuple Implementation
+// Supplementary Member utils
+
+[<AutoOpen>]
+module private MemberUtils2 =
+    let mkMemberUntyped<'Record> (label : string) (memberInfo : MemberInfo) (path : MemberInfo[]) =
+        let memberType = 
+            match path.[path.Length - 1] with
+            | :? FieldInfo as fI -> fI.FieldType
+            | :? PropertyInfo as pI -> pI.PropertyType
+            | m -> invalidMember m
+
+        let tyArgs = [|typeof<'Record> ; memberType|]
+        let args = [|box label; box memberInfo; box path|]
+        if isWriteableMember path then
+            Activator.CreateInstanceGeneric<ShapeMember<_,_>>(tyArgs, args)
+            :?> IShapeReadOnlyMember<'Record>
+        else
+            Activator.CreateInstanceGeneric<ReadOnlyMember<_,_>>(tyArgs, args) 
+            :?> IShapeReadOnlyMember<'Record>
+        
+    let mkWriteMemberUntyped<'Record> (label : string) (memberInfo : MemberInfo) (path : MemberInfo[]) =
+        match mkMemberUntyped<'Record> label memberInfo path with
+        | :? IShapeMember<'Record> as wm -> wm
+        | _ -> invalidOp <| sprintf "TypeShape internal error: Member '%O' is not writable" memberInfo
+
+    let mkCtorUntyped<'Record> (ctorInfo : ConstructorInfo) =
+        let argTypes = ctorInfo.GetParameters() |> Array.map (fun p -> p.ParameterType)
+        let arity = argTypes.Length
+        let argumentType =
+            match arity with
+            | 0 -> typeof<unit>
+            | 1 -> argTypes.[0]
+            | _ -> FSharpType.MakeStructTupleType(typeof<int>.Assembly, argTypes)
+
+        Activator.CreateInstanceGeneric<ShapeConstructor<_,_>>([|typeof<'Record>; argumentType|], [|box ctorInfo; box arity|])
+        :?> IShapeConstructor<'Record>
+
+//--------------------
+// Generic Tuple Shape
 
 /// Denotes a specific System.Tuple shape
 type IShapeTuple =
@@ -1120,44 +1209,49 @@ and ITupleVisitor<'R> =
 /// Identifies a specific System.Tuple shape
 and [<Sealed>] ShapeTuple<'Tuple> private () =
     let tupleInfo = mkTupleInfo typeof<'Tuple>
-    let isStructTuple = typeof<'Tuple>.IsValueType
 
-    let tupleElems =
+    let tupleElems = lazy(
         gatherTupleMembers tupleInfo
         |> Seq.mapi (fun i (pI, path) -> 
             let label = sprintf "Item%d" (i+1)
             mkWriteMemberUntyped<'Tuple> label pI path)
-        |> Seq.toArray
+        |> Seq.toArray)
 
-    let fieldStack = gatherNestedFields tupleInfo
-
-    member _.IsStructTuple = isStructTuple
-    /// Tuple element shape definitions
-    member _.Elements = tupleElems
-    /// Creates an uninitialized tuple instance of given type
-    member _.CreateUninitialized() : 'Tuple =
-        if isStructTuple then Unchecked.defaultof<'Tuple>
+    let ctorf = 
+#if TYPESHAPE_EMIT
+        emitCreateUninitializedTuple<'Tuple> tupleInfo
+#else
+        if typeof<'Tuple>.IsValueType then Func<_>(fun () -> Unchecked.defaultof<'Tuple>)
         else
-            let obj = FormatterServices.GetUninitializedObject typeof<'Tuple>
-            let mutable this = obj
-            for f in fieldStack do
-                let x = FormatterServices.GetUninitializedObject f.FieldType
-                f.SetValue(this, x)
-                this <- x
+            let fieldStack = gatherNestedFields tupleInfo
+            Func<_>(fun () ->
+                let tuple = FormatterServices.GetUninitializedObject typeof<'Tuple>
+                let mutable currentTuple = tuple
+                for f in fieldStack do
+                    let nestedTuple = FormatterServices.GetUninitializedObject f.FieldType
+                    f.SetValue(currentTuple, nestedTuple)
+                    currentTuple <- nestedTuple
+                tuple :?> 'Tuple)
+#endif
 
-            obj :?> 'Tuple
+    member _.IsStructTuple = typeof<'Tuple>.IsValueType
+    /// Tuple element shape definitions
+    member _.Elements = tupleElems.Value
+    /// Creates an uninitialized tuple instance of given type
+    [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
+    member _.CreateUninitialized() : 'Tuple = ctorf.Invoke()
 
 #if TYPESHAPE_EXPR
     member _.CreateUninitializedExpr() : Expr<'Tuple> =
-        if isStructTuple then
+        if typeof<'Tuple>.IsValueType then
             Expr.Cast<'Tuple>(Expr.DefaultValue typeof<'Tuple>)
         else
-            let values = tupleElems |> Seq.map (fun e -> getDefaultValueExpr e.Member.Type) |> Seq.toList
+            let values = tupleElems.Value |> Seq.map (fun e -> getDefaultValueExpr e.Member.Type) |> Seq.toList
             Expr.Cast<'Tuple>(Expr.NewTuple(values))
 #endif
 
     interface IShapeTuple with
-        member _.Elements = tupleElems |> Array.map (fun e -> e :> _)
+        member _.Elements = tupleElems.Value |> Array.map (fun e -> e :> _)
         member s.Accept v = v.Visit s
 
 //---------------------
@@ -1174,7 +1268,6 @@ type IShapeFSharpRecord =
 
 /// Identifies an F# record type
 and [<Sealed>] ShapeFSharpRecord<'Record> private () =
-    let isStructRecord = typeof<'Record>.IsValueType
     // Warning: ugly hack -- should derive from FSharp.Reflection
     let isAnonymousRecord = typeof<'Record>.Name.StartsWith "<>f__AnonymousType"
     let ctorInfo = FSharpValue.PreComputeRecordConstructorInfo(typeof<'Record>, AllMembers)
@@ -1190,38 +1283,38 @@ and [<Sealed>] ShapeFSharpRecord<'Record> private () =
     let ctorParams = props |> Array.map (fun p -> defaultOfUntyped p.PropertyType)
 #endif
 
-    let recordFields = Array.map mkRecordField props
+    let recordFields = lazy (Array.map mkRecordField props)
 
     /// True if an F# struct record
-    member _.IsStructRecord = isStructRecord
+    member _.IsStructRecord = typeof<'Record>.IsValueType
 
     /// True if F# 4.6 anonyous records
     member _.IsAnonymousRecord = isAnonymousRecord
 
     /// F# record field shapes
-    member _.Fields = recordFields
+    member _.Fields = recordFields.Value
 
     /// Creates an uninitialized instance for given record
+    [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
     member _.CreateUninitialized() : 'Record =
-        if isStructRecord then Unchecked.defaultof<'Record> else
 #if TYPESHAPE_EMIT
-        ctorf.Value.Invoke()
+        ctorf.Invoke()
 #else
         ctorInfo.Invoke ctorParams :?> 'Record
 #endif
 
 #if TYPESHAPE_EXPR
     member _.CreateUninitializedExpr() : Expr<'Record> =
-        if isStructRecord then <@ Unchecked.defaultof<'Record> @> else
+        if typeof<'Record>.IsValueType then <@ Unchecked.defaultof<'Record> @> else
         let values = props |> Seq.map (fun p -> getDefaultValueExpr p.PropertyType)
         Expr.Cast<'Record>(Expr.NewObject(ctorInfo, Seq.toList values))
 #endif
 
     interface IShapeFSharpRecord with
-        member _.IsStructRecord = isStructRecord
+        member _.IsStructRecord = typeof<'Record>.IsValueType
         member _.IsAnonymousRecord = isAnonymousRecord
 
-        member _.Fields = recordFields |> Array.map unbox
+        member _.Fields = recordFields.Value |> Array.map unbox
         member s.Accept v = v.Visit s
 
 and IFSharpRecordVisitor<'R> =
@@ -1247,7 +1340,7 @@ type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
     let ctorParams = properties |> Array.map (fun p -> defaultOfUntyped p.PropertyType)
 #endif
 
-    let caseFields =
+    let caseFields = lazy (
         match properties with
         | [||] -> [||]
         | _ ->
@@ -1257,19 +1350,20 @@ type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
                 let fieldInfo = allFields |> Array.find (fun f -> f.Name = "_" + p.Name || f.Name.ToLower() = p.Name.ToLower())
                 mkWriteMemberUntyped<'Union> p.Name p [|fieldInfo|]
 
-            Array.map mkUnionField properties
+            Array.map mkUnionField properties)
 
     /// Underlying FSharp.Reflection.UnionCaseInfo description
     member _.CaseInfo = uci
     /// Number of fields in the particular union case
     member _.Arity = properties.Length
     /// Field shapes for union case
-    member _.Fields = caseFields
+    member _.Fields = caseFields.Value
 
     /// Creates an uninitialized instance for specific union case
+    [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
     member _.CreateUninitialized() : 'Union =
 #if TYPESHAPE_EMIT
-        ctorf.Value.Invoke()
+        ctorf.Invoke()
 #else
         ctorInfo.Invoke(null, ctorParams) :?> 'Union
 #endif
@@ -1282,7 +1376,7 @@ type [<Sealed>] ShapeFSharpUnionCase<'Union> private (uci : UnionCaseInfo) =
 
     interface IShapeFSharpUnionCase with
         member _.CaseInfo = uci
-        member _.Fields = caseFields |> Array.map (fun f -> f :> _)
+        member _.Fields = caseFields.Value |> Array.map (fun f -> f :> _)
 
 /// Denotes an F# Union shape
 type IShapeFSharpUnion =
@@ -1291,41 +1385,54 @@ type IShapeFSharpUnion =
     abstract Accept : IFSharpUnionVisitor<'R> -> 'R
 
 /// Denotes an F# Union shape
-and [<Sealed>] ShapeFSharpUnion<'U> private () =
-    let isStructUnion = typeof<'U>.IsValueType
-    let ucis = 
-        FSharpType.GetUnionCases(typeof<'U>, AllMembers)
+and [<Sealed>] ShapeFSharpUnion<'Union> private () =
+    let ucis = lazy(
+        FSharpType.GetUnionCases(typeof<'Union>, AllMembers)
         |> Array.map (fun uci -> 
-            Activator.CreateInstanceGeneric<ShapeFSharpUnionCase<'U>>([||],[|uci|]) 
-            :?> ShapeFSharpUnionCase<'U>)
+            Activator.CreateInstanceGeneric<ShapeFSharpUnionCase<'Union>>([||],[|uci|]) 
+            :?> ShapeFSharpUnionCase<'Union>))
 
 #if TYPESHAPE_EMIT || TYPESHAPE_EXPR
-    let tagReaderInfo = FSharpValue.PreComputeUnionTagMemberInfo(typeof<'U>, AllMembers)
+    let tagReaderInfo = FSharpValue.PreComputeUnionTagMemberInfo(typeof<'Union>, AllMembers)
 #endif
 
 #if TYPESHAPE_EMIT
-    let tagReader = emitUnionTagReader<'U> tagReaderInfo
+    let tagReader = emitUnionTagReader<'Union> tagReaderInfo
 #else
-    let tagReader = FSharpValue.PreComputeUnionTagReader(typeof<'U>, AllMembers)
+    let tagReader = FSharpValue.PreComputeUnionTagReader(typeof<'Union>, AllMembers)
 #endif
 
-    let caseNames = ucis |> Array.map (fun u -> u.CaseInfo.Name)
+    let caseNames = lazy(ucis.Value |> Array.map (fun u -> u.CaseInfo.Name))
 
-    member _.IsStructUnion = isStructUnion
+    member _.IsStructUnion = typeof<'Union>.IsValueType
 
     /// Case shapes for given union type
-    member _.UnionCases = ucis
+    member _.UnionCases = ucis.Value
     /// Gets the underlying tag id for given union instance
-    member _.GetTag (union : 'U) : int =
+    [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
+    member _.GetTag (union : 'Union) : int =
 #if TYPESHAPE_EMIT
-        tagReader.Value.Invoke union
+        // temporary workaround until https://github.com/dotnet/fsharp/issues/12085 is resolved
+        let mutable _dummy = false
+        let result = tagReader.Invoke &union
+        _dummy <- true
+        result
 #else
         tagReader union
 #endif
 
-    /// Gets the underlying tag id for given union case name
+    /// Gets the underlying tag id for given union instance
+    [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
+    member _.GetTagByRef (union : inref<'Union>) : int =
+#if TYPESHAPE_EMIT
+        tagReader.Invoke &union
+#else
+        tagReader union
+#endif
+
+    /// Looks the underlying tag id for given union case name using linear search.
     member _.GetTag (caseName : string) : int =
-        let caseNames = caseNames
+        let caseNames = caseNames.Value
         let n = caseNames.Length
         let mutable i = 0
         let mutable notFound = true
@@ -1338,7 +1445,7 @@ and [<Sealed>] ShapeFSharpUnion<'U> private () =
         i
 
 #if TYPESHAPE_EXPR
-    member _.GetTagExpr (union : Expr<'U>) : Expr<int> =
+    member _.GetTagExpr (union : Expr<'Union>) : Expr<int> =
         let expr =
             match tagReaderInfo with
             | :? MethodInfo as m when m.IsStatic -> Expr.Call(m, [union])
@@ -1348,10 +1455,9 @@ and [<Sealed>] ShapeFSharpUnion<'U> private () =
         
         Expr.Cast<int> expr
 #endif
-        
-        
+
     interface IShapeFSharpUnion with
-        member _.UnionCases = ucis |> Array.map (fun u -> u :> _)
+        member _.UnionCases = ucis.Value |> Array.map (fun u -> u :> _)
         member s.Accept v = v.Visit s
 
 and IFSharpUnionVisitor<'R> =
@@ -1370,20 +1476,21 @@ type IShapeCliMutable =
 /// Denotes a type that behaves like a C# record:
 /// Carries a parameterless constructor and settable properties
 and [<Sealed>] ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) =
-    let properties =
+    let properties = lazy(
         typeof<'Record>.GetProperties(AllInstanceMembers)
         |> Seq.filter (fun p -> p.CanRead && p.CanWrite && p.GetIndexParameters().Length = 0)
         |> Seq.map (fun p -> mkWriteMemberUntyped<'Record> p.Name p [|p|])
-        |> Seq.toArray
+        |> Seq.toArray)
 
 #if TYPESHAPE_EMIT
     let ctor = emitUninitializedCtor<'Record> defaultCtor
 #endif
 
     /// Creates an uninitialized instance for given C# record
+    [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
     member _.CreateUninitialized() : 'Record =
 #if TYPESHAPE_EMIT
-        ctor.Value.Invoke()
+        ctor.Invoke()
 #else
         defaultCtor.Invoke [||] :?> 'Record
 #endif
@@ -1395,12 +1502,12 @@ and [<Sealed>] ShapeCliMutable<'Record> private (defaultCtor : ConstructorInfo) 
 #endif
 
     /// Property shapes for C# record
-    member _.Properties = properties
+    member _.Properties = properties.Value
     /// Gets the default constructor info defined in the type
     member _.DefaultCtorInfo = defaultCtor
 
     interface IShapeCliMutable with
-        member _.Properties = properties |> Array.map (fun p -> p :> _)
+        member _.Properties = properties.Value |> Array.map (fun p -> p :> _)
         member s.Accept v = v.Visit s
 
 and ICliMutableVisitor<'R> =
@@ -1425,44 +1532,43 @@ type IShapePoco =
 
 /// Denotes any .NET type that is either a class or a struct
 and [<Sealed>] ShapePoco<'Poco> private () =
-    let isStruct = typeof<'Poco>.IsValueType
-
-    let fields = 
+    let fields = lazy(
         gatherMembers (fun t -> t.GetFields(AllInstanceMembers ||| BindingFlags.FlattenHierarchy)) typeof<'Poco>
-        |> Array.map (fun f -> mkWriteMemberUntyped<'Poco> f.Name f [|f|])
+        |> Array.map (fun f -> mkWriteMemberUntyped<'Poco> f.Name f [|f|]))
 
     let isCSharpRecord =
         typeof<IEquatable<'Poco>>.IsAssignableFrom(typeof<'Poco>) &&
         let cloner = typeof<'Poco>.GetMethod("<Clone>$", BindingFlags.Instance ||| BindingFlags.Public, null, types = [||], modifiers = null) in
         not (isNull cloner) && cloner.IsVirtual
 
-    let ctors =
+    let ctors = lazy(
         typeof<'Poco>.GetConstructors(AllInstanceMembers)
         // filter any ctors that accept byrefs or pointers
         |> Seq.filter (fun c -> c.GetParameters() |> Array.forall(fun p -> not <| isUnsupported p.ParameterType))
         |> Seq.map (fun c -> mkCtorUntyped<'Poco> c)
-        |> Seq.toArray
+        |> Seq.toArray)
 
-    let properties =
+    let properties = lazy(
         typeof<'Poco>.GetProperties(AllInstanceMembers)
         |> Seq.filter (fun p -> p.CanRead)
         |> Seq.map (fun p -> mkMemberUntyped<'Poco> p.Name p [|p|])
-        |> Seq.toArray
+        |> Seq.toArray)
 
     /// True iff POCO is a struct
-    member _.IsStruct = isStruct
+    member _.IsStruct = typeof<'Poco>.IsValueType
     /// True iff POCO is a C# 9 record
     member _.IsCSharpRecord = isCSharpRecord
     /// Constructor shapes for the type
-    member _.Constructors = ctors
+    member _.Constructors = ctors.Value
     /// Field shapes for the type
-    member _.Fields = fields
+    member _.Fields = fields.Value
     /// Property shapes for the type
-    member _.Properties = properties
+    member _.Properties = properties.Value
 
     /// Creates an uninitialized instance for POCO
-    member inline _.CreateUninitialized() : 'Poco = 
-        FormatterServices.GetUninitializedObject(typeof<'Poco>) :?> 'Poco
+    member _.CreateUninitialized() : 'Poco =
+        if typeof<'Poco>.IsValueType then Unchecked.defaultof<'Poco>
+        else FormatterServices.GetUninitializedObject(typeof<'Poco>) :?> 'Poco
 
 #if TYPESHAPE_EXPR
     /// Creates an uninitialized instance for POCO
@@ -1471,10 +1577,10 @@ and [<Sealed>] ShapePoco<'Poco> private () =
 #endif
 
     interface IShapePoco with
-        member _.Constructors = ctors |> Array.map (fun c -> c :> _)
-        member _.Fields = fields |> Array.map (fun f -> f :> _)
-        member _.Properties = properties |> Array.map (fun p -> p :> _)
-        member _.IsStruct = isStruct
+        member _.Constructors = ctors.Value |> Array.map (fun c -> c :> _)
+        member _.Fields = fields.Value |> Array.map (fun f -> f :> _)
+        member _.Properties = properties.Value |> Array.map (fun p -> p :> _)
+        member _.IsStruct = typeof<'Poco>.IsValueType
         member _.IsCSharpRecord = isCSharpRecord
         member s.Accept v = v.Visit s
 
@@ -1506,7 +1612,7 @@ and ShapeISerializable<'T when 'T :> ISerializable> private () =
     member _.CtorInfo = ctorInfo
     member _.Create(serializationInfo : SerializationInfo, streamingContext : StreamingContext) : 'T =
 #if TYPESHAPE_EMIT
-        ctor.Value.Invoke(serializationInfo, streamingContext)
+        ctor.Invoke(serializationInfo, streamingContext)
 #else
         getCtorInfo().Invoke [| serializationInfo ; streamingContext |] :?> 'T
 #endif

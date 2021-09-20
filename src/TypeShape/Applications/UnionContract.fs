@@ -34,16 +34,38 @@ type EncodedUnion<'Encoding> =
     }
 
 /// Provides an encoder implementation for a union of events
-[<AbstractClass>]
-type UnionContractEncoder<'Union, 'Format> internal () =
+[<Sealed>]
+type UnionContractEncoder<'Union, 'Format> internal 
+    (shape : ShapeFSharpUnion<'Union>,
+     labelIndex : BinSearch,
+     caseEncoders : Func<'Union, EncodedUnion<'Format>>[],
+     caseDecoders : Func<'Format, 'Union>[]) =
+
     /// Gets the union case string identifier for given union instance
-    abstract GetCaseName : value:'Union -> string
+    member _.GetCaseName (value:'Union) : string =
+        let tag = shape.GetTagByRef &value
+        labelIndex.Values.[tag]
+
     /// Encodes a union instance into a decoded representation
-    abstract Encode      : value:'Union -> EncodedUnion<'Format>
+    member _.Encode (value:'Union) : EncodedUnion<'Format> =
+        let tag = shape.GetTagByRef &value
+        caseEncoders.[tag].Invoke value
+
     /// Decodes a formatted representation into a union instance. Can potentially throw FormatException
-    abstract Decode      : encodedUnion:EncodedUnion<'Format> -> 'Union
+    member _.Decode (encodedUnion:EncodedUnion<'Format>) : 'Union =
+        let unrecognizedCaseName(caseName : string) =
+            let msg = sprintf "Unrecognized case name '%O.%s'" typeof<'Union> caseName
+            raise <| FormatException msg
+
+        match labelIndex.TryFindIndex encodedUnion.CaseName with
+        |  -1 -> unrecognizedCaseName encodedUnion.CaseName
+        | tag -> caseDecoders.[tag].Invoke encodedUnion.Payload
+
     /// Decodes a formatted representation into a union instance. Does not throw exception on format mismatches
-    abstract TryDecode   : encodedUnion:EncodedUnion<'Format> -> 'Union option
+    member _.TryDecode (encodedUnion:EncodedUnion<'Format>) : 'Union option =
+        match labelIndex.TryFindIndex encodedUnion.CaseName with
+        |  -1 -> None
+        | tag -> caseDecoders.[tag].Invoke encodedUnion.Payload |> Some
 
 [<AutoOpen>]
 module private Impl =
@@ -61,21 +83,6 @@ module private Impl =
                 sprintf "Type '%O' is not an F# union" typeof<'Union>
                 |> invalidArg "Union"
 
-        let mkFieldEncoders (field : IShapeMember<'Union>) (encoder : IEncoder<'Format>) =
-            field.Accept {
-                new IMemberVisitor<'Union, ('Union -> 'Format) * ('Union -> 'Format -> 'Union)> with
-                    member _.Visit(sfield : ShapeMember<'Union, 'Field>) =
-                        let enc u =
-                            let f = sfield.Get u
-                            encoder.Encode f
-
-                        let dec u f =
-                            let v = encoder.Decode f
-                            sfield.Set u v
-
-                        enc, dec
-            }
-
         let hasRecordPayload (scase : ShapeFSharpUnionCase<'Union>) =
             match scase.Fields with
             | [| |] -> true // support as trivial case
@@ -85,7 +92,7 @@ module private Impl =
                 | _ -> false
             | _ -> false
 
-        let genUnionCaseEncoder (scase : ShapeFSharpUnionCase<'Union>) =
+        let mkUnionCaseEncoder (scase : ShapeFSharpUnionCase<'Union>) =
             // extract the case label identifier for given case
             let label =
                 scase.CaseInfo.GetCustomAttributes()
@@ -100,27 +107,35 @@ module private Impl =
                     sprintf "union case %O.%O has more than one field." typeof<'Union> scase.CaseInfo.Name
                     |> invalidArg "Union"
 
-            let mkCaseEncDec encoder =
+            let mkUnionCaseEncDec (encoder : IEncoder<'Format>) =
                 match caseField with
-                | Some f ->
-                    let fieldEnc, fieldDec = mkFieldEncoders f encoder
-                    let enc u = { CaseName = label ; Payload = fieldEnc u }
-                    let dec f =
-                        let u = scase.CreateUninitialized()
-                        fieldDec u f
+                | Some field ->
+                    field.Accept {
+                        new IMemberVisitor<'Union, (Func<'Union, EncodedUnion<'Format>> * Func<'Format, 'Union>)> with
+                            member _.Visit (sfield : ShapeMember<'Union, 'Field>) =
+                                let inline enc u =
+                                    let f = sfield.GetByRef &u
+                                    { CaseName = label ; Payload = encoder.Encode f }
 
-                    enc, dec
+                                let inline dec f =
+                                    let mutable u = scase.CreateUninitialized()
+                                    let v = encoder.Decode f
+                                    sfield.SetByRef(&u, v)
+                                    u
+
+                                Func<_,_> enc, Func<_,_> dec
+                    }
 
                 | None ->
-                    let enc _ = { CaseName = label ; Payload = encoder.Empty }
-                    let dec _ = scase.CreateUninitialized()
-                    enc, dec
+                    let inline enc _ = { CaseName = label ; Payload = encoder.Empty }
+                    let inline dec _ = scase.CreateUninitialized()
+                    Func<_,_> enc, Func<_,_> dec
 
-            label, mkCaseEncDec
+            label, mkUnionCaseEncDec
 
         let labels, encoderFactories =
             shape.UnionCases
-            |> Array.map genUnionCaseEncoder
+            |> Array.map mkUnionCaseEncoder
             |> Array.unzip
 
         let caseWithoutRecordPayload =
@@ -164,31 +179,11 @@ module private Impl =
                 |> Array.map (fun e -> e encoder)
                 |> Array.unzip
 
-            { new UnionContractEncoder<'Union, 'Format>() with
-                member _.GetCaseName(u:'Union) =
-                    let tag = shape.GetTag u
-                    labels.[tag]
-
-                member _.Encode(u:'Union) =
-                    let tag = shape.GetTag u
-                    caseEncoders.[tag] u
-
-                member _.Decode e =
-                    match labelIndex.TryFindIndex e.CaseName with
-                    |  -1 ->
-                        let msg = sprintf "Unrecognized case name '%O.%s'" typeof<'Union> e.CaseName
-                        raise <| FormatException msg
-                    | tag -> caseDecoders.[tag] e.Payload
-
-                member _.TryDecode e =
-                    match labelIndex.TryFindIndex e.CaseName with
-                    |  -1 -> None
-                    | tag -> caseDecoders.[tag] e.Payload |> Some }
+            new UnionContractEncoder<'Union, 'Format>(shape, labelIndex, caseEncoders, caseDecoders)
 
     type EncoderFactory<'Union, 'Format> private () =
         static let factory = lazy(mkUnionEncoder<'Union, 'Format>())
         static member Create requireRecordFields (e : IEncoder<_>) = factory.Value requireRecordFields e
-
 
 type UnionContractEncoder =
 

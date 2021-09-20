@@ -325,8 +325,8 @@ module Generic =
         GIterator.mkIterator<'a,'T>() ctx source
 
     /// <summary>
-    /// Generic iter combinator with cancellatoin semantics. Calls the action function on every instance
-    /// of type 'a structurally wihtin the source type 'T using depth-first
+    /// Generic iter combinator with cancellation semantics. Calls the action function on every instance
+    /// of type 'a structurally within the source type 'T using depth-first
     /// traversal. Cyclic objects are supported.
     /// </summary>
     /// <param name="action">Action to perform on every instance of type 'a.</param>

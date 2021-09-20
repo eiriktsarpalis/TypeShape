@@ -2,8 +2,14 @@
 // FAKE build script
 // --------------------------------------------------------------------------------------
 
-#r "paket: groupref build //"
-#load "./.fake/build.fsx/intellisense.fsx"
+#r "nuget: System.Reactive        ,5.0.0"
+#r "nuget: Fake.Core.UserInput    ,5.20.4"
+#r "nuget: Fake.Core.ReleaseNotes ,5.20.4"
+#r "nuget: Fake.Core.Target       ,5.20.4"
+#r "nuget: Fake.IO.FileSystem     ,5.20.4"
+#r "nuget: Fake.DotNet.Cli        ,5.20.4"
+#r "nuget: Fake.Tools.Git         ,5.20.4"
+#r "nuget: Fake.Api.Github        ,5.20.4"
 
 open Fake.Core
 open Fake.Core.TargetOperators
@@ -14,6 +20,15 @@ open Fake.IO.Globbing.Operators
 open Fake.Tools
 open Fake.Api
 open System
+
+#if !FAKE
+Environment.GetCommandLineArgs()
+|> Array.skip 2
+|> Array.toList
+|> Fake.Core.Context.FakeExecutionContext.Create false __SOURCE_FILE__
+|> Fake.Core.Context.RuntimeContext.Fake
+|> Fake.Core.Context.setExecutionContext
+#endif
 
 // --------------------------------------------------------------------------------------
 // START TODO: Provide project-specific details below
@@ -29,7 +44,7 @@ let gitHome = "https://github.com/" + gitOwner
 let gitName = "TypeShape"
 
 let configuration = Environment.environVarOrDefault "configuration" "Release"
-let noEmitConfiguration = "Release-Emit"
+let noEmitConfiguration = "Release-NoEmit"
 
 // --------------------------------------------------------------------------------------
 // END TODO: The rest of the file includes standard build steps
@@ -55,13 +70,14 @@ let Build configuration =
 
             MSBuildParams =
                 { c.MSBuildParams with
-                    Properties = [("Version", release.NugetVersion)] }
+                    Properties = [("Version", release.NugetVersion)]
+                    DisableInternalBinLog = true }
 
         }) __SOURCE_DIRECTORY__
 
 
 Target.create "Build" (fun _ -> Build configuration)
-Target.create "Build.Emit" (fun _ -> Build noEmitConfiguration)
+Target.create "Build.NoEmit" (fun _ -> Build noEmitConfiguration)
 
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner & kill test runner when complete
@@ -75,12 +91,13 @@ let Test configuration =
 
             MSBuildParams =
                 { c.MSBuildParams with
-                    Properties = [("ParallelizeAssemblies", "true"); ("ParallelizeTestCollections", "true")] }
+                    Properties = [("ParallelizeAssemblies", "true"); ("ParallelizeTestCollections", "true")]
+                    DisableInternalBinLog = true }
 
         }) __SOURCE_DIRECTORY__
 
 Target.create "RunTests" (fun _ -> Test configuration)
-Target.create "RunTests.Emit" (fun _ -> Test configuration)
+Target.create "RunTests.NoEmit" (fun _ -> Test noEmitConfiguration)
 
 // --------------------------------------------------------------------------------------
 // Build a NuGet package
@@ -95,7 +112,8 @@ Target.create "NuGet.Bundle" (fun _ ->
                 { pack.MSBuildParams with
                     Properties = 
                         [("Version", release.NugetVersion)
-                         ("PackageReleaseNotes", releaseNotes)] }
+                         ("PackageReleaseNotes", releaseNotes)]
+                    DisableInternalBinLog = true }
         }) __SOURCE_DIRECTORY__
 )
 
@@ -163,8 +181,8 @@ Target.create "Release" ignore
 "Clean"
   ==> "Build"
   ==> "RunTests"
-  ==> "Build.Emit"
-  ==> "RunTests.Emit"
+  ==> "Build.NoEmit"
+  ==> "RunTests.NoEmit"
   ==> "Default"
 
 "Default"
