@@ -808,11 +808,12 @@ module GenericJsonSerializerHKT =
             Arb.Default.TimeSpan() |> Arb.filter (fun t -> TimeSpan.FromSeconds(t.TotalSeconds) = t)
 
         // 'Some null' representations collapse to null in JSON serialization, exclude in roundtrip testing
-        static member NoSomeOfRefOfNull() =
-            Arb.Default.Option<'T ref>() |> Arb.filter (function Some x -> not <| obj.ReferenceEquals(x.Value, null) | _ -> true)
-
         static member NoSomeOfNull() =
             Arb.Default.Option() |> Arb.filter (function Some x -> not <| obj.ReferenceEquals(x, null) | _ -> true)
+
+        static member NoRefOptionals() =
+            Arb.Default.Derive<TypeAlg>()
+            |> Arb.filter (fun tyAlg -> tyAlg |> TypeAlg.forall(function Option (Ref _) -> false | _ -> true))
 
     let generator = new JsonSerializer.ConverterGeneratorExtensions()
 

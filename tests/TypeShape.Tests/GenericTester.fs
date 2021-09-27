@@ -205,10 +205,11 @@ module Implementation =
 
 
     type Config with
-        static member CreateTypeConfig(maxTypes : int, ?maxSize : int) =
+        static member CreateTypeConfig(maxTypes : int, ?maxSize : int, ?arbitrary : Type) =
             { Config.QuickThrowOnFailure with 
                 MaxTest = maxTypes ; 
-                EndSize = defaultArg maxSize 20 }
+                EndSize = defaultArg maxSize 20 
+                Arbitrary = [ match arbitrary with Some a -> a | None -> () ] }
 
         static member CreateValueConfig(useNaN : bool, maxTests : int, ?arbitrary : Type) =
             { Config.QuickThrowOnFailure with 
@@ -345,6 +346,24 @@ module Implementation =
 
 open Implementation
 
+module TypeAlg =
+    
+    let rec forall (nodePredicate : TypeAlg -> bool) (typeAlg : TypeAlg) =
+        if not (nodePredicate typeAlg) then false else
+
+        match typeAlg with
+        | Option ta
+        | Ref ta
+        | List ta
+        | Array ta
+        | Map ta
+        | Set ta
+        | BinTree ta -> forall nodePredicate ta
+        | Tuple (_, NonEmptyArray ts)
+        | Tuple (_, NonEmptyArray ts)
+        | Union (_, NonEmptyArray ts)
+        | Record (_, NonEmptyArray ts) -> ts |> Array.forall (forall nodePredicate)
+        | _ -> true
 
 //------------------------------------------------------------------------------
 // Runner Implementation
@@ -389,7 +408,7 @@ type Check with
     /// <param name="maxTestsPerType">Maximum number of randomly generated values per type.</param>
     /// <param name="predicate">Predicate to check.</param>
     static member GenericPredicate verbose arbitrary useNaN maxTypes maxTestsPerType (predicate : Predicate) =
-        let tconf = Config.CreateTypeConfig(maxTypes)
+        let tconf = Config.CreateTypeConfig(maxTypes, ?arbitrary = arbitrary)
         let vconf = Config.CreateValueConfig(useNaN, maxTestsPerType, ?arbitrary = arbitrary)
 
         let checker =
