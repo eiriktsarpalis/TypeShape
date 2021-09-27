@@ -1,4 +1,4 @@
-### 10.0.0-alpha1
+### 10.0.0-rc1
 * Revert to using Reflection.Emit when generating member accessors.
 * Add ShapeMember.GetByRef and SetByRef methods for updating objects by reference.
 * Apply performance optimizations to all bundled generic programs.
