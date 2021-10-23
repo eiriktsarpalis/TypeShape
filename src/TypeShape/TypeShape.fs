@@ -1008,11 +1008,7 @@ and ReadOnlyMember<'DeclaringType, 'MemberType> internal (label : string, member
     [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
     member _.Get (instance : 'DeclaringType) : 'MemberType =
 #if TYPESHAPE_EMIT
-        // temporary workaround until https://github.com/dotnet/fsharp/issues/12085 is resolved
-        let mutable _dummy = false
-        let result = projectFunc.Invoke &instance
-        _dummy <- true
-        result
+        projectFunc.Invoke &instance
 #else
         project path instance
 #endif
@@ -1412,11 +1408,7 @@ and [<Sealed>] ShapeFSharpUnion<'Union> private () =
     [<MethodImpl(MethodImplOptions.AggressiveInlining)>]
     member _.GetTag (union : 'Union) : int =
 #if TYPESHAPE_EMIT
-        // temporary workaround until https://github.com/dotnet/fsharp/issues/12085 is resolved
-        let mutable _dummy = false
-        let result = tagReader.Invoke &union
-        _dummy <- true
-        result
+        tagReader.Invoke &union
 #else
         tagReader union
 #endif
