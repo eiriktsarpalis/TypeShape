@@ -240,7 +240,7 @@ prettyPrint (Some false)
 prettyPrint (Some "test", [Some 42; None; Some -1])
 ```
 
-Please check the [samples/HKT](https://github.com/eiriktsarpalis/TypeShape/tree/23dabf9e863464c08a3ca82ad452695615f62708/samples/TypeShape.Samples/HKT) folder for real-world examples of the above.
+Please check the [samples/HKT](https://github.com/eiriktsarpalis/TypeShape/tree/main/samples/TypeShape.Samples/HKT) folder for real-world examples of the above.
 
 ### Projects using TypeShape
 
