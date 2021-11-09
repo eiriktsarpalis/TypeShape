@@ -10,8 +10,8 @@ group Test
   source https://api.nuget.org/v3/index.json
   framework: net6.0
 
-  nuget FSharp.Core >= 5.0.0
-  nuget Microsoft.NET.Test.Sdk ~> 16.0
+  nuget FSharp.Core >= 6.0.0
+  nuget Microsoft.NET.Test.Sdk ~> 17.0
   nuget xunit ~> 2.4.0
   nuget xunit.runner.visualstudio ~> 2.4.0 version_in_path: true
   nuget Unquote ~> 4.0
@@ -19,10 +19,10 @@ group Test
   nuget FsCheck.XUnit 3.0.0-alpha4
   nuget BenchmarkDotNet ~> 0.13.0
   nuget BenchmarkDotNet.Diagnostics.Windows ~> 0.13.0
-  nuget Newtonsoft.Json
-  nuget System.Formats.Cbor
+  nuget Newtonsoft.Json ~> 13.0
+  nuget System.Formats.Cbor ~> 6.0
   nuget FSharp.Data ~> 3.0
   nuget DotNext ~> 3.0
   
-  nuget FParsec
-  nuget FSharp.Quotations.Evaluator
+  nuget FParsec ~> 1.1
+  nuget FSharp.Quotations.Evaluator ~> 2.1

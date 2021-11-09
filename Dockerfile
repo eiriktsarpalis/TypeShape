@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:6.0.100-rc.2-bullseye-slim
+FROM mcr.microsoft.com/dotnet/sdk:6.0-bullseye-slim
 
 # allow pushing docs & tags using docker builds:
 # pass git credentials using $GITHUB_TOKEN environment variable
