@@ -7,10 +7,10 @@
     <!-- workaround for inlining p2p references in nuget; include custom target from Directory.Build.props -->
     <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
     <Configurations>Debug;Release;Debug-NoEmit;Release-NoEmit</Configurations>
-	<!-- packaging configuration -->
+    <!-- packaging configuration -->
     <IsPackable>true</IsPackable>
-	<EnablePackageValidation>true</EnablePackageValidation>
-	<PackageValidationBaselineVersion>10.0.0</PackageValidationBaselineVersion>
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <PackageValidationBaselineVersion>10.0.0</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <PropertyGroup>
