@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Net6Extensions.fs" />
     <Compile Include="disposable.fs" />
     <Compile Include="equality-comparer.fs" />
     <Compile Include="equality-staged.fs" />

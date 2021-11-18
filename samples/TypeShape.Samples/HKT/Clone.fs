@@ -36,6 +36,8 @@ type ClonerBuilder() =
 
         member _.TimeSpan () = HKT.pack id
         member _.DateTime () = HKT.pack id
+        member _.DateOnly () = HKT.pack id
+        member _.TimeOnly () = HKT.pack id
         member _.DateTimeOffset() = HKT.pack id
 
         member _.Enum _ = HKT.pack id

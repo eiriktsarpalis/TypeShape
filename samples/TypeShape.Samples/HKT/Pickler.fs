@@ -166,6 +166,18 @@ type PickerBuilder() =
                 unpickle = fun r -> match r true with String s -> System.DateTime.Parse s | t -> invalidTok t
             }
 
+        member _.DateOnly () =
+            HKT.pack {
+                pickle = fun k s -> k (String (s.ToString("O")))
+                unpickle = fun r -> match r true with String s -> System.DateOnly.Parse s | t -> invalidTok t
+            }
+
+        member _.TimeOnly () =
+            HKT.pack {
+                pickle = fun k s -> k (String (s.ToString("O")))
+                unpickle = fun r -> match r true with String s -> System.TimeOnly.Parse s | t -> invalidTok t
+            }
+
         member _.DateTimeOffset() =
             HKT.pack {
                 pickle = fun k s -> k (String (s.ToString("O")))

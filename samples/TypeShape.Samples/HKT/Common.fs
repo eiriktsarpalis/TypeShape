@@ -7,6 +7,8 @@ open TypeShape.HKT
 // Contains common F# values, DTOs with getters and setters
 // and supports recursive types via IDelayBuilder.
 type ITypeBuilder<'F, 'G> =
+    inherit IDateOnlyBuilder<'F>
+    inherit ITimeOnlyBuilder<'F>
     inherit IFSharpTypeBuilder<'F, 'G>
     inherit ICliMutableBuilder<'F, 'G>
     inherit IDelayBuilder<'F>
@@ -20,6 +22,8 @@ module TypeBuilder =
             { new IFoldContext<'F> with 
                 member _.Fold<'t> self =
                     match shapeof<'t> with
+                    | Fold.TimeOnly builder s -> s
+                    | Fold.DateOnly builder s -> s
                     | Fold.FSharpType builder self s -> s
                     | Fold.CliMutable builder self s -> s
                     | _ -> failwithf "Type %O not recognized as an F# data type." typeof<'t>

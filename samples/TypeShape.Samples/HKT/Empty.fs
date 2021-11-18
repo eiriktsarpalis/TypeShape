@@ -36,6 +36,8 @@ type PrettyPrinterBuilder() =
 
         member _.TimeSpan () = HKT.pack(fun () -> TimeSpan.Zero)
         member _.DateTime () = HKT.pack(fun () -> DateTime.MinValue)
+        member _.DateOnly () = HKT.pack(fun () -> DateOnly.MinValue)
+        member _.TimeOnly () = HKT.pack(fun () -> TimeOnly.MinValue)
         member _.DateTimeOffset() = HKT.pack(fun () -> DateTimeOffset.MinValue)
 
         member _.Enum (HKT.Unpack e) = HKT.pack (fun () -> LanguagePrimitives.EnumOfValue(e ()))

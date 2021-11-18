@@ -66,6 +66,7 @@ and private mkEqualityComparerAux<'T> (ctx : TypeGenerationContext) : IEqualityC
     | Shape.Double -> wrap (fun (f:float) -> hash f) (=)
     | Shape.Decimal -> wrap (fun (f:decimal) -> hash f) (=)
     | Shape.DateTime -> wrap (fun (f:DateTime) -> hash f) (=)
+    | Shape.DateOnly -> wrap (fun (f:DateOnly) -> hash f) (=)
     | Shape.Char -> wrap (fun (c:Char) -> hash c) (=)
     | Shape.TimeSpan -> wrap (fun (f:TimeSpan) -> hash f) (=)
     | Shape.String -> wrap (fun (s:string) -> s.GetHashCode()) (=)

@@ -47,6 +47,8 @@ module Impl =
 
             member _.TimeSpan () = HKT.pack(PP(fun s t -> s.Append(t) |> ignore))
             member _.DateTime () = HKT.pack(PP(fun s d -> s.Append(d) |> ignore))
+            member _.DateOnly () = HKT.pack(PP(fun s t -> s.Append(t) |> ignore))
+            member _.TimeOnly () = HKT.pack(PP(fun s t -> s.Append(t) |> ignore))
             member _.DateTimeOffset() = HKT.pack(PP(fun s d -> s.Append(d) |> ignore))
 
             member _.Nullable (HKT.Unpack ep) = HKT.pack(PP(fun s x -> if x.HasValue then ep.Invoke(s, x.Value) else append s "null"))
