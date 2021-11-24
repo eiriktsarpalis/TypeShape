@@ -670,6 +670,15 @@ let ``Empty should update definitions on new registrations`` () =
 
     test <@ empty<Empty<int> * Empty<string>> = (Empty -1, Empty "otherString") @>
 
+type RecType = RecType of RecType option * RecType list * RecType []
+
+[<Fact>]
+let ``Empty should support types with optional recursive fields`` () =
+    test <@ empty<RecType> = RecType (None, [], [||]) @>
+
+[<Fact>]
+let ``NotEmpty should not support types with optional recursive fields`` () =
+    raises <@ notEmpty<RecType> @>
 
 [<Fact>]
 let ``Shape-Poco should not match primitives`` () =

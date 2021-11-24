@@ -17,8 +17,7 @@ let rec private mkEmptyFunc<'T> () : EmptyFunc<'T> =
         mkEmptyFuncCached<'T> ctx
 
 and private mkEmptyFuncCached<'T> (ctx : TypeGenerationContext) : EmptyFunc<'T> =
-    match ctx.InitOrGetCachedValue<EmptyFunc<'T>>(fun c -> EmptyFunc(fun m -> c.Value.Invoke m)) with
-    | Cached(isValueCreated = false) -> failwithf "Type '%O' does not support empty values." typeof<'T>
+    match ctx.InitOrGetCachedValue<EmptyFunc<'T>>(fun _ -> EmptyFunc(fun m -> failwithf "Type '%O' does not support empty values." typeof<'T>)) with
     | Cached(value = f) -> f
     | NotCached t ->
         let f = mkEmptyFuncAux<'T> ctx
