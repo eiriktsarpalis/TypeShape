@@ -7,6 +7,7 @@ open System.Text
 open System.Text.Json
 open System.Runtime.CompilerServices
 open DotNext.Buffers
+open Helpers
 open TypeShape.HKT
 open TypeShape.Core
 open TypeShape.Core.Utils
@@ -44,6 +45,26 @@ module private JsonHelpers =
 
     let inline ensureToken (expectedToken : JsonTokenType) (reader : byref<Utf8JsonReader>) =
         if reader.TokenType <> expectedToken then throwInvalidToken reader.TokenType
+
+    type PropertyDictionary<'T>(inputs : seq<JsonEncodedText * 'T>) =
+        let bufferDict =
+            inputs 
+            |> Seq.map (fun (key, value) -> KeyValuePair(key.EncodedUtf8Bytes.ToArray(), value))
+            |> BufferDictionary
+
+        member _.TryGetPropertyName(reader : byref<Utf8JsonReader>, value:outref<'T>) =
+            assert(reader.TokenType = JsonTokenType.PropertyName)
+
+            let unescapedPropertyName =
+                if not (reader.ValueIsEscaped || reader.ValueIsEscaped) then 
+                    reader.ValueSpan
+                else
+                    let length = if reader.HasValueSequence then int reader.ValueSequence.Length else reader.ValueSpan.Length
+                    let destination = Array.zeroCreate<byte> length
+                    let bytesWritten = reader.CopyString(destination)
+                    Span.op_Implicit(destination.AsSpan(0, bytesWritten))
+
+            bufferDict.TryGetValue(unescapedPropertyName, &value)
 
 // HKT encoding for JsonConverter
 type JsonConverter =
@@ -307,7 +328,7 @@ type JsonConverterBuilder() =
             |> HKT.pack
 
         member _.Record shape (HKT.Unpacks fieldConverters) =
-            let labelSearch = fieldConverters |> Seq.map (fun c -> c.PropertyName.ToString()) |> BinSearch
+            let labelSearch = fieldConverters |> Seq.map (fun fc -> fc.PropertyName, fc) |> PropertyDictionary
             { new JsonConverter<'T> with
                 member _.Serialize writer value =
                     writer.WriteStartObject()
@@ -321,26 +342,26 @@ type JsonConverterBuilder() =
                     let mutable result = shape.CreateUninitialized()
                     while reader.Read() && reader.TokenType <> JsonTokenType.EndObject do
                         assert(reader.TokenType = JsonTokenType.PropertyName)
-                        let fieldIndex = labelSearch.TryFindIndex(reader.GetString())
+                        let ok, fc = labelSearch.TryGetPropertyName &reader
                         ensureRead &reader
-                        if fieldIndex < 0 then reader.Skip() else
-                        let fp = fieldConverters.[fieldIndex]
-                        fp.DeserializeField(&reader, &result)
+                        if not ok then reader.Skip() else
+                        fc.DeserializeField(&reader, &result)
 
                     result }
             |> HKT.pack
 
         member _.Union shape (HKT.Unpackss fieldConverterss) =
-            let caseNameSearch = shape.UnionCases |> Seq.map (fun c -> c.CaseInfo.Name) |> BinSearch
-            let unionCases = 
+            let unionCases =
                 (shape.UnionCases, fieldConverterss)
                 ||> Array.map2 (fun unionShape fieldConverters ->
                     {|
                         CaseName = JsonEncodedText.Encode unionShape.CaseInfo.Name
                         UnionShape = unionShape
-                        LabelSearch = unionShape.Fields |> Array.map (fun f -> f.Label) |> BinSearch
+                        LabelSearch = fieldConverters |> Seq.map (fun fc -> fc.PropertyName, fc) |> PropertyDictionary
                         FieldConverters = fieldConverters
                     |})
+
+            let caseNameSearch = unionCases |> Seq.map (fun caseInfo -> caseInfo.CaseName, caseInfo) |> PropertyDictionary
 
             { new JsonConverter<'T> with
                 member _.Serialize writer value =
@@ -360,39 +381,35 @@ type JsonConverterBuilder() =
                 member _.Deserialize reader =
                     match reader.TokenType with
                     | JsonTokenType.String ->
-                        let caseName = reader.GetString()
-                        let tag = caseNameSearch.TryFindIndex caseName
-                        if tag < 0 then JsonHelpers.throwUnrecognizedFSharpUnionCaseName typeof<'T> caseName
-                        unionCases.[tag].UnionShape.CreateUninitialized()
+                        let ok, caseInfo = caseNameSearch.TryGetPropertyName &reader
+                        if not ok then JsonHelpers.throwUnrecognizedFSharpUnionCaseName typeof<'T> (reader.GetString())
+                        caseInfo.UnionShape.CreateUninitialized()
 
                     | JsonTokenType.StartObject ->
                         ensureRead &reader
                         assert(reader.TokenType = JsonTokenType.PropertyName)
-                        if reader.GetString() <> JsonHelpers.FSharpUnionCaseNameFieldName.ToString() then
+                        if not <| JsonHelpers.FSharpUnionCaseNameFieldName.EncodedUtf8Bytes.SequenceEqual(reader.ValueSpan) then
                             JsonHelpers.throwMissingUnionCaseField()
 
                         ensureRead &reader
                         ensureToken JsonTokenType.String &reader
-                        let caseName = reader.GetString()
-                        let tag = caseNameSearch.TryFindIndex caseName
-                        if tag < 0 then JsonHelpers.throwUnrecognizedFSharpUnionCaseName typeof<'T> caseName
-                        let caseInfo = unionCases.[tag]
+                        let ok, caseInfo = caseNameSearch.TryGetPropertyName &reader
+                        if not ok then JsonHelpers.throwUnrecognizedFSharpUnionCaseName typeof<'T> (reader.GetString())
 
                         let mutable result = caseInfo.UnionShape.CreateUninitialized()
                         while reader.Read() && reader.TokenType <> JsonTokenType.EndObject do
                             assert(reader.TokenType = JsonTokenType.PropertyName)
-                            let fieldIndex = caseInfo.LabelSearch.TryFindIndex(reader.GetString())
+                            let ok, fc = caseInfo.LabelSearch.TryGetPropertyName &reader
                             ensureRead &reader
-                            if fieldIndex < 0 then reader.Skip() else
-                            let fieldConverter = caseInfo.FieldConverters.[fieldIndex]
-                            fieldConverter.DeserializeField(&reader, &result)
+                            if not ok then reader.Skip() else
+                            fc.DeserializeField(&reader, &result)
                         result
                     | token -> JsonHelpers.throwInvalidToken token }
             |> HKT.pack
 
     interface ICliMutableBuilder<JsonConverter, JsonFieldConverter> with
         member _.CliMutable shape (HKT.Unpacks fieldConverters) =
-            let labelSearch = fieldConverters |> Seq.map (fun c -> c.PropertyName.ToString()) |> BinSearch
+            let labelSearch = fieldConverters |> Seq.map (fun fc -> fc.PropertyName, fc) |> PropertyDictionary
             { new JsonConverter<'T> with
                 member _.Serialize writer value =
                     writer.WriteStartObject()
@@ -406,17 +423,16 @@ type JsonConverterBuilder() =
                     let mutable result = shape.CreateUninitialized()
                     while reader.Read() && reader.TokenType <> JsonTokenType.EndObject do
                         assert(reader.TokenType = JsonTokenType.PropertyName)
-                        let fieldIndex = labelSearch.TryFindIndex(reader.GetString())
+                        let ok, fc = labelSearch.TryGetPropertyName &reader
                         ensureRead &reader
-                        if fieldIndex < 0 then reader.Skip() else
-                        let fp = fieldConverters.[fieldIndex]
-                        fp.DeserializeField(&reader, &result)
+                        if not ok then reader.Skip() else
+                        fc.DeserializeField(&reader, &result)
 
                     result }
             |> HKT.pack
 
     interface IFieldExtractor<JsonConverter, JsonFieldConverter> with
-        member _.Field shape (HKT.Unpack fieldConverter) = 
+        member _.Field shape (HKT.Unpack fieldConverter) =
             let encodedLabel = JsonEncodedText.Encode shape.Label
             { new JsonFieldConverter<'DeclaringType> with
                 member _.PropertyName = encodedLabel

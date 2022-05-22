@@ -7,6 +7,12 @@
 	<ServerGarbageCollection>true</ServerGarbageCollection>
 	<TieredPGO>true</TieredPGO>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug-NoEmit|AnyCPU' ">
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release-NoEmit|AnyCPU' ">
+    <Optimize>false</Optimize>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\samples\TypeShape.Samples\HKT\Common.fs" Link="Implementations\Common.fs" />
     <Compile Include="..\..\samples\TypeShape.Samples\HKT\PrettyPrinter.fs" Link="Implementations\PrettyPrinter.fs" />

@@ -3,7 +3,13 @@
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <Configurations>Debug;Release;Debug-NoEmit;Release-NoEmit</Configurations>
+    <Configurations>Debug-NoEmit;Release-NoEmit;Debug;Release</Configurations>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug-NoEmit|AnyCPU' ">
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release-NoEmit|AnyCPU' ">
+    <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\samples\TypeShape.Samples\TypeShape.Samples.fsproj" />

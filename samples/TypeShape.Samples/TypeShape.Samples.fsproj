@@ -33,6 +33,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\TypeShape.CSharp\TypeShape.CSharp.csproj" />
     <ProjectReference Include="..\..\src\TypeShape\TypeShape.fsproj" />
+    <ProjectReference Include="..\Helpers\Helpers.csproj" />
   </ItemGroup>
 
   <Import Project="..\..\.paket\Paket.Restore.targets" />
