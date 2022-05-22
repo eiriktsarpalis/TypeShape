@@ -2,17 +2,17 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31624.102
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TypeShape.CSharp", "src\TypeShape.CSharp\TypeShape.CSharp.csproj", "{D3A1F378-8186-4166-A1B0-C39C06F6897B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TypeShape.CSharp", "src\TypeShape.CSharp\TypeShape.CSharp.csproj", "{D3A1F378-8186-4166-A1B0-C39C06F6897B}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TypeShape", "src\TypeShape\TypeShape.fsproj", "{6C2B8675-6456-4E1F-9E65-488D11501F1A}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape", "src\TypeShape\TypeShape.fsproj", "{6C2B8675-6456-4E1F-9E65-488D11501F1A}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TypeShape.Samples", "samples\TypeShape.Samples\TypeShape.Samples.fsproj", "{B7208218-6800-42E8-886D-041B93D3201B}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape.Samples", "samples\TypeShape.Samples\TypeShape.Samples.fsproj", "{B7208218-6800-42E8-886D-041B93D3201B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TypeShape.CSharp.Tests", "tests\TypeShape.CSharp.Tests\TypeShape.CSharp.Tests.csproj", "{822AB53B-9E71-44A7-BEDC-A22F80587D50}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TypeShape.Tests", "tests\TypeShape.Tests\TypeShape.Tests.fsproj", "{587124FD-D054-4948-A0C1-6C0D123CAC2F}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape.Tests", "tests\TypeShape.Tests\TypeShape.Tests.fsproj", "{587124FD-D054-4948-A0C1-6C0D123CAC2F}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TypeShape.Benchmarks", "tests\TypeShape.Benchmarks\TypeShape.Benchmarks.fsproj", "{ACFC21E1-951E-4B00-8DC3-228CCE47A898}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape.Benchmarks", "tests\TypeShape.Benchmarks\TypeShape.Benchmarks.fsproj", "{ACFC21E1-951E-4B00-8DC3-228CCE47A898}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".config", ".config", "{8CDC5B35-E7B5-488E-A2F0-1C81CC8C8760}"
 	ProjectSection(SolutionItems) = preProject
@@ -63,6 +63,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{40062C92-B307-433D-8036-A4D23738476D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{3D30801C-7074-4E5A-A17D-4458648DF767}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Helpers", "samples\Helpers\Helpers.csproj", "{59E28279-C407-4259-B74E-5BC724224B06}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -120,6 +122,14 @@ Global
 		{ACFC21E1-951E-4B00-8DC3-228CCE47A898}.Release|Any CPU.Build.0 = Release|Any CPU
 		{ACFC21E1-951E-4B00-8DC3-228CCE47A898}.Release-NoEmit|Any CPU.ActiveCfg = Release-NoEmit|Any CPU
 		{ACFC21E1-951E-4B00-8DC3-228CCE47A898}.Release-NoEmit|Any CPU.Build.0 = Release-NoEmit|Any CPU
+		{59E28279-C407-4259-B74E-5BC724224B06}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59E28279-C407-4259-B74E-5BC724224B06}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59E28279-C407-4259-B74E-5BC724224B06}.Debug-NoEmit|Any CPU.ActiveCfg = Debug|Any CPU
+		{59E28279-C407-4259-B74E-5BC724224B06}.Debug-NoEmit|Any CPU.Build.0 = Debug|Any CPU
+		{59E28279-C407-4259-B74E-5BC724224B06}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59E28279-C407-4259-B74E-5BC724224B06}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59E28279-C407-4259-B74E-5BC724224B06}.Release-NoEmit|Any CPU.ActiveCfg = Release|Any CPU
+		{59E28279-C407-4259-B74E-5BC724224B06}.Release-NoEmit|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -132,6 +142,7 @@ Global
 		{587124FD-D054-4948-A0C1-6C0D123CAC2F} = {3D30801C-7074-4E5A-A17D-4458648DF767}
 		{ACFC21E1-951E-4B00-8DC3-228CCE47A898} = {3D30801C-7074-4E5A-A17D-4458648DF767}
 		{BD082DA1-0DA2-47B1-B4E7-F192F06B8544} = {8B9B5A4E-5619-44CB-AF42-26DF28058A92}
+		{59E28279-C407-4259-B74E-5BC724224B06} = {B713A85D-A898-4A9A-8EC4-FAC27D551986}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {17B6E289-7BB0-4CE7-A9BC-94427940D604}
