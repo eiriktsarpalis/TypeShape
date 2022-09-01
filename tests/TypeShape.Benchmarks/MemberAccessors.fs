@@ -35,7 +35,8 @@ type Getter<'DeclaringType, 'Field> = delegate of inref<'DeclaringType> -> 'Fiel
 type Setter<'DeclaringType, 'Field> = delegate of byref<'DeclaringType> * 'Field -> unit
 type Lens<'DeclaringType,'Field> = { get : Getter<'DeclaringType, 'Field> ; set : Setter<'DeclaringType, 'Field> }
 
-[<MemoryDiagnoser; DisassemblyDiagnoser(maxDepth = 3)>]
+[<MemoryDiagnoser>]
+//[<DisassemblyDiagnoser(maxDepth = 3)>]
 type MemberAccessorBenchmark() =
 
     // Handwritten member accessors
