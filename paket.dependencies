@@ -14,7 +14,7 @@ group Test
   nuget Microsoft.NET.Test.Sdk ~> 17.0
   nuget xunit ~> 2.4.0
   nuget xunit.runner.visualstudio ~> 2.4.0 version_in_path: true
-  nuget Unquote ~> 4.0
+  nuget Unquote ~> 6.0
   nuget FsCheck 3.0.0-alpha4
   nuget FsCheck.XUnit 3.0.0-alpha4
   nuget BenchmarkDotNet ~> 0.13.0
