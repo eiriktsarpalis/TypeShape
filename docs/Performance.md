@@ -3,13 +3,13 @@
 TypeShape is intended for real-world applications, and as such performance is a significant aspect of its design.
 In this article I present a few benchmarks comparing generic programming approaches for common applications.
 
-Unless otherwise stated, all benchmarks use [BenchmarkDotNet](https://benchmarkdotnet.org/) running .NET 6.0 on Windows:
+Unless otherwise stated, all benchmarks use [BenchmarkDotNet](https://benchmarkdotnet.org/) running .NET 7.0 on MacOS:
 ```
-BenchmarkDotNet=v0.13.1, OS=Windows 10.0.19043.1237 (21H1/May2021Update)
-Intel Core i9-10900X CPU 3.70GHz, 1 CPU, 20 logical and 10 physical cores
-.NET SDK=6.0.100-rc.2.21452.10
-  [Host]     : .NET 6.0.0 (6.0.21.45117), X64 RyuJIT DEBUG
-  Job-PUVFFK : .NET 6.0.0 (6.0.21.45117), X64 RyuJIT
+BenchmarkDotNet=v0.13.2, OS=macOS Monterey 12.6 (21G115) [Darwin 21.6.0]
+Apple M1, 1 CPU, 8 logical and 8 physical cores
+.NET SDK=7.0.100-rc.1.22431.12
+  [Host]     : .NET 7.0.0 (7.0.22.42610), Arm64 RyuJIT AdvSIMD DEBUG
+  Job-EROLPB : .NET 7.0.0 (7.0.22.42610), Arm64 RyuJIT AdvSIMD
 ```
 You can find the benchmarks project [here](https://github.com/eiriktsarpalis/TypeShape/tree/master/tests/TypeShape.Benchmarks).
 Without further ado, here are the results:
@@ -36,11 +36,11 @@ The following implementations were benchmarked:
   
 ### Results
 
-|                      Method |         Mean |       Error |      StdDev |    Ratio | RatioSD |   Gen 0 | Allocated |
-|---------------------------- |-------------:|------------:|------------:|---------:|--------:|--------:|----------:|
-| &#39;FSharp.Core PrettyPrinter&#39; | 451,631.0 ns | 5,526.89 ns | 5,169.86 ns | 1,042.77 |   14.75 | 15.1367 |    153 KB |
-|    &#39;Baseline PrettyPrinter&#39; |     433.0 ns |     2.93 ns |     2.60 ns |     1.00 |    0.00 |  0.1144 |      1 KB |
-|   &#39;TypeShape PrettyPrinter&#39; |     787.8 ns |     5.51 ns |     4.60 ns |     1.82 |    0.01 |  0.1450 |      1 KB |
+|                      Method |         Mean |     Error |    StdDev |  Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
+|---------------------------- |-------------:|----------:|----------:|-------:|--------:|-------:|----------:|------------:|
+|    &#39;Baseline PrettyPrinter&#39; |     320.4 ns |   2.18 ns |   2.04 ns |   1.00 |    0.00 | 0.0224 |   1.13 KB |        1.00 |
+| &#39;FSharp.Core PrettyPrinter&#39; | 296,448.9 ns | 519.21 ns | 485.67 ns | 925.30 |    5.41 | 2.9297 | 153.44 KB |      136.39 |
+|   &#39;TypeShape PrettyPrinter&#39; |     638.4 ns |   2.98 ns |   2.64 ns |   1.99 |    0.02 | 0.0286 |   1.43 KB |        1.27 |
 
 The bespoke implementation is twice as fast as the TypeShape program,
 however it is still significantly faster than the default core implementation.
@@ -67,11 +67,11 @@ The following implementations were benchmarked:
 
 ### Results
 
-|                                     Method |     Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 | Allocated |
-|------------------------------------------- |---------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|
-|                          &#39;Baseline Cloner&#39; | 1.785 μs | 0.0092 μs | 0.0076 μs |  1.00 |    0.00 | 0.7305 | 0.0153 |      7 KB |
-|                         &#39;TypeShape Cloner&#39; | 4.147 μs | 0.0489 μs | 0.0434 μs |  2.32 |    0.03 | 0.7706 | 0.0153 |      8 KB |
-| &#39;TypeShape Staged Cloner with compilation&#39; | 1.967 μs | 0.0387 μs | 0.0475 μs |  1.11 |    0.03 | 0.7744 | 0.0153 |      8 KB |
+|                                     Method |     Mean |     Error |    StdDev | Ratio |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+|------------------------------------------- |---------:|----------:|----------:|------:|-------:|-------:|----------:|------------:|
+|                          &#39;Baseline Cloner&#39; | 1.783 μs | 0.0052 μs | 0.0046 μs |  1.00 | 0.1431 | 0.0019 |    7.2 KB |        1.00 |
+|                         &#39;TypeShape Cloner&#39; | 4.845 μs | 0.0143 μs | 0.0126 μs |  2.72 | 0.1450 |      - |   7.62 KB |        1.06 |
+| &#39;TypeShape Staged Cloner with compilation&#39; | 1.955 μs | 0.0064 μs | 0.0060 μs |  1.10 | 0.1526 |      - |   7.62 KB |        1.06 |
 
 The standard TypeShape cloner is an order of magnitude slower than the bespoke implementation,
 however the compiled staged cloner offers very comparable performance.
@@ -104,11 +104,11 @@ For the purposes of this benchmark, we'll be comparing:
 
 ### Results
 
-|             Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Allocated |
-|------------------- |----------:|---------:|---------:|------:|--------:|-------:|----------:|
-|   &#39;Baseline Empty&#39; |  39.05 ns | 0.777 ns | 0.926 ns |  1.00 |    0.00 | 0.0262 |     264 B |
-| &#39;Reflection Empty&#39; | 303.26 ns | 4.212 ns | 3.517 ns |  7.78 |    0.20 | 0.0768 |     776 B |
-|  &#39;TypeShape Empty&#39; | 177.29 ns | 3.276 ns | 2.904 ns |  4.56 |    0.16 | 0.0262 |     264 B |
+|             Method |      Mean |    Error |   StdDev | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
+|------------------- |----------:|---------:|---------:|------:|--------:|-------:|----------:|------------:|
+|   &#39;Baseline Empty&#39; |  43.75 ns | 0.157 ns | 0.147 ns |  1.00 |    0.00 | 0.0051 |     264 B |        1.00 |
+| &#39;Reflection Empty&#39; | 256.22 ns | 1.059 ns | 0.884 ns |  5.85 |    0.02 | 0.0148 |     776 B |        2.94 |
+|  &#39;TypeShape Empty&#39; | 154.97 ns | 0.334 ns | 0.279 ns |  3.54 |    0.02 | 0.0050 |     264 B |        1.00 |
 
 ## UnionContract
 
@@ -123,14 +123,14 @@ For this benchmark we will be comparing the following implementations:
 
 ### Results
 
-|            Method |      Mean |     Error |    StdDev |  Gen 0 | Allocated |
+|            Method |      Mean |     Error |    StdDev |   Gen0 | Allocated |
 |------------------ |----------:|----------:|----------:|-------:|----------:|
-|   Encode_Baseline |  7.706 ns | 0.0431 ns | 0.0360 ns | 0.0034 |      34 B |
-| Encode_Reflection | 27.385 ns | 0.1913 ns | 0.1696 ns | 0.0066 |      66 B |
-|  Encode_TypeShape | 23.308 ns | 0.0941 ns | 0.0834 ns | 0.0034 |      34 B |
-|   Decode_Baseline | 10.647 ns | 0.0867 ns | 0.0769 ns | 0.0031 |      31 B |
-| Decode_Reflection | 90.961 ns | 0.1050 ns | 0.0877 ns | 0.0086 |      87 B |
-|  Decode_TypeShape | 31.220 ns | 0.2973 ns | 0.2781 ns | 0.0031 |      31 B |
+|   Encode_Baseline |  9.010 ns | 0.0542 ns | 0.0480 ns | 0.0007 |      34 B |
+| Encode_Reflection | 26.429 ns | 0.1372 ns | 0.1284 ns | 0.0013 |      66 B |
+|  Encode_TypeShape | 16.951 ns | 0.0811 ns | 0.0759 ns | 0.0007 |      34 B |
+|   Decode_Baseline |  9.135 ns | 0.0240 ns | 0.0213 ns | 0.0006 |      31 B |
+| Decode_Reflection | 74.797 ns | 0.3100 ns | 0.2748 ns | 0.0016 |      87 B |
+|  Decode_TypeShape | 28.600 ns | 0.0831 ns | 0.0777 ns | 0.0006 |      31 B |
 
 ## Json Serialization
 
@@ -138,12 +138,12 @@ The TypeShape samples project implements a [JSON serializer](https://github.com/
 
 Here are the results of a [benchmark](https://github.com/eiriktsarpalis/TypeShape/blob/main/tests/TypeShape.Benchmarks/JsonSerializer.fs) comparing the TypeShape serializer with the default serializer found in System.Text.Json:
 
-|                     Method |     Mean |     Error |    StdDev |  Gen 0 | Allocated |
+|                     Method |     Mean |     Error |    StdDev |   Gen0 | Allocated |
 |--------------------------- |---------:|----------:|----------:|-------:|----------:|
-|   Serialize_SystemTextJson | 2.109 μs | 0.0403 μs | 0.0464 μs | 0.1183 |      1 KB |
-|        Serialize_TypeShape | 2.215 μs | 0.0218 μs | 0.0193 μs | 0.1297 |      1 KB |
-| Deserialize_SystemTextJson | 3.780 μs | 0.0125 μs | 0.0111 μs | 0.1602 |      2 KB |
-|      Deserialize_TypeShape | 3.821 μs | 0.0547 μs | 0.0511 μs | 0.2251 |      2 KB |
+|   Serialize_SystemTextJson | 1.249 μs | 0.0052 μs | 0.0046 μs | 0.0191 |      1 KB |
+|        Serialize_TypeShape | 1.262 μs | 0.0074 μs | 0.0069 μs | 0.0229 |   1.19 KB |
+| Deserialize_SystemTextJson | 2.464 μs | 0.0072 μs | 0.0064 μs | 0.0305 |   1.65 KB |
+|      Deserialize_TypeShape | 2.434 μs | 0.0120 μs | 0.0112 μs | 0.0420 |   2.15 KB |
 
 ## FsPickler
 
