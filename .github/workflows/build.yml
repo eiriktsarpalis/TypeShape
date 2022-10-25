@@ -16,7 +16,7 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 7.0.x
-        dotnet-quality: preview
+        include-prerelease: true
     - name: Build
       run: .\build.cmd -t Bundle
       
@@ -37,6 +37,6 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 7.0.x
-        dotnet-quality: preview
+        include-prerelease: true
     - name: Build
       run: ./build.sh -t Bundle
