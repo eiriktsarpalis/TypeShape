@@ -574,28 +574,29 @@ let ``Should support struct records``() =
 [<Struct>]
 type StructUnion = 
     | SU1 of a:int
-    //| SU2 of b:int
+    | SU2 of b:int
     | SU3
     | SU4 of string
     | SU5 of byte[] * int64
-    //| SU6
+    | SU6
 
 [<Fact>]
 let ``Should support struct unions``() =
     match shapeof<StructUnion> with
     | Shape.FSharpUnion (:? ShapeFSharpUnion<StructUnion> as s) ->
-        test <@ s.IsStructUnion && s.UnionCases.Length = 4 (* 6 *) @>
+        test <@ s.IsStructUnion && s.UnionCases.Length = 6 @>
         let fieldTypes = s.UnionCases |> Array.map (fun c -> c.Fields |> Array.map (fun f -> f.Member.Type))
-        test <@ fieldTypes = 
-                    [|
-                        [|typeof<int>|]
-                        //[|typeof<int>|]
-                        [||]
-                        [|typeof<string>|];
-                        [|typeof<byte[]>;typeof<int64>|]
-                        //[||]
-                    |] 
-             @>
+        let expectedTypes = 
+            [|
+                [|typeof<int>|]
+                [|typeof<int>|]
+                [||]
+                [|typeof<string>|];
+                [|typeof<byte[]>;typeof<int64>|]
+                [||]
+            |]
+
+        Assert.True((expectedTypes = fieldTypes))
 
     | _ -> raise <| InvalidCastException()
 
