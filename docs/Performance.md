@@ -5,11 +5,11 @@ In this article I present a few benchmarks comparing generic programming approac
 
 Unless otherwise stated, all benchmarks use [BenchmarkDotNet](https://benchmarkdotnet.org/) running .NET 7.0 on MacOS:
 ```
-BenchmarkDotNet=v0.13.2, OS=macOS Monterey 12.6 (21G115) [Darwin 21.6.0]
+BenchmarkDotNet=v0.13.2, OS=macOS 13.0 (22A380) [Darwin 22.1.0]
 Apple M1, 1 CPU, 8 logical and 8 physical cores
-.NET SDK=7.0.100-rc.1.22431.12
-  [Host]     : .NET 7.0.0 (7.0.22.42610), Arm64 RyuJIT AdvSIMD DEBUG
-  Job-EROLPB : .NET 7.0.0 (7.0.22.42610), Arm64 RyuJIT AdvSIMD
+.NET SDK=7.0.100
+  [Host]     : .NET 7.0.0 (7.0.22.51805), Arm64 RyuJIT AdvSIMD DEBUG
+  Job-GAGGLY : .NET 7.0.0 (7.0.22.51805), Arm64 RyuJIT AdvSIMD
 ```
 You can find the benchmarks project [here](https://github.com/eiriktsarpalis/TypeShape/tree/master/tests/TypeShape.Benchmarks).
 Without further ado, here are the results:
@@ -140,10 +140,10 @@ Here are the results of a [benchmark](https://github.com/eiriktsarpalis/TypeShap
 
 |                     Method |     Mean |     Error |    StdDev |   Gen0 | Allocated |
 |--------------------------- |---------:|----------:|----------:|-------:|----------:|
-|   Serialize_SystemTextJson | 1.249 μs | 0.0052 μs | 0.0046 μs | 0.0191 |      1 KB |
-|        Serialize_TypeShape | 1.262 μs | 0.0074 μs | 0.0069 μs | 0.0229 |   1.19 KB |
-| Deserialize_SystemTextJson | 2.464 μs | 0.0072 μs | 0.0064 μs | 0.0305 |   1.65 KB |
-|      Deserialize_TypeShape | 2.434 μs | 0.0120 μs | 0.0112 μs | 0.0420 |   2.15 KB |
+|   Serialize_SystemTextJson | 1.242 us | 0.0021 us | 0.0018 us | 0.0191 |      1 KB |
+|        Serialize_TypeShape | 1.058 us | 0.0020 us | 0.0018 us | 0.0229 |   1.19 KB |
+| Deserialize_SystemTextJson | 2.424 us | 0.0068 us | 0.0064 us | 0.0305 |   1.65 KB |
+|      Deserialize_TypeShape | 2.428 us | 0.0180 us | 0.0169 us | 0.0420 |   2.15 KB |
 
 ## FsPickler
 
