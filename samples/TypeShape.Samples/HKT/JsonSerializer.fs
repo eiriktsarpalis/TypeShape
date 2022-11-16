@@ -18,15 +18,14 @@ type JsonConverter<'T> =
 
 /// Serializes and deserializes the existentially packed field of a given type
 type JsonFieldConverter<'DeclaringType> =
-    abstract PropertyName : string
+    abstract PropertyName : JsonEncodedText
     abstract SerializeField : Utf8JsonWriter * inref<'DeclaringType> -> unit
     abstract DeserializeField : byref<Utf8JsonReader> * byref<'DeclaringType> -> unit
 
 [<AutoOpen>]
 module private JsonHelpers =
 
-    [<Literal>]
-    let FSharpUnionCaseNameFieldName = "$case"
+    let FSharpUnionCaseNameFieldName = JsonEncodedText.Encode "$case"
 
     [<MethodImpl(MethodImplOptions.NoInlining)>]
     let throwEOF() = failwith "Unexpected end of JSON stream."
@@ -308,7 +307,7 @@ type JsonConverterBuilder() =
             |> HKT.pack
 
         member _.Record shape (HKT.Unpacks fieldConverters) =
-            let labelSearch = fieldConverters |> Seq.map (fun c -> c.PropertyName) |> BinSearch
+            let labelSearch = fieldConverters |> Seq.map (fun c -> c.PropertyName.ToString()) |> BinSearch
             { new JsonConverter<'T> with
                 member _.Serialize writer value =
                     writer.WriteStartObject()
@@ -335,21 +334,25 @@ type JsonConverterBuilder() =
             let caseNameSearch = shape.UnionCases |> Seq.map (fun c -> c.CaseInfo.Name) |> BinSearch
             let unionCases = 
                 (shape.UnionCases, fieldConverterss)
-                ||> Array.map2 (fun unionShape fieldConverters  ->
-                    let labelSearch = unionShape.Fields |> Array.map (fun f -> f.Label) |> BinSearch
-                    (labelSearch, unionShape, fieldConverters))
+                ||> Array.map2 (fun unionShape fieldConverters ->
+                    {|
+                        CaseName = JsonEncodedText.Encode unionShape.CaseInfo.Name
+                        UnionShape = unionShape
+                        LabelSearch = unionShape.Fields |> Array.map (fun f -> f.Label) |> BinSearch
+                        FieldConverters = fieldConverters
+                    |})
 
             { new JsonConverter<'T> with
                 member _.Serialize writer value =
                     let tag = shape.GetTagByRef &value
-                    let _, caseInfo, fieldConverters = unionCases.[tag]
-                    if fieldConverters.Length = 0 then
-                        writer.WriteStringValue caseInfo.CaseInfo.Name
+                    let caseInfo = unionCases.[tag]
+                    if caseInfo.FieldConverters.Length = 0 then
+                        writer.WriteStringValue caseInfo.CaseName
                     else
                         writer.WriteStartObject()
                         writer.WritePropertyName JsonHelpers.FSharpUnionCaseNameFieldName
-                        writer.WriteStringValue caseInfo.CaseInfo.Name
-                        for fieldConverter in fieldConverters do 
+                        writer.WriteStringValue caseInfo.CaseName
+                        for fieldConverter in caseInfo.FieldConverters do 
                             writer.WritePropertyName fieldConverter.PropertyName
                             fieldConverter.SerializeField (writer, &value)
                         writer.WriteEndObject()
@@ -360,12 +363,12 @@ type JsonConverterBuilder() =
                         let caseName = reader.GetString()
                         let tag = caseNameSearch.TryFindIndex caseName
                         if tag < 0 then JsonHelpers.throwUnrecognizedFSharpUnionCaseName typeof<'T> caseName
-                        let _,caseInfo,_ = unionCases.[tag]
-                        caseInfo.CreateUninitialized()
+                        unionCases.[tag].UnionShape.CreateUninitialized()
+
                     | JsonTokenType.StartObject ->
                         ensureRead &reader
                         assert(reader.TokenType = JsonTokenType.PropertyName)
-                        if reader.GetString() <> JsonHelpers.FSharpUnionCaseNameFieldName then
+                        if reader.GetString() <> JsonHelpers.FSharpUnionCaseNameFieldName.ToString() then
                             JsonHelpers.throwMissingUnionCaseField()
 
                         ensureRead &reader
@@ -373,15 +376,15 @@ type JsonConverterBuilder() =
                         let caseName = reader.GetString()
                         let tag = caseNameSearch.TryFindIndex caseName
                         if tag < 0 then JsonHelpers.throwUnrecognizedFSharpUnionCaseName typeof<'T> caseName
-                        let labelSearch, caseInfo, fieldConverters = unionCases.[tag]
+                        let caseInfo = unionCases.[tag]
 
-                        let mutable result = caseInfo.CreateUninitialized()
+                        let mutable result = caseInfo.UnionShape.CreateUninitialized()
                         while reader.Read() && reader.TokenType <> JsonTokenType.EndObject do
                             assert(reader.TokenType = JsonTokenType.PropertyName)
-                            let fieldIndex = labelSearch.TryFindIndex(reader.GetString())
+                            let fieldIndex = caseInfo.LabelSearch.TryFindIndex(reader.GetString())
                             ensureRead &reader
                             if fieldIndex < 0 then reader.Skip() else
-                            let fieldConverter = fieldConverters.[fieldIndex]
+                            let fieldConverter = caseInfo.FieldConverters.[fieldIndex]
                             fieldConverter.DeserializeField(&reader, &result)
                         result
                     | token -> JsonHelpers.throwInvalidToken token }
@@ -389,7 +392,7 @@ type JsonConverterBuilder() =
 
     interface ICliMutableBuilder<JsonConverter, JsonFieldConverter> with
         member _.CliMutable shape (HKT.Unpacks fieldConverters) =
-            let labelSearch = fieldConverters |> Seq.map (fun c -> c.PropertyName) |> BinSearch
+            let labelSearch = fieldConverters |> Seq.map (fun c -> c.PropertyName.ToString()) |> BinSearch
             { new JsonConverter<'T> with
                 member _.Serialize writer value =
                     writer.WriteStartObject()
@@ -414,8 +417,9 @@ type JsonConverterBuilder() =
 
     interface IFieldExtractor<JsonConverter, JsonFieldConverter> with
         member _.Field shape (HKT.Unpack fieldConverter) = 
+            let encodedLabel = JsonEncodedText.Encode shape.Label
             { new JsonFieldConverter<'DeclaringType> with
-                member _.PropertyName = shape.Label
+                member _.PropertyName = encodedLabel
                 member _.SerializeField (writer, value) =
                     let field = shape.GetByRef &value
                     fieldConverter.Serialize writer field
