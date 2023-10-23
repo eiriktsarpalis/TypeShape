@@ -1,4 +1,4 @@
-﻿#I "bin/Debug/net7.0"
+﻿#I "bin/Debug/net8.0"
 #r "TypeShape.dll"
 #r "Helpers.dll"
 #r "TypeShape.Samples.dll"
