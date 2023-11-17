@@ -1,6 +1,8 @@
 ﻿[<AutoOpen>]
 module TypeShape.Tests.StagedClone
 
+#nowarn "44" // SerializationInfo is obsolete
+
 open System
 open System.Runtime.Serialization
 open FSharp.Quotations

@@ -19,14 +19,14 @@ with
         match u with
         | A _ -> 0
         | B _ -> 1
-        | C _ -> 2
+        | C -> 2
 
     [<MethodImpl(MethodImplOptions.NoInlining)>]
     member u.GetTag_NoInlining() =
         match u with
         | A _ -> 0
         | B _ -> 1
-        | C _ -> 2
+        | C -> 2
 
 type TupleType = int * int * int * int * int * int * int * int * int * int
 type StructTupleType = (struct(int * int * int * int * int * int * int * int * int * int))
