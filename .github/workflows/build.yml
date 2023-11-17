@@ -15,8 +15,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 7.0.x
-        include-prerelease: true
+        dotnet-version: 8.0.x
     - name: Build
       run: .\build.cmd -t Bundle
       
@@ -36,7 +35,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 7.0.x
+        dotnet-version: 8.0.x
         include-prerelease: true
     - name: Build
       run: ./build.sh -t Bundle
