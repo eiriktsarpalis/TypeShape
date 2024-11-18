@@ -1,4 +1,4 @@
-# TypeShape [![Build & Tests](https://github.com/eiriktsarpalis/TypeShape/workflows/Build%20&%20Tests/badge.svg)](https://github.com/eiriktsarpalis/TypeShape/actions?query=branch%3Amaster) [![NuGet Badge](https://buildstats.info/nuget/TypeShape)](https://www.nuget.org/packages/TypeShape/)
+# TypeShape [![Build & Tests](https://github.com/eiriktsarpalis/TypeShape/workflows/Build%20&%20Tests/badge.svg)](https://github.com/eiriktsarpalis/TypeShape/actions?query=branch%3Amaster) [![NuGet Badge](https://img.shields.io/nuget/dt/TypeShape)](https://www.nuget.org/packages/TypeShape/)
 
 TypeShape is a small, extensible F# library for practical datatype-generic programming.
 Borrowing from ideas used in the FsPickler [implementation](http://mbraceproject.github.io/FsPickler/overview.html#Pickler-Generation),
