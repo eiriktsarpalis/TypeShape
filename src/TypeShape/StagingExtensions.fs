@@ -98,25 +98,22 @@ module Expr =
         | [||] -> <@ () @>
         | _ -> comps |> Array.reduceBack (fun c s -> <@ %c ; %s @>) 
 
-    /// Expands a collection of folding computations into a statically
-    /// expanded expression tree
-    let fold (folder : Expr<'State> -> Expr<'T> -> Expr<'State>) 
-                (varName : string, init : Expr<'State>) (inputs : Expr<'T> []) : Expr<'State> =
-
-        if inputs.Length = 0 then init else
-        bindMutable (varName, init)
-            (fun getter setter ->
-                let body = inputs |> Array.map (fun t -> setter (folder getter t)) |> seq
-                <@ %body ; %getter @>)
-
     /// Expands a collection of state-updating staged computations
-    /// into a expression tree
+    /// into a statically expanded expression tree
     let update (varName : string, init : Expr<'T>) (comps : (Expr<'T> -> Expr<'T>) []) : Expr<'T> =
         if comps.Length = 0 then init else
         bindMutable (varName, init)
             (fun getter setter -> 
                 let unfolded = comps |> Array.map (fun c -> setter (c getter)) |> seq
                 <@ %unfolded ; %getter @>)
+
+    /// Expands a collection of folding computations 
+    /// into a statically expanded expression tree
+    let fold (folder : Expr<'State> -> Expr<'T> -> Expr<'State>) 
+                (varName : string, init : Expr<'State>) (inputs : Expr<'T> []) : Expr<'State> =
+
+        let comps = inputs |> Array.map (fun t getter -> folder getter t)
+        update (varName, init) comps
 
     /// expands a collection of expressions so that they
     /// branch according to the tag expression provided
@@ -143,24 +140,17 @@ module Expr =
             // traverses the "Lambda(Lambda(Lambda ... " part of the expression
             let rec gatherLambdas args acc e =
                 match e, args with
-                | _, [] -> Some (acc, e)
+                | _, [] -> Some (Map acc, e)
                 | Lambda(v, body), hd :: tl -> gatherLambdas tl ((v, hd) :: acc) body
                 | _ -> None
-
-            // performs substitution of each recovered var with corresponding value
-            let rec substitute vars (body : Expr) =
-                match vars with
-                | [] -> body
-                | (var, value) :: rest ->
-                    let body2 = body.Substitute(function v when v = var -> Some value | _ -> None)
-                    substitute rest body2
 
             match gatherApps [] e with
             | [], _ -> None
             | args, body ->
                 match gatherLambdas args [] body with
                 | None -> None
-                | Some(vars, body) -> Some(substitute vars body)
+                // performs substitution of each recovered var with corresponding value
+                | Some(bindings, body) -> Some(body.Substitute bindings.TryFind)
 
         // traverse the full expression tree
         let rec aux e =
